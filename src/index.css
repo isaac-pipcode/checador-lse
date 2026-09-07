@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    @apply bg-paper text-navy antialiased;
+    margin: 0;
+  }
+
+  /* Foco sempre visível, com contraste suficiente sobre os dois fundos. */
+  :focus-visible {
+    outline: 3px solid #2c3547;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: #e3ddcd;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply btn border-navy bg-navy text-paper hover:bg-navy-700;
+  }
+  .btn-secundario {
+    @apply btn border-navy-500 bg-paper text-navy hover:bg-paper-200;
+  }
+  .btn-fantasma {
+    @apply btn border-transparent bg-transparent text-navy-700 hover:bg-paper-200;
+  }
+  .campo {
+    @apply w-full rounded border border-navy-500 bg-paper px-2 py-1.5 text-sm text-navy
+           focus:border-navy;
+  }
+  .rotulo {
+    @apply block text-sm font-medium text-navy-700;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+  }
+  .cartao {
+    @apply rounded-lg border border-paper-400 bg-paper p-4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Conteúdo visível apenas para tecnologias assistivas. */
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
