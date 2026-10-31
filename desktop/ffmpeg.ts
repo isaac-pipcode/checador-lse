@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
 import { dirname, join } from 'node:path';
+import { fpsDeFracao, type InfoVideo } from '../src/midia/avaliacao';
 
 /** Ordem de busca: variável de ambiente, depois o PATH. */
 export const FFMPEG = process.env.CHECADOR_FFMPEG || 'ffmpeg';
@@ -152,9 +153,11 @@ export function executarComProgresso(
   args: string[],
   duracaoMs: number,
   aoProgredir: (fracao: number) => void,
+  sinal?: AbortSignal,
 ): Promise<{ codigo: number; stderr: string }> {
   return new Promise((ok, falha) => {
     const p = spawn(FFMPEG, ['-hide_banner', '-nostdin', ...args]);
+    sinal?.addEventListener('abort', () => p.kill('SIGKILL'), { once: true });
     let stderr = '';
     p.stderr.on('data', (d: Buffer) => {
       const txt = d.toString();
@@ -169,5 +172,42 @@ export function executarComProgresso(
     });
     p.on('error', falha);
     p.on('close', (c) => ok({ codigo: c ?? -1, stderr }));
+  });
+}
+
+/** Sondagem para a avaliação de proxy (codec, perfil, bits, cadência, taxa). */
+export function sondarVideo(arquivo: string): Promise<InfoVideo> {
+  return new Promise((ok, falha) => {
+    const p = spawn(FFPROBE, [
+      '-v', 'error',
+      '-show_entries', 'format=duration,bit_rate:stream=codec_type,codec_name,profile,pix_fmt,width,height,r_frame_rate,channels',
+      '-of', 'json', arquivo,
+    ]);
+    let out = '';
+    let err = '';
+    p.stdout.on('data', (d) => (out += d));
+    p.stderr.on('data', (d) => (err += d));
+    p.on('error', falha);
+    p.on('close', (c) => {
+      if (c !== 0) return falha(new Error(`ffprobe: ${err.trim().split('\n').pop()}`));
+      const j = JSON.parse(out) as {
+        format?: { duration?: string; bit_rate?: string };
+        streams?: Array<{ codec_type: string; codec_name?: string; profile?: string; pix_fmt?: string; width?: number; height?: number; r_frame_rate?: string; channels?: number }>;
+      };
+      const v = j.streams?.find((s) => s.codec_type === 'video');
+      const a = j.streams?.find((s) => s.codec_type === 'audio');
+      ok({
+        codec: v?.codec_name ?? null,
+        perfil: v?.profile ?? null,
+        pixFmt: v?.pix_fmt ?? null,
+        largura: v?.width ?? 0,
+        altura: v?.height ?? 0,
+        fps: fpsDeFracao(v?.r_frame_rate),
+        bitrate: j.format?.bit_rate ? Number(j.format.bit_rate) : null,
+        duracaoMs: Math.round(Number(j.format?.duration ?? 0) * 1000),
+        temAudio: !!a,
+        canaisAudio: a?.channels ?? null,
+      });
+    });
   });
 }

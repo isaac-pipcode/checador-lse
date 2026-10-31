@@ -63,7 +63,7 @@ export function SaidasAD() {
   }
 
   return (
-    <section aria-labelledby={`${id}-t`} className="border-t border-paper-400 px-3 py-3">
+    <section aria-labelledby={`${id}-t`} className="px-3 py-3">
       <h2 id={`${id}-t`} className="secao-titulo">
         Saídas da audiodescrição
       </h2>

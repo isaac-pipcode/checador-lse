@@ -37,13 +37,25 @@ export function useAcoesProjeto() {
         formato: 'estudio-acessibilidade',
         versao: 1,
         salvoEm: new Date().toISOString(),
-        video: estado.video ? { nome: estado.video.nome, caminho: estado.video.caminho } : null,
+        video: estado.video
+          ? {
+              nome: estado.video.nome,
+              caminho: estado.video.caminho,
+              proxy: estado.video.proxy?.caminho ?? null,
+              usarProxy: estado.video.usarProxy,
+            }
+          : null,
         legenda: estado.cues.length ? { nome: estado.arquivoNome ?? 'legenda.srt', conteudo: serializarSrt(estado.cues) } : null,
         ad: {
           parametros: estado.ad.parametros,
           blocos: estado.ad.blocos.map((b) => ({ ...b, takes: b.takes.map((t) => ({ ...t, arquivo: arquivos[t.id] })) })),
         },
-        libras: { ...janela, clipe: clipe ? { nome: clipe.nome, caminho: clipe.caminho, duracaoMs: clipe.duracaoMs } : null },
+        libras: {
+          ...janela,
+          clipe: clipe
+            ? { nome: clipe.nome, caminho: clipe.caminho, duracaoMs: clipe.duracaoMs, proxy: clipe.proxy?.caminho ?? null }
+            : null,
+        },
       };
       const r = await desktop.salvarProjeto({ caminho: como ? null : estado.projeto.caminho, projeto, takes });
       if (r) despachar({ tipo: 'projetoSalvo', caminho: r.caminho, arquivosTakes: arquivos });
@@ -72,8 +84,15 @@ export function useAcoesProjeto() {
       let libras: JanelaLibras | undefined = lib ? { ...JANELA_PADRAO, ...lib, clipe: null } : undefined;
       if (lib?.clipe?.caminho) {
         try {
-          const url = await desktop.urlDeMidia(lib.clipe.caminho);
-          libras = { ...JANELA_PADRAO, ...lib, clipe: { ...lib.clipe, url } };
+          const urlOriginal = await desktop.urlDeMidia(lib.clipe.caminho);
+          // o proxy do clipe, se ainda existir, volta a ser o que a prévia toca
+          let proxy: { caminho: string; url: string } | null = null;
+          if (lib.clipe.proxy) proxy = await desktop.urlDeMidia(lib.clipe.proxy).then((url) => ({ caminho: lib.clipe!.proxy!, url }), () => null);
+          libras = {
+            ...JANELA_PADRAO,
+            ...lib,
+            clipe: { nome: lib.clipe.nome, caminho: lib.clipe.caminho, duracaoMs: lib.clipe.duracaoMs, urlOriginal, proxy, url: proxy?.url ?? urlOriginal },
+          };
         } catch {
           /* clipe movido ou apagado: a janela abre sem clipe (J3 aponta) */
         }
@@ -84,7 +103,14 @@ export function useAcoesProjeto() {
       if (v?.caminho) {
         const url = await desktop.urlDeMidia(v.caminho);
         const caminho = v.caminho;
-        await carregarMidia(despachar, { url, nome: v.nome, caminho }, () => desktop.analisarAudio(caminho, JANELA_MS, () => {}));
+        const info = await desktop.sondarMidia(caminho).catch(() => null);
+        const analise = carregarMidia(despachar, { url, nome: v.nome, caminho, info }, () => desktop.analisarAudio(caminho, JANELA_MS, () => {}));
+        if (v.proxy) {
+          const proxy = v.proxy;
+          const purl = await desktop.urlDeMidia(proxy).catch(() => null);
+          if (purl) despachar({ tipo: 'videoProxy', proxy: { caminho: proxy, url: purl }, usar: v.usarProxy ?? true, restaurando: true });
+        }
+        await analise;
       }
     },
     [desktop, despachar],

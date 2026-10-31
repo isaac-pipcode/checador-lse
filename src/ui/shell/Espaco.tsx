@@ -15,6 +15,9 @@ import { CamadaLibras } from '../libras/CamadaLibras';
 import { tcSmpte, useLacunas } from '../comum';
 import { BarraSuperior } from './BarraSuperior';
 import { BarraPaginas } from './BarraPaginas';
+import { AvisoOriginal, ControleProxy } from './ControleProxy';
+import { avaliarMidia } from '../../midia/avaliacao';
+import { gerarProxyDe } from '../proxy';
 import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
@@ -52,6 +55,11 @@ export function Espaco() {
   const [legendaRevisada, setLegendaRevisada] = useState(true);
   const [verLse, setVerLse] = useState(true);
   const [verLibras, setVerLibras] = useState(true);
+  const [erroVideo, setErroVideo] = useState(false);
+  // trocar entre proxy e original recria o elemento de vídeo: a posição é preservada
+  const ultimoTempo = useRef(0);
+  ultimoTempo.current = tempoMs;
+  useEffect(() => setErroVideo(false), [video?.url]);
 
   // relógio fluido durante a reprodução
   useEffect(() => {
@@ -131,7 +139,15 @@ export function Espaco() {
     const m = await desktop.escolherVideo();
     if (!m) return;
     setProgressoAudio(0);
-    await carregarMidia(despachar, m, () => desktop.analisarAudio(m.caminho, JANELA_MS, setProgressoAudio));
+    ultimoTempo.current = 0;
+    const analise = carregarMidia(despachar, m, () => desktop.analisarAudio(m.caminho, JANELA_MS, setProgressoAudio));
+    // formato de finalização: o proxy é gerado já, em paralelo à análise do áudio
+    if (m.info && avaliarMidia(m.info).necessidade === 'obrigatorio') {
+      void gerarProxyDe(despachar, m.caminho, estado.projeto.caminho).then((px) => {
+        if (px) despachar({ tipo: 'videoProxy', proxy: px, usar: true });
+      });
+    }
+    await analise;
     setProgressoAudio(null);
   }
 
@@ -205,10 +221,11 @@ export function Espaco() {
               <header className="painel-cabeca">
                 <h2>Monitor</h2>
                 <span className="min-w-0 truncate font-normal normal-case tracking-normal text-navy-500">
-                  {video ? video.nome : 'sem vídeo'}
+                  {video ? `${video.nome}${video.usarProxy ? ' (proxy)' : ''}` : 'sem vídeo'}
                   {status ? ` · ${status}` : ''}
                 </span>
-                <span className="ml-auto flex items-center gap-1 normal-case tracking-normal">
+                <span className="ml-auto flex min-w-0 items-center gap-1 normal-case tracking-normal">
+                  <ControleProxy />
                   {video ? (
                     desktop ? (
                       <button type="button" className="btn-fantasma h-6 px-2 text-2xs" onClick={() => void abrirVideo()}>
@@ -232,10 +249,15 @@ export function Espaco() {
                       src={video.url}
                       crossOrigin="anonymous"
                       className="absolute inset-0 h-full w-full object-contain"
-                      onLoadedMetadata={(e) => setDuracaoVideoMs(Math.round(e.currentTarget.duration * 1000))}
+                      onLoadedMetadata={(e) => {
+                        setDuracaoVideoMs(Math.round(e.currentTarget.duration * 1000));
+                        if (ultimoTempo.current > 0) e.currentTarget.currentTime = ultimoTempo.current / 1000;
+                      }}
+                      onError={() => setErroVideo(true)}
                       onTimeUpdate={(e) => setTempoMs(Math.round(e.currentTarget.currentTime * 1000))}
                       onClick={(e) => void (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())}
                     />
+                    <AvisoOriginal erroDeReproducao={erroVideo} />
                     {verLibras && (libras.clipe || pagina === 'libras') ? (
                       <CamadaLibras principal={videoPronto} janela={libras} tempoMs={tempoMs} tocando={tocando} guia={pagina === 'libras'} />
                     ) : null}

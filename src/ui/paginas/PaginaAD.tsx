@@ -11,7 +11,7 @@ import { ponte } from '../../desktop/ponte';
 import { useSessaoGravacao, type SessaoGravacao } from '../ad/useSessaoGravacao';
 import { Teleprompter } from '../ad/Teleprompter';
 import { AjustesLegenda, CartaoBloco, CLASSE_NIVEL, ICONE, Numero, ROTULO_NIVEL, seg } from '../ad/componentes';
-import { Secao, useLacunas } from '../comum';
+import { PainelAbas, Secao, useLacunas } from '../comum';
 
 type Modo = 'roteiro' | 'gravacao';
 
@@ -44,14 +44,26 @@ export function ProvedorPaginaAD({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (sessao.ativa) setModo('gravacao');
   }, [sessao.ativa]);
-  return <CtxAD.Provider value={{ sessao, modo, setModo, repetir, setRepetir, foco, setFoco }}>{children}</CtxAD.Provider>;
+  return (
+    <CtxAD.Provider value={{ sessao, modo, setModo, repetir, setRepetir, foco, setFoco }}>{children}</CtxAD.Provider>
+  );
 }
 
 function SeletorModo() {
   const { modo, setModo, sessao } = useAD();
   return (
-    <div className="ml-auto flex rounded bg-fundo p-0.5 normal-case tracking-normal" role="group" aria-label="Modo de trabalho">
-      <button type="button" className="segmento" aria-pressed={modo === 'roteiro'} disabled={sessao.ativa} onClick={() => setModo('roteiro')}>
+    <div
+      className="ml-auto flex rounded bg-fundo p-0.5 normal-case tracking-normal"
+      role="group"
+      aria-label="Modo de trabalho"
+    >
+      <button
+        type="button"
+        className="segmento"
+        aria-pressed={modo === 'roteiro'}
+        disabled={sessao.ativa}
+        onClick={() => setModo('roteiro')}
+      >
         Roteiro
       </button>
       <button type="button" className="segmento" aria-pressed={modo === 'gravacao'} onClick={() => setModo('gravacao')}>
@@ -229,7 +241,12 @@ function GravacaoLista() {
               Só blocos ainda sem gravação
             </label>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <button type="button" className="btn-primario" disabled={!video || fila.length === 0} onClick={() => sessao.gravarSequencia(fila.map((b) => b.id))}>
+              <button
+                type="button"
+                className="btn-primario"
+                disabled={!video || fila.length === 0}
+                onClick={() => sessao.gravarSequencia(fila.map((b) => b.id))}
+              >
                 <span aria-hidden="true">●</span> Gravar em sequência ({fila.length})
               </button>
               {!desktop ? (
@@ -263,7 +280,10 @@ function GravacaoLista() {
             const nivel = nivelDoBloco(verificarBloco(b, final.cues, parametros));
             const atual = sessao.blocoId === b.id;
             return (
-              <li key={b.id} className={`grid grid-cols-[auto_1fr_auto] items-center gap-x-2 px-3 py-2 text-xs ${atual ? 'bg-bad-100' : ''}`}>
+              <li
+                key={b.id}
+                className={`grid grid-cols-[auto_1fr_auto] items-center gap-x-2 px-3 py-2 text-xs ${atual ? 'bg-bad-100' : ''}`}
+              >
                 <span className="font-mono text-2xs text-navy-500">
                   {String(i + 1).padStart(2, '0')}
                   <br />
@@ -282,10 +302,20 @@ function GravacaoLista() {
                   </span>
                 </span>
                 <span className="flex gap-1">
-                  <button type="button" className="btn-icone h-7 w-7" aria-label={`Ir ao bloco ${i + 1}`} onClick={() => buscar(Math.max(0, b.inicioMs - 2000))}>
+                  <button
+                    type="button"
+                    className="btn-icone h-7 w-7"
+                    aria-label={`Ir ao bloco ${i + 1}`}
+                    onClick={() => buscar(Math.max(0, b.inicioMs - 2000))}
+                  >
                     <span aria-hidden="true">↦</span>
                   </button>
-                  <button type="button" className="btn-secundario h-7 px-2 text-2xs" disabled={!video || sessao.ativa} onClick={() => sessao.gravarAvulso(b.id)}>
+                  <button
+                    type="button"
+                    className="btn-secundario h-7 px-2 text-2xs"
+                    disabled={!video || sessao.ativa}
+                    onClick={() => sessao.gravarAvulso(b.id)}
+                  >
                     <span aria-hidden="true">●</span> Gravar
                   </button>
                 </span>
@@ -314,19 +344,56 @@ function GravacaoLista() {
 // ===========================================================================
 
 export function AdDireita() {
-  const { modo } = useAD();
+  const { modo, sessao } = useAD();
+  const titulo = (
+    <>
+      Inspetor{' '}
+      <span className="font-normal normal-case tracking-normal text-navy-500">
+        {modo === 'roteiro' ? 'roteiro' : 'gravação'}
+      </span>
+    </>
+  );
+  if (modo === 'roteiro') {
+    return (
+      <PainelAbas
+        key="roteiro"
+        memoria="ad-direita-roteiro"
+        rotulo="Inspetor de audiodescrição"
+        titulo={titulo}
+        abas={[
+          { id: 'blocos', rotulo: 'Blocos', conteudo: <RoteiroInspetor secao="blocos" /> },
+          { id: 'leitura', rotulo: 'Leitura e mixagem', conteudo: <RoteiroInspetor secao="leitura" /> },
+          { id: 'atalhos', rotulo: 'Atalhos', conteudo: <RoteiroInspetor secao="atalhos" /> },
+        ]}
+      />
+    );
+  }
   return (
-    <section className="painel" aria-label="Inspetor de audiodescrição">
-      <header className="painel-cabeca">
-        <h2>Inspetor</h2>
-        <span className="font-normal normal-case tracking-normal text-navy-500">{modo === 'roteiro' ? 'roteiro' : 'gravação'}</span>
-      </header>
-      <div className="painel-corpo">{modo === 'roteiro' ? <RoteiroInspetor /> : <GravacaoInspetor />}</div>
-    </section>
+    <PainelAbas
+      key="gravacao"
+      memoria="ad-direita-gravacao"
+      rotulo="Inspetor de audiodescrição"
+      titulo={titulo}
+      abas={[
+        {
+          id: 'teleprompter',
+          rotulo: 'Teleprompter',
+          marca: sessao.prompterAberto ? '●' : null,
+          conteudo: <GravacaoInspetor secao="teleprompter" />,
+        },
+        { id: 'legenda', rotulo: 'Legenda', conteudo: <GravacaoInspetor secao="legenda" /> },
+        {
+          id: 'microfone',
+          rotulo: 'Microfone',
+          marca: sessao.micAberto ? '●' : null,
+          conteudo: <GravacaoInspetor secao="microfone" />,
+        },
+      ]}
+    />
   );
 }
 
-function RoteiroInspetor() {
+function RoteiroInspetor({ secao }: { secao: 'blocos' | 'leitura' | 'atalhos' }) {
   const { estado } = useEstado();
   const despachar = useDespachar();
   const { video, tempoMs } = useVideo();
@@ -343,8 +410,8 @@ function RoteiroInspetor() {
   const aprovaveis = blocos.filter((b) => !b.aprovado && b.texto.trim());
   const mudar = (mudanca: Partial<typeof p>) => despachar({ tipo: 'adParametros', mudanca });
 
-  return (
-    <>
+  if (secao === 'blocos')
+    return (
       <Secao titulo="Blocos">
         <p className="text-xs">
           {blocos.length} blocos · {blocos.filter((b) => b.aprovado).length} aprovados
@@ -358,10 +425,20 @@ function RoteiroInspetor() {
           ))}
         </ul>
         <div className="mt-2 grid gap-1.5">
-          <button type="button" className="btn-secundario justify-center" disabled={lacunas.length === 0} onClick={() => despachar({ tipo: 'adCriarDasLacunas', lacunas })}>
+          <button
+            type="button"
+            className="btn-secundario justify-center"
+            disabled={lacunas.length === 0}
+            onClick={() => despachar({ tipo: 'adCriarDasLacunas', lacunas })}
+          >
             Criar blocos nas {lacunas.length} lacunas
           </button>
-          <button type="button" className="btn-fantasma justify-center" disabled={!video} onClick={() => despachar({ tipo: 'adAdicionar', inicioMs: tempoMs, fimMs: tempoMs + 3000 })}>
+          <button
+            type="button"
+            className="btn-fantasma justify-center"
+            disabled={!video}
+            onClick={() => despachar({ tipo: 'adAdicionar', inicioMs: tempoMs, fimMs: tempoMs + 3000 })}
+          >
             + Bloco em {formatarTimecode(tempoMs)}
           </button>
           {aprovaveis.length > 0 ? (
@@ -369,7 +446,9 @@ function RoteiroInspetor() {
               type="button"
               className="btn-fantasma justify-center"
               onClick={() => {
-                if (window.confirm(`Aprovar para gravação os ${aprovaveis.length} blocos com texto ainda em rascunho?`)) {
+                if (
+                  window.confirm(`Aprovar para gravação os ${aprovaveis.length} blocos com texto ainda em rascunho?`)
+                ) {
                   aprovaveis.forEach((b) => despachar({ tipo: 'adAprovar', id: b.id, aprovado: true }));
                 }
               }}
@@ -379,51 +458,78 @@ function RoteiroInspetor() {
           ) : null}
         </div>
         {fonte === 'silencio' ? (
-          <p className="mt-2 text-2xs text-warn">Sem LSE carregada: lacunas tiradas dos silêncios do áudio, menos confiáveis.</p>
+          <p className="mt-2 text-2xs text-warn">
+            Sem LSE carregada: lacunas tiradas dos silêncios do áudio, menos confiáveis.
+          </p>
         ) : null}
       </Secao>
-
+    );
+  if (secao === 'atalhos')
+    return (
       <Secao titulo="Atalhos (Ctrl ou ⌘)">
         <ul className="grid gap-0.5 text-2xs text-navy-700">
-          <li><kbd>Espaço</kbd> tocar/pausar</li>
-          <li><kbd>←</kbd>/<kbd>→</kbd> voltar/avançar 2 s</li>
-          <li><kbd>B</kbd> novo bloco na posição</li>
-          <li><kbd>↑</kbd>/<kbd>↓</kbd> bloco anterior/seguinte</li>
-          <li><kbd>Enter</kbd> aprovar e ir ao seguinte</li>
+          <li>
+            <kbd>Espaço</kbd> tocar/pausar
+          </li>
+          <li>
+            <kbd>←</kbd>/<kbd>→</kbd> voltar/avançar 2 s
+          </li>
+          <li>
+            <kbd>B</kbd> novo bloco na posição
+          </li>
+          <li>
+            <kbd>↑</kbd>/<kbd>↓</kbd> bloco anterior/seguinte
+          </li>
+          <li>
+            <kbd>Enter</kbd> aprovar e ir ao seguinte
+          </li>
         </ul>
         <label className="mt-2 flex items-center gap-2 text-xs">
           <input type="checkbox" checked={repetir} onChange={(e) => setRepetir(e.target.checked)} />
           Repetir o trecho do bloco em foco
         </label>
       </Secao>
-
-      <Secao titulo="Leitura e mixagem">
-        <div className="grid grid-cols-2 gap-2">
-          <Numero rotulo="Velocidade (ppm)" valor={p.palavrasPorMinuto} passo={5} aoMudar={(v) => mudar({ palavrasPorMinuto: v })} />
-          <Numero rotulo="Ducking (dB)" valor={p.duckingDb} passo={1} min={-40} max={0} aoMudar={(v) => mudar({ duckingDb: v })} />
-          <Numero rotulo="Ataque (ms)" valor={p.ataqueMs} passo={50} aoMudar={(v) => mudar({ ataqueMs: v })} />
-          <Numero rotulo="Liberação (ms)" valor={p.liberacaoMs} passo={50} aoMudar={(v) => mudar({ liberacaoMs: v })} />
-        </div>
-        <p className="mt-2 text-2xs text-navy-500">
-          {calibracao ? (
-            <>
-              Medido nas gravações: <strong className="text-navy">{calibracao.ppm} ppm</strong> ({calibracao.amostras} takes).{' '}
-              {calibracao.ppm !== p.palavrasPorMinuto ? (
-                <button type="button" className="underline" onClick={() => mudar({ palavrasPorMinuto: calibracao.ppm })}>
-                  Usar na estimativa
-                </button>
-              ) : null}
-            </>
-          ) : (
-            'Estimativa até haver três gravações; depois, o estúdio mede a velocidade do locutor.'
-          )}
-        </p>
-      </Secao>
-    </>
+    );
+  return (
+    <Secao titulo="Leitura e mixagem">
+      <div className="grid grid-cols-2 gap-2">
+        <Numero
+          rotulo="Velocidade (ppm)"
+          valor={p.palavrasPorMinuto}
+          passo={5}
+          aoMudar={(v) => mudar({ palavrasPorMinuto: v })}
+        />
+        <Numero
+          rotulo="Ducking (dB)"
+          valor={p.duckingDb}
+          passo={1}
+          min={-40}
+          max={0}
+          aoMudar={(v) => mudar({ duckingDb: v })}
+        />
+        <Numero rotulo="Ataque (ms)" valor={p.ataqueMs} passo={50} aoMudar={(v) => mudar({ ataqueMs: v })} />
+        <Numero rotulo="Liberação (ms)" valor={p.liberacaoMs} passo={50} aoMudar={(v) => mudar({ liberacaoMs: v })} />
+      </div>
+      <p className="mt-2 text-2xs text-navy-500">
+        {calibracao ? (
+          <>
+            Medido nas gravações: <strong className="text-navy">{calibracao.ppm} ppm</strong> ({calibracao.amostras}{' '}
+            takes).{' '}
+            {calibracao.ppm !== p.palavrasPorMinuto ? (
+              <button type="button" className="underline" onClick={() => mudar({ palavrasPorMinuto: calibracao.ppm })}>
+                Usar na estimativa
+              </button>
+            ) : null}
+          </>
+        ) : (
+          'Estimativa até haver três gravações; depois, o estúdio mede a velocidade do locutor.'
+        )}
+      </p>
+    </Secao>
   );
 }
 
-function GravacaoInspetor() {
+function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'microfone' }) {
   const id = useId();
   const { estado } = useEstado();
   const despachar = useDespachar();
@@ -432,8 +538,8 @@ function GravacaoInspetor() {
   const p = estado.ad.parametros;
   const nivelPct = Number.isFinite(sessao.nivel) ? Math.max(0, Math.min(100, ((sessao.nivel + 60) / 60) * 100)) : 0;
 
-  return (
-    <>
+  if (secao === 'teleprompter')
+    return (
       <Secao titulo="O que o locutor vê">
         <Teleprompter estado={sessao.estadoPrompter} compacto />
         {desktop ? (
@@ -447,49 +553,83 @@ function GravacaoInspetor() {
               </button>
             </div>
           ) : (
-            <button type="button" className="btn-secundario mt-2 w-full justify-center" onClick={() => void sessao.abrirPrompter()}>
+            <button
+              type="button"
+              className="btn-secundario mt-2 w-full justify-center"
+              onClick={() => void sessao.abrirPrompter()}
+            >
               Abrir no monitor do locutor
             </button>
           )
         ) : null}
       </Secao>
-
+    );
+  if (secao === 'legenda')
+    return (
       <Secao titulo="Legenda do teleprompter">
         <AjustesLegenda />
       </Secao>
-
-      <Secao titulo="Microfone">
-        {sessao.micAberto ? (
-          <>
-            <label className="rotulo" htmlFor={`${id}-mic`}>
-              Entrada
-            </label>
-            <select id={`${id}-mic`} className="campo" value={sessao.micId} onChange={(e) => sessao.setMicId(e.target.value)}>
-              <option value="">Padrão do sistema</option>
-              {sessao.microfones.map((m) => (
-                <option key={m.deviceId} value={m.deviceId}>
-                  {m.label || `Microfone ${m.deviceId.slice(0, 6)}`}
-                </option>
-              ))}
-            </select>
-            <div className="mt-2 h-1.5 w-full rounded bg-fundo" aria-hidden="true">
-              <div className={`h-1.5 rounded ${sessao.nivel > -3 ? 'bg-bad' : sessao.nivel > -12 ? 'bg-warn' : 'bg-ok'}`} style={{ width: `${nivelPct}%` }} />
-            </div>
-            <p className="mt-1 text-2xs text-navy-500">Pico: {Number.isFinite(sessao.nivel) ? `${sessao.nivel.toFixed(0)} dBFS` : '—'}</p>
-          </>
-        ) : (
-          <button type="button" className="btn-secundario w-full justify-center" onClick={() => void sessao.abrirMic()}>
-            Abrir microfone
-          </button>
-        )}
-        {sessao.erroMic ? <p className="mt-2 text-xs text-bad">{sessao.erroMic}</p> : null}
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-          <Numero rotulo="Pré (ms)" valor={p.prerollMs} passo={500} aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { prerollMs: v } })} />
-          <Numero rotulo="Pós (ms)" valor={p.posrollMs} passo={500} aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { posrollMs: v } })} />
-          <Numero rotulo="Latência" valor={p.latenciaMs} passo={10} min={-500} aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { latenciaMs: v } })} />
-        </div>
-        <p className="mt-2 text-2xs text-navy-500">Fones para o locutor. Eco, ruído e ganho automáticos ficam desligados.</p>
-      </Secao>
-    </>
+    );
+  return (
+    <Secao titulo="Microfone">
+      {sessao.micAberto ? (
+        <>
+          <label className="rotulo" htmlFor={`${id}-mic`}>
+            Entrada
+          </label>
+          <select
+            id={`${id}-mic`}
+            className="campo"
+            value={sessao.micId}
+            onChange={(e) => sessao.setMicId(e.target.value)}
+          >
+            <option value="">Padrão do sistema</option>
+            {sessao.microfones.map((m) => (
+              <option key={m.deviceId} value={m.deviceId}>
+                {m.label || `Microfone ${m.deviceId.slice(0, 6)}`}
+              </option>
+            ))}
+          </select>
+          <div className="mt-2 h-1.5 w-full rounded bg-fundo" aria-hidden="true">
+            <div
+              className={`h-1.5 rounded ${sessao.nivel > -3 ? 'bg-bad' : sessao.nivel > -12 ? 'bg-warn' : 'bg-ok'}`}
+              style={{ width: `${nivelPct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-2xs text-navy-500">
+            Pico: {Number.isFinite(sessao.nivel) ? `${sessao.nivel.toFixed(0)} dBFS` : '—'}
+          </p>
+        </>
+      ) : (
+        <button type="button" className="btn-secundario w-full justify-center" onClick={() => void sessao.abrirMic()}>
+          Abrir microfone
+        </button>
+      )}
+      {sessao.erroMic ? <p className="mt-2 text-xs text-bad">{sessao.erroMic}</p> : null}
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        <Numero
+          rotulo="Pré (ms)"
+          valor={p.prerollMs}
+          passo={500}
+          aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { prerollMs: v } })}
+        />
+        <Numero
+          rotulo="Pós (ms)"
+          valor={p.posrollMs}
+          passo={500}
+          aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { posrollMs: v } })}
+        />
+        <Numero
+          rotulo="Latência"
+          valor={p.latenciaMs}
+          passo={10}
+          min={-500}
+          aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { latenciaMs: v } })}
+        />
+      </div>
+      <p className="mt-2 text-2xs text-navy-500">
+        Fones para o locutor. Eco, ruído e ganho automáticos ficam desligados.
+      </p>
+    </Secao>
   );
 }

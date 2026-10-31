@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { useEstado, useResultadoFinal } from '../state/store';
 import { lacunasParaAd, lacunasPorSilencio, type Lacuna } from '../mapa/lacunas';
 import { ponte } from '../desktop/ponte';
@@ -142,3 +142,135 @@ export const tcSmpte = (ms: number, fps: number) => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}:${p(q)}`;
 };
+
+export interface Aba {
+  id: string;
+  rotulo: string;
+  /** contagem ou estado curto ao lado do rótulo (ex.: "3") */
+  marca?: string | number | null;
+  /** tom da marca */
+  tom?: 'neutro' | 'aviso' | 'erro';
+  /** conteúdo; recebe o elemento que rola (para listas virtualizadas) */
+  conteudo: ReactNode | ((rolagem: RefObject<HTMLDivElement>) => ReactNode);
+}
+
+/**
+ * Painel com abas internas (padrão WAI-ARIA de abas): setas ←/→, Home e End
+ * movem entre as abas; só a aba ativa entra na ordem de Tab. A última aba
+ * escolhida é lembrada por painel (`memoria`) durante a sessão.
+ */
+export function PainelAbas({
+  titulo,
+  acoes,
+  faixa,
+  abas,
+  memoria,
+  rotulo,
+  className = '',
+}: {
+  titulo: ReactNode;
+  acoes?: ReactNode;
+  /** linha fixa entre as abas e o conteúdo (ex.: resumo) */
+  faixa?: ReactNode;
+  abas: Aba[];
+  memoria: string;
+  rotulo: string;
+  className?: string;
+}) {
+  const idBase = useId();
+  const chave = `estudio:aba:${memoria}`;
+  const [ativa, setAtivaEstado] = useState<string>(() => {
+    try {
+      const s = sessionStorage.getItem(chave);
+      if (s && abas.some((a) => a.id === s)) return s;
+    } catch {
+      /* sem armazenamento */
+    }
+    return abas[0]?.id ?? '';
+  });
+  const setAtiva = (id: string) => {
+    setAtivaEstado(id);
+    try {
+      sessionStorage.setItem(chave, id);
+    } catch {
+      /* sem armazenamento */
+    }
+  };
+  const atual = abas.find((a) => a.id === ativa) ?? abas[0];
+  const rolagem = useRef<HTMLDivElement>(null);
+  const botoes = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  function teclado(e: KeyboardEvent<HTMLDivElement>) {
+    const i = abas.findIndex((a) => a.id === atual?.id);
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % abas.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + abas.length) % abas.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = abas.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    setAtiva(abas[j].id);
+    botoes.current[abas[j].id]?.focus();
+  }
+
+  const corMarca = {
+    neutro: 'bg-paper-400 text-navy',
+    aviso: 'bg-warn-100 text-warn',
+    erro: 'bg-bad-100 text-bad',
+  } as const;
+
+  return (
+    <section className={`painel ${className}`} aria-label={rotulo}>
+      <header className="painel-cabeca">
+        <h2 className="min-w-0 truncate">{titulo}</h2>
+        {acoes ? <div className="ml-auto flex items-center gap-1 normal-case tracking-normal">{acoes}</div> : null}
+      </header>
+      <div
+        role="tablist"
+        aria-label={`Seções de ${rotulo}`}
+        className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-paper-400 px-1.5"
+        onKeyDown={teclado}
+      >
+        {abas.map((a) => {
+          const sel = a.id === atual?.id;
+          return (
+            <button
+              key={a.id}
+              ref={(el) => {
+                botoes.current[a.id] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`${idBase}-aba-${a.id}`}
+              aria-selected={sel}
+              aria-controls={`${idBase}-painel-${a.id}`}
+              tabIndex={sel ? 0 : -1}
+              onClick={() => setAtiva(a.id)}
+              className={`-mb-px inline-flex h-8 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium ${
+                sel ? 'border-terra text-navy' : 'border-transparent text-navy-500 hover:text-navy'
+              }`}
+            >
+              {a.rotulo}
+              {a.marca !== undefined && a.marca !== null && a.marca !== '' ? (
+                <span className={`rounded-full px-1.5 text-2xs leading-4 ${corMarca[a.tom ?? 'neutro']}`}>
+                  {a.marca}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      {faixa}
+      <div
+        ref={rolagem}
+        role="tabpanel"
+        id={`${idBase}-painel-${atual?.id}`}
+        aria-labelledby={`${idBase}-aba-${atual?.id}`}
+        tabIndex={0}
+        className="painel-corpo focus-visible:outline-offset-[-2px]"
+      >
+        {atual ? (typeof atual.conteudo === 'function' ? atual.conteudo(rolagem) : atual.conteudo) : null}
+      </div>
+    </section>
+  );
+}

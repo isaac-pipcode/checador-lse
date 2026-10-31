@@ -10,23 +10,28 @@ import type { Clipe, PontoGanho } from '../ad/mixagem';
 import type { BlocoAD, ParametrosAD } from '../ad/tipos';
 import type { ComandoGravacao, EstadoPrompter } from '../ad/prompter';
 import type { JanelaLibras } from '../libras/tipos';
+import type { InfoVideo } from '../midia/avaliacao';
 
 export interface MidiaEscolhida {
   caminho: string;
   nome: string;
   /** URL servível pelo protocolo `midia://` (com suporte a Range) */
   url: string;
+  /** sondagem do ffprobe (codec, resolução, cadência…), para decidir sobre proxy */
+  info?: InfoVideo | null;
 }
 
 export interface ProjetoArquivo {
   formato: 'estudio-acessibilidade';
   versao: 1;
   salvoEm: string;
-  video: { nome: string; caminho: string | null } | null;
+  video: { nome: string; caminho: string | null; proxy?: string | null; usarProxy?: boolean } | null;
   legenda: { nome: string; conteudo: string } | null;
   ad: { parametros: ParametrosAD; blocos: BlocoAD[] };
   /** passo 3 (ausente em projetos antigos) */
-  libras?: Omit<JanelaLibras, 'clipe'> & { clipe: { nome: string; caminho: string | null; duracaoMs: number } | null };
+  libras?: Omit<JanelaLibras, 'clipe'> & {
+    clipe: { nome: string; caminho: string | null; duracaoMs: number; proxy?: string | null } | null;
+  };
 }
 
 export interface ArquivoTake {
@@ -113,6 +118,19 @@ export interface PonteDesktop {
   // ---- Libras e entrega -------------------------------------------------
   escolherClipeLibras(): Promise<(MidiaEscolhida & { duracaoMs: number; largura: number; altura: number }) | null>;
   renderizarEntrega(pedido: PedidoEntrega, aoProgredir: (fracao: number, etapa: string) => void): Promise<RelatorioEntrega | null>;
+
+  // ---- Mídia e proxy ------------------------------------------------------
+  sondarMidia(caminho: string): Promise<InfoVideo>;
+  /**
+   * Gera (ou reaproveita) o proxy de edição. Fica em `proxies/` ao lado do
+   * projeto, se houver; senão, na pasta de dados do aplicativo.
+   */
+  gerarProxy(
+    caminho: string,
+    projetoCaminho: string | null,
+    aoProgredir: (fracao: number) => void,
+  ): Promise<{ caminho: string; url: string; reaproveitado: boolean }>;
+  cancelarProxy(caminho: string): Promise<void>;
 
   // ---- Projetos ----------------------------------------------------------
   projetosRecentes(): Promise<ResumoProjeto[]>;

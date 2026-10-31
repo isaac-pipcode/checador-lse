@@ -75,6 +75,7 @@ Contorno de 2 px no acento (`terra`), com 2 px de folga, em todo elemento focáv
 | Segmento | `.segmento` | `aria-pressed` = selecionado | estado anunciado pelo `aria-pressed` |
 | Aba de página | `.aba` | `aria-current="page"` = barra de acento no topo | dentro de `nav` rotulado |
 | Painel | `comum.tsx` (`Painel`) | cabeçalho fino + corpo rolável | `section` com `aria-label` |
+| Painel com abas | `comum.tsx` (`PainelAbas`) | abas com marca de contagem (neutra, aviso, erro); faixa fixa opcional entre as abas e o conteúdo; última aba lembrada por painel | padrão WAI-ARIA de abas: `tablist`/`tab`/`tabpanel`, setas ←/→, Home/End, só a aba ativa na ordem de Tab |
 | Seção de inspetor | `Secao` | título em caixa-alta | `aria-labelledby` |
 | Deslizante | `Deslizante` | valor formatado; **marca de referência** (mínimo da norma) | `label` associado; a marca também vem em texto |
 | Chip de estado | `.chip` | ok, aviso, erro, pendente | **sempre ícone + texto**, nunca só cor |
@@ -95,6 +96,17 @@ audível) e timecode SMPTE (HH:MM:SS:QQ) no acento. Botões de quadro a quadro.
 (pior severidade pendente), Audiodescrição (janela do bloco + take), Libras (trecho do clipe) e
 Lacunas. Cortes de plano em traço vertical. O trecho além do fim da obra fica sombreado. Ao
 clicar num item de outra etapa, o app navega para a página dela.
+
+**Um assunto por aba.** Painel com mais de um assunto usa abas internas, e cada aba responde a uma
+pergunta: na lista de LSE, "o que revisar" (Legendas · Obra inteira · Lote e métricas); no
+inspetor, "o que ajustar" (Vídeo · Regras · Assistente; Janela · Enquadramento · Fundo). O que
+precisa ficar sempre visível (os contadores da revisão) fica numa faixa fixa acima do conteúdo,
+não dentro de uma aba. Ações raras saem da superfície: os ajustes de janela de um bloco de AD
+ficam em "Janela e opções", recolhido.
+
+**Proxy de edição.** O monitor mostra o que está tocando ("(proxy)" no nome), a descrição técnica
+do original e a escolha Proxy/Original. Quando o original não é reproduzível, um aviso sobre a
+imagem diz por que e oferece a saída. A entrega nunca usa o proxy.
 
 **Indicador de etapa.** Cada aba da barra de páginas traz o estado em texto ("3 erros", "1/4
 gravados", "pronta"), com cor de reforço.

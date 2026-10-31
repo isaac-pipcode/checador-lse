@@ -2,9 +2,10 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell }
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { FFMPEG, decodificarStream, executar, sondar, versaoFfmpeg } from './ffmpeg';
+import { FFMPEG, decodificarStream, executar, sondar, sondarVideo, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
 import { renderizarEntrega } from './entrega';
+import { gerarProxy } from './proxy';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoEntrega, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
@@ -242,7 +243,8 @@ function registrarIpc() {
     });
     if (r.canceled || !r.filePaths[0]) return null;
     const caminho = r.filePaths[0];
-    return { caminho, nome: basename(caminho), url: urlDeMidia(caminho) };
+    const info = await sondarVideo(caminho).catch(() => null);
+    return { caminho, nome: basename(caminho), url: urlDeMidia(caminho), info };
   });
 
   // Só caminhos que vieram de um projeto aberto pelo usuário (ver projeto:abrir).
@@ -323,6 +325,9 @@ function registrarIpc() {
     projetosPermitidos.add(resolve(caminho));
     if (lido.projeto.video?.caminho) caminhosDeProjeto.add(resolve(lido.projeto.video.caminho));
     if (lido.projeto.libras?.clipe?.caminho) caminhosDeProjeto.add(resolve(lido.projeto.libras.clipe.caminho));
+    for (const px of [lido.projeto.video?.proxy, lido.projeto.libras?.clipe?.proxy]) {
+      if (px && existsSync(px)) caminhosDeProjeto.add(resolve(px));
+    }
     await registrarRecente(caminho, lido.projeto);
     return lido;
   };
@@ -370,8 +375,47 @@ function registrarIpc() {
     if (r.canceled || !r.filePaths[0]) return null;
     const caminho = r.filePaths[0];
     const info = await sondar(caminho);
-    return { caminho, nome: basename(caminho), url: urlDeMidia(caminho), duracaoMs: info.duracaoMs, largura: info.largura, altura: info.altura };
+    const video = await sondarVideo(caminho).catch(() => null);
+    return {
+      caminho,
+      nome: basename(caminho),
+      url: urlDeMidia(caminho),
+      duracaoMs: info.duracaoMs,
+      largura: info.largura,
+      altura: info.altura,
+      info: video,
+    };
   });
+
+  const ehAutorizado = (c: string) => [...autorizados.values()].includes(resolve(c));
+
+  ipcMain.handle('midia:sondar', (_e, caminho: string) => {
+    if (!ehAutorizado(caminho)) throw new Error('Caminho não autorizado.');
+    return sondarVideo(caminho);
+  });
+
+  // Proxies: um trabalho por original; cancelável.
+  const trabalhosProxy = new Map<string, AbortController>();
+  ipcMain.handle(
+    'proxy:gerar',
+    async (e, { id, caminho, projetoCaminho }: { id: string; caminho: string; projetoCaminho: string | null }) => {
+      if (!ehAutorizado(caminho)) throw new Error('Caminho não autorizado.');
+      const pasta =
+        projetoCaminho && projetosPermitidos.has(resolve(projetoCaminho))
+          ? join(dirname(projetoCaminho), 'proxies')
+          : join(app.getPath('userData'), 'proxies');
+      trabalhosProxy.get(resolve(caminho))?.abort();
+      const ctrl = new AbortController();
+      trabalhosProxy.set(resolve(caminho), ctrl);
+      try {
+        const r = await gerarProxy(caminho, pasta, (f) => progresso(e, id, f), ctrl.signal);
+        return { ...r, url: urlDeMidia(r.caminho) };
+      } finally {
+        if (trabalhosProxy.get(resolve(caminho)) === ctrl) trabalhosProxy.delete(resolve(caminho));
+      }
+    },
+  );
+  ipcMain.handle('proxy:cancelar', (_e, caminho: string) => trabalhosProxy.get(resolve(caminho))?.abort());
 
   ipcMain.handle('entrega:renderizar', async (e, { id, pedido }: { id: string; pedido: PedidoEntrega }) => {
     const permitidos = [...autorizados.values()];

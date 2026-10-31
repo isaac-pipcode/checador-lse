@@ -192,36 +192,9 @@ export function CartaoBloco({
           <span aria-hidden="true">{b.aprovado ? '✓' : '✎'}</span>
           {b.aprovado ? 'Aprovado para gravação' : 'Rascunho'}
         </span>
-        <span className="ml-auto flex flex-wrap gap-1" role="group" aria-label={`Ajustar janela do bloco ${n}`}>
-          <button type="button" className="btn-fantasma px-2 py-0.5 text-xs" onClick={() => mover('inicioMs', -250)}>
-            Início −¼ s
-          </button>
-          <button type="button" className="btn-fantasma px-2 py-0.5 text-xs" onClick={() => mover('inicioMs', 250)}>
-            Início +¼ s
-          </button>
-          <button type="button" className="btn-fantasma px-2 py-0.5 text-xs" onClick={() => mover('fimMs', -250)}>
-            Fim −¼ s
-          </button>
-          <button type="button" className="btn-fantasma px-2 py-0.5 text-xs" onClick={() => mover('fimMs', 250)}>
-            Fim +¼ s
-          </button>
-          <button
-            type="button"
-            className="btn-fantasma px-2 py-0.5 text-xs text-bad"
-            onClick={() => {
-              if (!temTexto && b.takes.length === 0) despachar({ tipo: 'adRemover', id: b.id });
-              else if (window.confirm(`Excluir o bloco ${n}, com roteiro e gravações?`)) {
-                b.takes.forEach((t) => descartarTake(t.id));
-                despachar({ tipo: 'adRemover', id: b.id });
-              }
-            }}
-          >
-            Excluir
-          </button>
-        </span>
       </header>
 
-      <div className="mt-2 grid gap-3 md:grid-cols-[1fr_auto]">
+      <div className="mt-2 grid gap-2">
         <div>
           <label className="rotulo sr-only-focusable" htmlFor={`texto-${b.id}`}>
             Roteiro do bloco {n}
@@ -255,22 +228,22 @@ export function CartaoBloco({
           />
         </div>
 
-        <div className="flex flex-col gap-2 md:w-64">
+        <div className="flex flex-wrap items-start gap-1.5">
           <button
             type="button"
-            className={b.aprovado ? 'btn-secundario justify-center' : 'btn-primario justify-center'}
+            className={b.aprovado ? 'btn-secundario' : 'btn-primario'}
             disabled={!temTexto}
             aria-pressed={!!b.aprovado}
             onClick={() => despachar({ tipo: 'adAprovar', id: b.id, aprovado: !b.aprovado })}
           >
             {b.aprovado ? 'Retirar aprovação' : 'Aprovar para gravação'}
           </button>
-          <button type="button" className="btn-secundario justify-center" disabled={!podeGravar} onClick={aoOuvir}>
+          <button type="button" className="btn-secundario" disabled={!podeGravar} onClick={aoOuvir}>
             <span aria-hidden="true">▶</span> Ouvir o trecho
           </button>
           <button
             type="button"
-            className="btn-secundario justify-center"
+            className="btn-secundario"
             disabled={!podeGravar || !b.aprovado}
             title={b.aprovado ? undefined : 'Aprove o roteiro para gravar'}
             onClick={aoGravar}
@@ -278,7 +251,7 @@ export function CartaoBloco({
             <span aria-hidden="true">●</span> {b.takes.length ? 'Gravar outro take' : 'Gravar este bloco'}
           </button>
           {b.takes.length > 0 ? (
-            <ul className="space-y-1 text-xs" aria-label={`Gravações do bloco ${n}`}>
+            <ul className="w-full space-y-1 text-xs" aria-label={`Gravações do bloco ${n}`}>
               {b.takes.map((t, k) => (
                 <LinhaTake key={t.id} blocoId={b.id} take={t} k={k + 1} ativo={ativo?.id === t.id} />
               ))}
@@ -287,6 +260,36 @@ export function CartaoBloco({
         </div>
       </div>
 
+      <details className="mt-2 border-t border-paper-400 pt-1.5">
+        <summary className="cursor-pointer text-2xs font-medium text-navy-500">Janela e opções</summary>
+        <span className="mt-1.5 flex flex-wrap gap-1" role="group" aria-label={`Ajustar janela do bloco ${n}`}>
+          <button type="button" className="btn-secundario h-7 px-2 text-2xs" onClick={() => mover('inicioMs', -250)}>
+            Início −¼ s
+          </button>
+          <button type="button" className="btn-secundario h-7 px-2 text-2xs" onClick={() => mover('inicioMs', 250)}>
+            Início +¼ s
+          </button>
+          <button type="button" className="btn-secundario h-7 px-2 text-2xs" onClick={() => mover('fimMs', -250)}>
+            Fim −¼ s
+          </button>
+          <button type="button" className="btn-secundario h-7 px-2 text-2xs" onClick={() => mover('fimMs', 250)}>
+            Fim +¼ s
+          </button>
+          <button
+            type="button"
+            className="btn-fantasma ml-auto h-7 px-2 text-2xs text-bad"
+            onClick={() => {
+              if (!temTexto && b.takes.length === 0) despachar({ tipo: 'adRemover', id: b.id });
+              else if (window.confirm(`Excluir o bloco ${n}, com roteiro e gravações?`)) {
+                b.takes.forEach((t) => descartarTake(t.id));
+                despachar({ tipo: 'adRemover', id: b.id });
+              }
+            }}
+          >
+            Excluir
+          </button>
+        </span>
+      </details>
       {apontamentos.filter((a) => a.nivel !== 'pendente').length > 0 ? (
         <ul className="mt-2 space-y-1 text-sm">
           {apontamentos

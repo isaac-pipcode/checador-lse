@@ -265,12 +265,47 @@ Página **Entrega**: prontidão por etapa (em texto, com atalho para a página),
 Testado com ffmpeg real: as faixas e os nomes são conferidos, e os pixels na região da janela
 também, antes, durante e depois do clipe.
 
+## Proxy de edição
+
+Masters de finalização chegam em formatos que o motor de vídeo do app não toca (ProRes, DNxHD/HR,
+CineForm, MPEG-2, H.264 de 10 bits) ou que tocam mal (4K, mais de 50 Mb/s, 50/60 qd/s em alta
+resolução). O estúdio sonda o arquivo (ffprobe) e decide:
+
+- **Obrigatório** (formato não reproduzível): o proxy é gerado assim que o vídeo é aberto, em
+  paralelo à análise do áudio. Até ficar pronto, um aviso sobre o monitor explica o motivo.
+- **Recomendado** (HEVC, que depende de hardware; arquivos pesados): botão *Gerar proxy* no
+  cabeçalho do monitor.
+- **Dispensável:** nada a fazer.
+
+O proxy é H.264 8 bits 4:2:0, no máximo 720p, com quadro-chave a cada 12 quadros (busca quadro a
+quadro instantânea), AAC estéreo e mesma linha do tempo do original. Fica em `proxies/`, ao lado
+do projeto, com nome derivado do caminho, do tamanho e da data do original; se já existir, é
+reaproveitado. A geração é cancelável e escreve num arquivo provisório, renomeado ao fim.
+
+O monitor, a detecção de cortes e a prévia de Libras usam o proxy. **A entrega usa sempre o
+original:** a mixagem lê o áudio do master, e a composição da janela de Libras e a codificação
+partem do vídeo original. O clipe do intérprete tem o mesmo tratamento (o ProRes 4444 é comum).
+
+Testado com um master ProRes 422 Proxy de 10 bits, 1080p, 23,976 qd/s e áudio PCM de 24 bits:
+o proxy sai em 1280×720 com a mesma duração; a entrega sai em 1920×1080 a 23,976 qd/s; ao
+reabrir, o proxy é reaproveitado sem nova geração.
+
+**Limites.** A trilha de timecode do master (por exemplo, 01:00:00:00) não é lida: a linha do
+tempo começa em zero, no início do arquivo. No proxy, o áudio é a primeira faixa reduzida a
+estéreo; masters com várias faixas mono (M&E, idiomas) precisam de escolha de faixa, ainda não
+implementada. O ProRes 4444 com canal alfa dispensaria o chroma key, mas isso ainda não é
+aproveitado.
+
 ## Interface
 
 Tema escuro por padrão, com tema claro alternativo; layout de editor de vídeo com dashboard de
 projetos, painéis, monitor, inspetor, linha do tempo multipista e páginas por etapa. Tokens,
 componentes, padrões e a auditoria de partida estão em
 [docs/design-system.md](docs/design-system.md).
+
+Painéis com mais de um assunto usam **abas internas** (padrão WAI-ARIA), e o que precisa ficar
+sempre à vista fica numa faixa fixa: na página de Legendas, a lista revisável, os apontamentos da
+obra inteira e o lote com as métricas ficam em abas, com os contadores acima delas.
 
 O **dashboard** lista os projetos recentes, com miniatura gerada pelo ffmpeg a 10% da obra e o
 estado de cada etapa, e permite filtrar, criar (o estúdio cria uma subpasta com o projeto e as

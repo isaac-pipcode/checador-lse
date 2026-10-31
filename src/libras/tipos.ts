@@ -12,9 +12,13 @@ export type Canto = 'inf-dir' | 'inf-esq' | 'sup-dir' | 'sup-esq';
 
 export interface ClipeLibras {
   nome: string;
+  /** original: é dele que a entrega compõe a janela */
   caminho: string | null;
+  /** URL em uso na prévia (do proxy, quando houver) */
   url: string;
   duracaoMs: number;
+  urlOriginal?: string;
+  proxy?: { caminho: string; url: string } | null;
 }
 
 export interface Chroma {

@@ -29,6 +29,7 @@ import { PARAMETROS_AD_PADRAO } from '../ad/tipos';
 import type { Intervalo } from '../mapa/tipos';
 import { novoId } from '../ad/takes';
 import { JANELA_PADRAO, type JanelaLibras } from '../libras/tipos';
+import type { InfoVideo } from '../midia/avaliacao';
 
 export type Pagina = 'projetos' | 'lse' | 'ad' | 'libras' | 'entrega';
 
@@ -63,7 +64,21 @@ export interface Estado {
   /** pilha de operações em lote, para desfazer */
   historicoLote: Array<{ rotulo: string; anterior: ReviewState }>;
   /** vídeo local (object URL); independe do arquivo de legenda */
-  video: { url: string; nome: string; caminho: string | null } | null;
+  /**
+   * Vídeo da obra. `caminho`/`urlOriginal` são o master (é dele que a entrega
+   * renderiza); `url` é o que o monitor toca — o proxy, quando em uso.
+   */
+  video: {
+    url: string;
+    nome: string;
+    caminho: string | null;
+    urlOriginal: string;
+    info: InfoVideo | null;
+    proxy: { caminho: string; url: string } | null;
+    usarProxy: boolean;
+  } | null;
+  /** proxies em geração, por caminho do original */
+  proxies: Record<string, { progresso: number; erro: string | null }>;
   ad: { blocos: BlocoAD[]; parametros: ParametrosAD };
   /** projeto desktop: caminho do .estudio.json e se há mudanças não salvas */
   projeto: { caminho: string | null; sujo: boolean; nome: string | null };
@@ -98,6 +113,7 @@ export const estadoInicial: Estado = {
   anuncio: '',
   historicoLote: [],
   video: null,
+  proxies: {},
   ad: { blocos: [], parametros: PARAMETROS_AD_PADRAO },
   projeto: { caminho: null, sujo: false, nome: null },
   libras: JANELA_PADRAO,
@@ -126,7 +142,10 @@ type Acao =
   | { tipo: 'llm'; mudanca: Partial<EstadoLlm> }
   | { tipo: 'sugestaoLlm'; base: Suggestion; after: CueSnapshot; confianca: number; texto: string }
   | { tipo: 'anunciar'; texto: string }
-  | { tipo: 'video'; url: string; nome: string; caminho: string | null }
+  | { tipo: 'video'; url: string; nome: string; caminho: string | null; info?: InfoVideo | null }
+  | { tipo: 'videoProxy'; proxy: { caminho: string; url: string } | null; usar: boolean; restaurando?: boolean }
+  | { tipo: 'videoUsarProxy'; usar: boolean }
+  | { tipo: 'proxyTrabalho'; caminho: string; progresso: number | null; erro?: string | null }
   | { tipo: 'adCriarDasLacunas'; lacunas: Intervalo[] }
   | { tipo: 'adAdicionar'; inicioMs: number; fimMs: number }
   | { tipo: 'adEditar'; id: string; mudanca: Partial<Pick<BlocoAD, 'texto' | 'nota' | 'inicioMs' | 'fimMs'>> }
@@ -334,7 +353,19 @@ function redutor(estado: Estado, acao: Acao): Estado {
       return { ...estado, anuncio: acao.texto };
 
     case 'video': {
-      const novo = { ...estado, video: { url: acao.url, nome: acao.nome, caminho: acao.caminho }, mapa: null };
+      const novo = {
+        ...estado,
+        video: {
+          url: acao.url,
+          nome: acao.nome,
+          caminho: acao.caminho,
+          urlOriginal: acao.url,
+          info: acao.info ?? null,
+          proxy: null,
+          usarProxy: false,
+        },
+        mapa: null,
+      };
       return estado.cues.length > 0 ? reanalisar(novo, estado.config) : novo;
     }
 
@@ -518,6 +549,36 @@ function redutor(estado: Estado, acao: Acao): Estado {
         libras: { ...estado.libras, ...acao.mudanca },
         projeto: { ...estado.projeto, sujo: true },
       };
+
+    case 'videoProxy': {
+      if (!estado.video) return estado;
+      const usar = acao.usar && !!acao.proxy;
+      return {
+        ...estado,
+        video: { ...estado.video, proxy: acao.proxy, usarProxy: usar, url: usar ? acao.proxy!.url : estado.video.urlOriginal },
+        // restaurar o proxy ao abrir um projeto não é alteração
+        projeto: acao.restaurando ? estado.projeto : { ...estado.projeto, sujo: true },
+        anuncio: acao.proxy ? (usar ? 'Monitor usando o proxy de edição.' : 'Proxy disponível.') : estado.anuncio,
+      };
+    }
+
+    case 'videoUsarProxy': {
+      if (!estado.video) return estado;
+      const usar = acao.usar && !!estado.video.proxy;
+      return {
+        ...estado,
+        video: { ...estado.video, usarProxy: usar, url: usar ? estado.video.proxy!.url : estado.video.urlOriginal },
+        projeto: { ...estado.projeto, sujo: true },
+        anuncio: usar ? 'Monitor usando o proxy.' : 'Monitor usando o original.',
+      };
+    }
+
+    case 'proxyTrabalho': {
+      const proxies = { ...estado.proxies };
+      if (acao.progresso === null && !acao.erro) delete proxies[acao.caminho];
+      else proxies[acao.caminho] = { progresso: acao.progresso ?? 0, erro: acao.erro ?? null };
+      return { ...estado, proxies };
+    }
 
     case 'seek':
       return { ...estado, pedidoSeek: { ms: acao.ms, n: (estado.pedidoSeek?.n ?? 0) + 1 } };

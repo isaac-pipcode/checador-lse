@@ -1,5 +1,6 @@
 import type { Dispatch } from 'react';
 import type { Acao } from '../state/store';
+import type { InfoVideo } from '../midia/avaliacao';
 import { detectarAtividade } from '../mapa/sinal';
 import { ErroMidia, JANELA_MS } from '../mapa/midia';
 import { PARAMETROS_ATIVIDADE_PADRAO, type MapaTemporal } from '../mapa/tipos';
@@ -11,7 +12,7 @@ import { PARAMETROS_ATIVIDADE_PADRAO, type MapaTemporal } from '../mapa/tipos';
  */
 export async function carregarMidia(
   despachar: Dispatch<Acao>,
-  midia: { url: string; nome: string; caminho: string | null },
+  midia: { url: string; nome: string; caminho: string | null; info?: InfoVideo | null },
   analisar: () => Promise<{ envelopeDb: Float32Array; duracaoMs: number }>,
 ) {
   despachar({ tipo: 'video', ...midia });

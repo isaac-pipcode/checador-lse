@@ -30,6 +30,9 @@ const ponte: PonteDesktop = {
   mostrarNaPasta: (caminho) => ipcRenderer.invoke('pasta:mostrar', caminho),
 
   escolherClipeLibras: () => ipcRenderer.invoke('libras:escolher'),
+  sondarMidia: (caminho) => ipcRenderer.invoke('midia:sondar', caminho),
+  gerarProxy: (caminho, projetoCaminho, aoProgredir) => comProgresso('proxy:gerar', { caminho, projetoCaminho }, (f) => aoProgredir(f)),
+  cancelarProxy: (caminho) => ipcRenderer.invoke('proxy:cancelar', caminho),
   renderizarEntrega: (pedido, aoProgredir) => comProgresso('entrega:renderizar', { pedido }, aoProgredir),
   projetosRecentes: () => ipcRenderer.invoke('projetos:recentes'),
   novoProjeto: (nome) => ipcRenderer.invoke('projetos:novo', nome),

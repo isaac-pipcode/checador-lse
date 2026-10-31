@@ -29,10 +29,7 @@ export function ListaLegendas({
     return m;
   }, [filtradas]);
 
-  const documento = useMemo(
-    () => filtradas.filter((s) => s.cueIndex === DOCUMENT_SCOPE),
-    [filtradas],
-  );
+  const documento = useMemo(() => filtradas.filter((s) => s.cueIndex === DOCUMENT_SCOPE), [filtradas]);
 
   const f = estado.filtros;
   const filtroAtivo =
@@ -48,10 +45,7 @@ export function ListaLegendas({
     return estado.cues.filter((c) => porLegenda.has(c.index));
   }, [estado.cues, porLegenda, filtroAtivo]);
 
-  const finaisPorIndice = useMemo(
-    () => new Map(final.cues.map((c) => [c.index, c.lines])),
-    [final.cues],
-  );
+  const finaisPorIndice = useMemo(() => new Map(final.cues.map((c) => [c.index, c.lines])), [final.cues]);
 
   /** Violações que sobrevivem às decisões tomadas, por legenda. */
   const remanescentesPorIndice = useMemo(() => {
@@ -108,29 +102,9 @@ export function ListaLegendas({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {documento.length > 0 ? (
-        <section aria-labelledby="titulo-documento" className="border-b border-paper-400 px-4 py-3">
-          <h3 id="titulo-documento" className="text-sm font-semibold">
-            Apontamentos da obra inteira
-          </h3>
-          <ul className="mt-2 space-y-2">
-            {documento.map((s) => {
-              const item = estado.review[s.id];
-              return item ? (
-                <li key={s.id}>
-                  <CardSugestao item={item} />
-                </li>
-              ) : null;
-            })}
-          </ul>
-        </section>
-      ) : null}
-
       <div ref={container} role="region" aria-label="Lista de legendas">
         {visiveis.length === 0 ? (
-          <p className="px-4 py-8 text-center text-navy-700">
-            Nenhuma legenda corresponde aos filtros atuais.
-          </p>
+          <p className="px-4 py-8 text-center text-navy-700">Nenhuma legenda corresponde aos filtros atuais.</p>
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((v) => {
@@ -166,4 +140,39 @@ export function ListaLegendas({
       </div>
     </div>
   );
+}
+
+/**
+ * Apontamentos de escopo da obra inteira (checklists manuais, som sem legenda…),
+ * numa aba própria para não empurrar a lista de legendas.
+ */
+export function ApontamentosObra() {
+  const { estado } = useEstado();
+  const filtradas = useSugestoesFiltradas();
+  const documento = filtradas.filter((s) => s.cueIndex === DOCUMENT_SCOPE);
+  if (documento.length === 0) {
+    return (
+      <p className="p-4 text-center text-xs text-navy-500">
+        Nenhum apontamento de escopo da obra com os filtros atuais.
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-2 p-3">
+      {documento.map((s) => {
+        const item = estado.review[s.id];
+        return item ? (
+          <li key={s.id}>
+            <CardSugestao item={item} />
+          </li>
+        ) : null;
+      })}
+    </ul>
+  );
+}
+
+export function useContagemObra(): { total: number; pendentes: number } {
+  const { estado } = useEstado();
+  const doc = estado.sugestoes.filter((s) => s.cueIndex === DOCUMENT_SCOPE);
+  return { total: doc.length, pendentes: doc.filter((s) => estado.review[s.id]?.decision === 'pendente').length };
 }
