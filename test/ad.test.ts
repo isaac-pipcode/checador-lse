@@ -199,3 +199,35 @@ describe('pré e pós-rolagem', () => {
     expect(e.ad.parametros.duckingDb).toBe(P.duckingDb);
   });
 });
+
+describe('legenda do teleprompter', () => {
+  it('ajustes ficam dentro dos limites e arredondados', async () => {
+    const { ajustarLegenda, LEGENDA_PROMPTER_PADRAO } = await import('../src/ad/tipos');
+    expect(ajustarLegenda(LEGENDA_PROMPTER_PADRAO, { escala: 5 }).escala).toBe(2);
+    expect(ajustarLegenda(LEGENDA_PROMPTER_PADRAO, { escala: 0.1 }).escala).toBe(0.6);
+    expect(ajustarLegenda(LEGENDA_PROMPTER_PADRAO, { escala: 1 + 0.1 + 0.1 }).escala).toBe(1.2);
+    expect(ajustarLegenda(LEGENDA_PROMPTER_PADRAO, { alturaMaxima: 0.9 }).alturaMaxima).toBe(0.5);
+    expect(ajustarLegenda(LEGENDA_PROMPTER_PADRAO, { cor: 'amarelo' }).cor).toBe('amarelo');
+  });
+
+  it('+ e − mudam o tamanho em qualquer fase; o estado leva a legenda ao teleprompter', async () => {
+    const { comandoDaTecla, montarEstadoPrompter } = await import('../src/ad/prompter');
+    expect(comandoDaTecla('+', 'agora')).toBe('fonteMais');
+    expect(comandoDaTecla('-', 'ocioso')).toBe('fonteMenos');
+    const legenda = { cor: 'amarelo' as const, escala: 1.4, alturaMaxima: 0.25 };
+    const e = montarEstadoPrompter({
+      blocos: [], fila: [], blocoId: null, fase: 'ocioso', sequencia: false,
+      videoUrl: null, tempoMs: 0, tocando: false, aviso: null, parametros: { ...P, legenda },
+    });
+    expect(e.legenda).toEqual(legenda);
+  });
+
+  it('projeto sem ajustes de legenda abre com o padrão', async () => {
+    const { redutorParaTeste, estadoInicial } = await import('../src/state/store');
+    const e = redutorParaTeste(estadoInicial, {
+      tipo: 'projetoCarregado', caminho: 'x.json',
+      ad: { blocos: [], parametros: { prerollMs: 3000 } as unknown as typeof P },
+    });
+    expect(e.ad.parametros.legenda).toEqual({ cor: 'branco', escala: 1, alturaMaxima: 0.33 });
+  });
+});

@@ -5,6 +5,7 @@ import { Gravador } from '../../ad/gravador';
 import { contextoAudio, descartarTake, registrarTake } from '../../ad/audio';
 import { aparar, novoId } from '../../ad/takes';
 import type { Take } from '../../ad/tipos';
+import { ajustarLegenda } from '../../ad/tipos';
 import { takeAtivo } from '../../ad/tipos';
 import {
   GRAVANDO,
@@ -213,6 +214,12 @@ export function useSessaoGravacao() {
 
   function comando(c: ComandoGravacao) {
     const f = r.current.fase;
+    if (c === 'fonteMais' || c === 'fonteMenos') {
+      const atual = estadoRef.current.ad.parametros.legenda;
+      const legenda = ajustarLegenda(atual, { escala: atual.escala + (c === 'fonteMais' ? 0.1 : -0.1) });
+      despachar({ tipo: 'adParametros', mudanca: { legenda } });
+      return;
+    }
     if (c === 'encerrar') return encerrar('Sessão de gravação encerrada.');
     if (c === 'parar' && GRAVANDO.has(f)) return void pararTake();
     if (f !== 'revisao') return;

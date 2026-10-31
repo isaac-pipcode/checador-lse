@@ -1,4 +1,4 @@
-import type { BlocoAD, ParametrosAD } from './tipos';
+import type { BlocoAD, LegendaPrompter, ParametrosAD } from './tipos';
 import { duracaoUtil, takeAtivo } from './tipos';
 
 /**
@@ -33,13 +33,25 @@ export interface EstadoPrompter {
   /** resultado do último take, na fase de revisão */
   take: { duracaoMs: number; cabe: boolean; posicaoMs: number } | null;
   aviso: string | null;
+  legenda: LegendaPrompter;
 }
 
-export type ComandoGravacao = 'parar' | 'manter' | 'regravar' | 'descartar' | 'ouvir' | 'encerrar';
+export type ComandoGravacao =
+  | 'parar'
+  | 'manter'
+  | 'regravar'
+  | 'descartar'
+  | 'ouvir'
+  | 'encerrar'
+  | 'fonteMais'
+  | 'fonteMenos';
 
 /** Teclas da sessão, iguais nas duas janelas. Devolve null se a tecla não é da sessão. */
 export function comandoDaTecla(tecla: string, fase: FaseGravacao): ComandoGravacao | null {
   if (tecla === 'Escape') return 'encerrar';
+  // tamanho da letra: vale em qualquer fase, inclusive lendo
+  if (tecla === '+' || tecla === '=') return 'fonteMais';
+  if (tecla === '-' || tecla === '_') return 'fonteMenos';
   if (GRAVANDO.has(fase)) return tecla === 'Enter' || tecla === ' ' ? 'parar' : null;
   if (fase === 'revisao') {
     if (tecla === 'Enter') return 'manter';
@@ -60,6 +72,7 @@ export const ESTADO_PROMPTER_OCIOSO: EstadoPrompter = {
   proximo: null,
   take: null,
   aviso: null,
+  legenda: { cor: 'branco', escala: 1, alturaMaxima: 0.33 },
 };
 
 /** Blocos que entram no modo de gravação: aprovados e com texto, em ordem. */
@@ -110,5 +123,6 @@ export function montarEstadoPrompter(args: {
         }
       : null,
     aviso: args.aviso,
+    legenda: args.parametros.legenda,
   };
 }

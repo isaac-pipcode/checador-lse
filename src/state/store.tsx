@@ -455,7 +455,14 @@ function redutor(estado: Estado, acao: Acao): Estado {
       return {
         ...estado,
         // parâmetros novos ausentes em projetos antigos recebem o padrão
-        ad: { ...acao.ad, parametros: { ...PARAMETROS_AD_PADRAO, ...acao.ad.parametros } },
+        ad: {
+          ...acao.ad,
+          parametros: {
+            ...PARAMETROS_AD_PADRAO,
+            ...acao.ad.parametros,
+            legenda: { ...PARAMETROS_AD_PADRAO.legenda, ...(acao.ad.parametros.legenda ?? {}) },
+          },
+        },
         projeto: { caminho: acao.caminho, sujo: false },
         anuncio: `Projeto aberto: ${acao.ad.blocos.length} blocos de audiodescrição.`,
       };

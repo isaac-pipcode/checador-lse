@@ -1,6 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ComandoGravacao, EstadoPrompter } from '../../ad/prompter';
 import { comandoDaTecla } from '../../ad/prompter';
+
+/** A redução automática não passa disto: abaixo, a leitura a distância piora mais do que ajuda. */
+const REDUCAO_MINIMA = 0.6;
+
+export const COR_LEGENDA = { branco: '#FAF8F3', amarelo: '#FFE14D' } as const;
 
 const seg = (ms: number) => `${(Math.max(0, ms) / 1000).toFixed(1).replace('.', ',')} s`;
 
@@ -66,7 +71,46 @@ export function Teleprompter({
   // Contagem regressiva grande na pré-rolagem: 3, 2, 1.
   const contagem = e.fase === 'preroll' && faltaParaEntrar > 0 ? Math.ceil(faltaParaEntrar / 1000) : null;
 
-  const tamLegenda = compacto ? 'text-sm' : 'text-[clamp(1.5rem,3.2vw,3.6rem)]';
+  // ---- Caixa do roteiro: altura limitada, letra reduzida até caber ----------
+  const area = useRef<HTMLDivElement>(null);
+  const caixa = useRef<HTMLParagraphElement>(null);
+  const [alturaArea, setAlturaArea] = useState(0);
+  const [reducao, setReducao] = useState(1);
+  const [naoCabe, setNaoCabe] = useState(false);
+  const { cor, escala, alturaMaxima } = e.legenda;
+  const maxPx = Math.round(alturaArea * alturaMaxima);
+
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setAlturaArea(el.clientHeight));
+    ro.observe(el);
+    setAlturaArea(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  // Mede de forma síncrona (antes da pintura): reduz em passos de 8% até caber.
+  useLayoutEffect(() => {
+    const el = caixa.current;
+    if (!el || maxPx <= 0) return;
+    let r = 1;
+    el.style.setProperty('--reducao', '1');
+    while (el.scrollHeight > maxPx + 1 && r > REDUCAO_MINIMA) {
+      r = Math.max(REDUCAO_MINIMA, r * 0.92);
+      el.style.setProperty('--reducao', String(r));
+    }
+    setReducao(r);
+    setNaoCabe(el.scrollHeight > maxPx + 1);
+  }, [b?.texto, escala, maxPx, compacto]);
+
+  const estiloCaixa = {
+    '--base': compacto ? '0.875rem' : 'clamp(1.5rem, 3.2vw, 3.6rem)',
+    '--escala': String(escala),
+    '--reducao': String(reducao),
+    fontSize: 'calc(var(--base) * var(--escala) * var(--reducao))',
+    color: COR_LEGENDA[cor],
+    maxHeight: maxPx > 0 ? `${maxPx}px` : undefined,
+  } as CSSProperties;
   const tamFaixa = compacto ? 'text-xs' : 'text-xl';
 
   return (
@@ -85,7 +129,7 @@ export function Teleprompter({
       </div>
 
       {/* Imagem, ocupando o espaço disponível, com o roteiro sobreposto */}
-      <div className={`relative min-h-0 ${compacto ? 'aspect-video' : 'flex-1'}`}>
+      <div ref={area} className={`relative min-h-0 ${compacto ? 'aspect-video' : 'flex-1'}`}>
         {e.videoUrl && !compacto ? (
           <video
             ref={video}
@@ -112,8 +156,15 @@ export function Teleprompter({
         <div className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 ${compacto ? 'p-2' : 'px-[5%] pb-[4%]'}`}>
           {b ? (
             <>
+              {naoCabe ? (
+                <p className={`rounded bg-bad px-2 font-semibold text-paper ${compacto ? 'text-[10px]' : 'text-base'}`}>
+                  <span aria-hidden="true">✂ </span>O texto não cabe na caixa nem com a letra reduzida
+                </p>
+              ) : null}
               <p
-                className={`max-w-[92%] whitespace-pre-wrap rounded bg-black/75 px-[0.6em] py-[0.25em] text-center font-sans font-medium leading-tight ${tamLegenda} ${e.fase === 'preroll' ? 'text-paper/80' : ''} ${e.fase === 'agora' ? 'ring-2 ring-bad' : ''}`}
+                ref={caixa}
+                style={estiloCaixa}
+                className={`max-w-[92%] overflow-hidden whitespace-pre-wrap rounded bg-black/75 px-[0.6em] py-[0.25em] text-center font-sans font-medium leading-tight ${e.fase === 'preroll' ? 'opacity-80' : ''} ${e.fase === 'agora' ? 'ring-2 ring-bad' : ''}`}
               >
                 {b.texto}
               </p>
@@ -143,7 +194,14 @@ export function Teleprompter({
           </p>
         ) : e.fase === 'preroll' || e.fase === 'agora' || e.fase === 'posroll' ? (
           <p>
-            <Kbd>Enter</Kbd> ou <Kbd>Espaço</Kbd> encerra o take · <Kbd>Esc</Kbd> encerra a sessão
+            <Kbd>Enter</Kbd> ou <Kbd>Espaço</Kbd> encerra o take · <Kbd>Esc</Kbd> encerra a sessão ·{' '}
+            <Kbd>+</Kbd>/<Kbd>−</Kbd> tamanho da letra
+          </p>
+        ) : null}
+        {b && reducao < 0.995 ? (
+          <p>
+            Letra reduzida a {Math.round(reducao * 100)}% para caber na caixa
+            {naoCabe ? '' : ' — aumentar a letra não terá efeito; aumente a altura máxima da caixa ou encurte o roteiro'}.
           </p>
         ) : null}
         {e.proximo ? (

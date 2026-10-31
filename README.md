@@ -164,7 +164,12 @@ trilha a mais.
    Uma faixa fina no topo mostra a fase e o tempo: *Prepare-se · entra em 3,0 s* (com contagem
    regressiva grande 3, 2, 1 no centro) → *GRAVANDO — LEIA · restam 2,0 s* (com barra) →
    *Gravando a pós-rolagem · encerra em 2,0 s*. Uma faixa fina embaixo mostra o resultado do take
-   (*cabe / sai da janela*), as teclas e o próximo bloco. A janela principal é a única dona do estado; o teleprompter exibe e devolve
+   (*cabe / sai da janela*), as teclas e o próximo bloco.
+   **Ajustes da legenda** (console da operadora, salvos no projeto): cor **branca ou amarela**,
+   tamanho da letra (60–200%, também com `+`/`−` na cabine, durante a sessão) e **altura máxima
+   da caixa** (20–50% da imagem; padrão 33%). Se o roteiro não couber, a letra diminui sozinha
+   até 60% do tamanho escolhido, e o teleprompter informa a redução. Se nem assim couber, o texto
+   é cortado na borda da caixa e um aviso aparece sobre ela. A janela principal é a única dona do estado; o teleprompter exibe e devolve
    comandos. No navegador, há um teleprompter em tela cheia na própria janela.
 5. **Gravação em sequência.** A operadora inicia a fila (todos os aprovados ou só os sem
    gravação). Para cada bloco, a sessão faz **pré-rolagem de 3 s** → leitura →

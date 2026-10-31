@@ -10,7 +10,8 @@ import { descartarTake } from '../../ad/audio';
 import { blocosGravaveis, GRAVANDO } from '../../ad/prompter';
 import { ponte } from '../../desktop/ponte';
 import { useSessaoGravacao, type SessaoGravacao } from './useSessaoGravacao';
-import { Teleprompter } from './Teleprompter';
+import { COR_LEGENDA, Teleprompter } from './Teleprompter';
+import { ajustarLegenda, LIMITES_LEGENDA, type LegendaPrompter } from '../../ad/tipos';
 
 const seg = (ms: number) => `${(ms / 1000).toFixed(1).replace('.', ',')} s`;
 
@@ -443,6 +444,7 @@ function ModoGravacao({ sessao }: { sessao: SessaoGravacao }) {
         <div>
           <p className="mb-1 text-xs font-medium text-navy-700">O que o locutor vê</p>
           <Teleprompter estado={sessao.estadoPrompter} compacto />
+          <AjustesLegenda />
         </div>
       </div>
 
@@ -497,6 +499,81 @@ function ModoGravacao({ sessao }: { sessao: SessaoGravacao }) {
         </div>
       ) : null}
     </>
+  );
+}
+
+/** Cor, tamanho e altura máxima do roteiro no teleprompter. */
+function AjustesLegenda() {
+  const id = useId();
+  const { estado } = useEstado();
+  const despachar = useDespachar();
+  const l = estado.ad.parametros.legenda;
+  const mudar = (m: Partial<LegendaPrompter>) =>
+    despachar({ tipo: 'adParametros', mudanca: { legenda: ajustarLegenda(l, m) } });
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+  return (
+    <fieldset className="mt-3 rounded border border-paper-400 p-3">
+      <legend className="px-1 text-sm font-medium">Legenda do teleprompter</legend>
+      <div className="flex flex-wrap items-center gap-4">
+        <div role="radiogroup" aria-label="Cor do texto" className="flex gap-2">
+          {(['branco', 'amarelo'] as const).map((c) => (
+            <label
+              key={c}
+              className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 text-sm ${l.cor === c ? 'border-navy bg-paper-200' : 'border-paper-400'}`}
+            >
+              <input type="radio" name={`${id}-cor`} checked={l.cor === c} onChange={() => mudar({ cor: c })} />
+              <span
+                aria-hidden="true"
+                className="inline-flex h-5 w-8 items-center justify-center rounded bg-black text-xs font-bold"
+                style={{ color: COR_LEGENDA[c] }}
+              >
+                Aa
+              </span>
+              {c === 'branco' ? 'Branco' : 'Amarelo'}
+            </label>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1" role="group" aria-label="Tamanho da letra">
+          <button
+            type="button"
+            className="btn-secundario px-2 py-0.5"
+            disabled={l.escala <= LIMITES_LEGENDA.escala[0]}
+            onClick={() => mudar({ escala: l.escala - 0.1 })}
+          >
+            A<span className="sr-only-focusable"> menor</span>−
+          </button>
+          <span className="w-24 text-center text-sm">Letra {pct(l.escala)}</span>
+          <button
+            type="button"
+            className="btn-secundario px-2 py-0.5"
+            disabled={l.escala >= LIMITES_LEGENDA.escala[1]}
+            onClick={() => mudar({ escala: l.escala + 0.1 })}
+          >
+            A<span className="sr-only-focusable"> maior</span>+
+          </button>
+        </div>
+      </div>
+
+      <label className="rotulo mt-3" htmlFor={`${id}-altura`}>
+        Altura máxima da caixa: {pct(l.alturaMaxima)} da imagem
+      </label>
+      <input
+        id={`${id}-altura`}
+        type="range"
+        min={LIMITES_LEGENDA.alturaMaxima[0]}
+        max={LIMITES_LEGENDA.alturaMaxima[1]}
+        step={0.01}
+        value={l.alturaMaxima}
+        onChange={(e) => mudar({ alturaMaxima: Number(e.target.value) })}
+        className="w-full max-w-xs"
+      />
+      <p className="mt-1 text-xs text-navy-500">
+        Se o texto não couber, a letra diminui sozinha (até 60% do tamanho escolhido); se ainda assim não couber, o
+        teleprompter avisa. Na cabine, <kbd>+</kbd> e <kbd>−</kbd> mudam o tamanho durante a sessão. Salvo no projeto.
+      </p>
+    </fieldset>
   );
 }
 
