@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { DOCUMENT_SCOPE } from '../model/types';
 import { useEstado, useResultadoFinal, useSugestoesFiltradas } from '../state/store';
@@ -6,7 +6,7 @@ import { ItemLegenda } from './ItemLegenda';
 import { CardSugestao } from './CardSugestao';
 
 export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
-  const { estado } = useEstado();
+  const { estado, despachar } = useEstado();
   const filtradas = useSugestoesFiltradas();
   const final = useResultadoFinal();
   const container = useRef<HTMLDivElement>(null);
@@ -76,6 +76,27 @@ export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
     scrollMargin: offset,
   });
 
+  // Pedido vindo da linha do tempo: rola até a legenda (mesmo fora da janela
+  // virtualizada) e leva o foco ao seu título.
+  const pedido = estado.pedidoLista;
+  useEffect(() => {
+    if (!pedido) return;
+    const i = visiveis.findIndex((c) => c.index === pedido.index);
+    if (i < 0) return;
+    virtualizer.scrollToIndex(i, { align: 'center' });
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(`legenda-${pedido.index}`);
+      if (el) {
+        el.setAttribute('tabindex', '-1');
+        el.focus({ preventScroll: true });
+      }
+    }, 120);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedido]);
+
+  const temVideo = estado.video !== null;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {documento.length > 0 ? (
@@ -126,6 +147,7 @@ export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
                     linhasFinais={finaisPorIndice.get(cue.index)}
                     remanescentes={remanescentesPorIndice.get(cue.index) ?? 0}
                     mostrarPrevia={mostrarPrevia}
+                    aoVerNoVideo={temVideo ? () => despachar({ tipo: 'seek', ms: cue.startMs }) : undefined}
                   />
                 </div>
               );

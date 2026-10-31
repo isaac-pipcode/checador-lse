@@ -17,6 +17,7 @@ import { c8 } from './c8-limpeza-tipografica';
 import { l1 } from './l1-segmentacao';
 import { l2 } from './l2-reducao';
 import { c3, c4Manual, c7, x1, x2 } from './manuais';
+import { m1, m2, m3 } from './m-mapa';
 
 /** Catálogo de regras. A ordem define a ordem de exibição dentro de cada legenda. */
 export const CATALOGO: RegraRegistrada[] = [
@@ -40,6 +41,9 @@ export const CATALOGO: RegraRegistrada[] = [
   { id: 'L2', nome: 'Redução textual', categoria: 'linguistica', verificabilidade: 'llm', fundamento: 'Quando a velocidade excede o alvo, condensa-se ou omite-se o redundante, sem perder sentido.', executar: l2 },
   { id: 'X1', nome: 'Identificação de falante', categoria: 'contextual', verificabilidade: 'manual', fundamento: 'Cada troca de turno precisa ser identificável pelo espectador surdo.', executar: x1 },
   { id: 'X2', nome: 'Efeitos sonoros', categoria: 'contextual', verificabilidade: 'manual', fundamento: 'Efeitos sonoros relevantes à narrativa devem estar legendados (NASCIMENTO, 2013).', executar: x2 },
+  { id: 'M1', nome: 'Sincronia com o som', categoria: 'temporal', verificabilidade: 'sinal', fundamento: 'A legenda entra quando a fala começa. Exige o vídeo: compara a entrada com o início do som detectado na banda de voz.', executar: m1 },
+  { id: 'M2', nome: 'Corte de plano', categoria: 'temporal', verificabilidade: 'sinal', fundamento: 'Legenda que atravessa um corte por poucos quadros provoca releitura; cola-se ao corte. Convenção de mercado, não do Guia MinC.', executar: m2 },
+  { id: 'M3', nome: 'Som sem legenda', categoria: 'temporal', verificabilidade: 'sinal', fundamento: 'Trecho sonoro longo sem legenda: fala omitida, ou efeito sonoro/música a descrever (complementa X2).', executar: m3 },
 ];
 
 export const META_POR_ID = new Map(CATALOGO.map((r) => [r.id, r]));

@@ -176,6 +176,60 @@ export function PainelConfig() {
           </div>
 
           <fieldset className="mt-4 rounded border border-paper-400 p-3">
+            <legend className="px-1 text-sm font-medium">Verificações com vídeo (M1–M3) e lacunas</legend>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Campo id={`${idBase}-sinc`} rotulo="Tolerância de sincronia (ms)" dica="M1: defasagem aceita entre a entrada da legenda e o som.">
+                <input
+                  id={`${idBase}-sinc`}
+                  className="campo"
+                  type="number"
+                  min={0}
+                  step={50}
+                  value={c.toleranciaSincroniaMs}
+                  onChange={(e) => num('toleranciaSincroniaMs', e.target.value)}
+                />
+              </Campo>
+              <Campo
+                id={`${idBase}-corte`}
+                rotulo="Margem ao corte (ms)"
+                dica={`M2: ${msParaFrames(c.margemCorteMs, c.fps)} quadros a ${c.fps} fps. Convenção de mercado.`}
+              >
+                <input
+                  id={`${idBase}-corte`}
+                  className="campo"
+                  type="number"
+                  min={0}
+                  step={10}
+                  value={c.margemCorteMs}
+                  onChange={(e) => num('margemCorteMs', e.target.value)}
+                />
+              </Campo>
+              <Campo id={`${idBase}-som`} rotulo="Som sem legenda a partir de (ms)" dica="M3.">
+                <input
+                  id={`${idBase}-som`}
+                  className="campo"
+                  type="number"
+                  min={200}
+                  step={100}
+                  value={c.somSemLegendaMs}
+                  onChange={(e) => num('somSemLegendaMs', e.target.value)}
+                />
+              </Campo>
+              <Campo id={`${idBase}-lac`} rotulo="Lacuna mínima para AD (ms)">
+                <input
+                  id={`${idBase}-lac`}
+                  className="campo"
+                  type="number"
+                  min={500}
+                  step={250}
+                  value={c.lacunaMinimaAdMs}
+                  onChange={(e) => num('lacunaMinimaAdMs', e.target.value)}
+                />
+              </Campo>
+            </div>
+          </fieldset>
+
+          <fieldset className="mt-4 rounded border border-paper-400 p-3">
             <legend className="px-1 text-sm font-medium">Contagem e checagens</legend>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex items-start gap-2 text-sm">

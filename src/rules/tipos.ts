@@ -1,9 +1,12 @@
 import type { Cue, RuleConfig, Suggestion, RuleMeta } from '../model/types';
 import type { MotorSegmentacao } from '../nlp/tipos';
+import type { MapaTemporal } from '../mapa/tipos';
 
 export interface ContextoRegras {
   /** motor de segmentação sintática de superfície; null quando desligado */
   nlp: MotorSegmentacao | null;
+  /** mapa temporal do vídeo (áudio e cortes); ausente = regras M não executam */
+  mapa?: MapaTemporal | null;
 }
 
 export const CONTEXTO_VAZIO: ContextoRegras = { nlp: null };

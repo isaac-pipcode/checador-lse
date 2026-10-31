@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useEstado, useDespachar, useResultadoFinal } from './state/store';
+import { useEstado, useDespachar } from './state/store';
 import { Carregador } from './ui/Carregador';
 import { PainelConfig } from './ui/PainelConfig';
 import { ConfigLlm } from './ui/ConfigLlm';
@@ -8,7 +8,7 @@ import { Filtros } from './ui/Filtros';
 import { ListaLegendas } from './ui/ListaLegendas';
 import { Exportar } from './ui/Exportar';
 import { Sobre } from './ui/Sobre';
-import { Player } from './ui/Player';
+import { Estudio } from './ui/Estudio';
 
 type Tela = 'revisao' | 'sobre';
 
@@ -17,7 +17,7 @@ export function App() {
   const despachar = useDespachar();
   const [tela, setTela] = useState<Tela>('revisao');
   const [previa, setPrevia] = useState(false);
-  const [player, setPlayer] = useState(false);
+  const [estudio, setEstudio] = useState(false);
   const carregado = estado.cues.length > 0;
 
   return (
@@ -108,10 +108,10 @@ export function App() {
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={player}
-                  onChange={(e) => setPlayer(e.target.checked)}
+                  checked={estudio}
+                  onChange={(e) => setEstudio(e.target.checked)}
                 />
-                Abrir player de vídeo local
+                Abrir estúdio (vídeo, mapa temporal e linha do tempo)
               </label>
               <a className="btn-fantasma" href="#titulo-exportar">
                 Ir para a geração do arquivo final
@@ -122,7 +122,7 @@ export function App() {
               </p>
             </div>
 
-            {player ? <PlayerContextual previa={previa} /> : null}
+            {estudio ? <Estudio previa={previa} /> : null}
 
             <ListaLegendas mostrarPrevia={previa} />
             <Exportar />
@@ -140,12 +140,6 @@ export function App() {
       </footer>
     </div>
   );
-}
-
-function PlayerContextual({ previa }: { previa: boolean }) {
-  const { estado } = useEstado();
-  const final = useResultadoFinal();
-  return <Player cues={previa ? final.cues : estado.cues} />;
 }
 
 function ErrosParse() {

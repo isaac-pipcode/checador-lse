@@ -55,6 +55,13 @@ export function Sobre() {
           itens de checklist, sem nota automática.
         </li>
         <li>
+          As verificações temporais (M1–M3) dependem do vídeo e são inferências sobre o sinal: energia
+          de áudio na banda de voz e diferença de histograma entre quadros. Não reconhecem fala, não
+          distinguem fala de música e podem perder cortes muito próximos ou fusões lentas. Por isso
+          vêm com grau de confiança e nunca são aprovadas em lote. M2 segue convenção de mercado (colar a
+          legenda ao corte), não o Guia MinC.
+        </li>
+        <li>
           A contagem de caracteres segue o Guia (inclui espaços e colchetes). Casas de legendagem
           divergem nesse ponto; por isso os dois <em>toggles</em> de contagem existem, e o relatório
           registra qual critério foi usado.

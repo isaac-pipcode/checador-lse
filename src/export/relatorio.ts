@@ -1,4 +1,5 @@
 import type { Cue, Decision, ReviewState, RuleConfig, Suggestion } from '../model/types';
+import type { MapaTemporal } from '../mapa/tipos';
 import { DOCUMENT_SCOPE } from '../model/types';
 import { META_POR_ID } from '../rules';
 import { calcularMetricas, contarPorSeveridade, type Metricas } from '../core/metricas';
@@ -53,6 +54,8 @@ export interface EntradaRelatorio {
   review: ReviewState;
   sugestoesRemanescentes: Suggestion[];
   conflitos: Array<{ id: string; motivo: string }>;
+  /** mapa temporal usado nas regras M; ausente = nenhum vídeo carregado */
+  mapa?: MapaTemporal | null;
 }
 
 export function montarRelatorio(e: EntradaRelatorio): RelatorioQa {
@@ -100,6 +103,29 @@ export function montarRelatorio(e: EntradaRelatorio): RelatorioQa {
     observacoes.push(
       'Contagem de caracteres SEM espaços — divergente do Guia, que inclui espaços no cômputo.',
     );
+  }
+  if (!e.mapa) {
+    observacoes.push(
+      'Nenhum vídeo carregado: as verificações temporais M1 (sincronia), M2 (corte de plano) e M3 (som sem legenda) não foram executadas.',
+    );
+  } else {
+    observacoes.push(
+      `Verificações temporais sobre o vídeo «${e.mapa.arquivoVideo}». São inferências sobre o sinal (energia de áudio, diferença entre quadros), não reconhecimento de fala ou de plano.`,
+    );
+    if (!e.mapa.audio) {
+      observacoes.push('O áudio do vídeo não pôde ser decodificado: M1 e M3 não foram executadas.');
+    } else {
+      observacoes.push(
+        `Detecção de som: limiar de ${e.mapa.parametros.limiarDb} dB acima do piso estimado (${e.mapa.pisoDb.toFixed(1)} dBFS), banda de 150–4000 Hz.`,
+      );
+    }
+    if (e.mapa.statusCortes.tipo === 'concluido') {
+      observacoes.push(
+        `Cortes de plano: ${e.mapa.cortes.length} detectados, amostragem a cada ${e.mapa.statusCortes.passoMs} ms com refinamento a ~1 quadro.`,
+      );
+    } else {
+      observacoes.push('A detecção de cortes não foi concluída: M2 não foi verificada.');
+    }
   }
   if (!e.config.contarColchetes) {
     observacoes.push('Contagem de caracteres excluindo o conteúdo entre colchetes.');
@@ -175,6 +201,9 @@ export function relatorioMarkdown(r: RelatorioQa): string {
   );
   l.push(
     `- Contagem de caracteres: ${r.parametros.contarEspacos ? 'com' : 'sem'} espaços, ${r.parametros.contarColchetes ? 'incluindo' : 'excluindo'} colchetes`,
+  );
+  l.push(
+    `- Verificações com vídeo: tolerância de sincronia ${r.parametros.toleranciaSincroniaMs} ms (M1), margem ao corte ${r.parametros.margemCorteMs} ms (M2), som sem legenda ≥ ${r.parametros.somSemLegendaMs} ms (M3)`,
   );
   l.push(
     `- Módulos assistidos: segmentação (L1) ${r.parametros.nlpAtivo ? 'ativa' : 'desligada'}; redução (L2) ${r.parametros.llmAtivo ? 'ativa' : 'desligada'}`,

@@ -31,6 +31,7 @@ export function ItemLegenda({
   linhasFinais,
   remanescentes,
   mostrarPrevia,
+  aoVerNoVideo,
 }: {
   cue: Cue;
   sugestoes: Suggestion[];
@@ -39,6 +40,7 @@ export function ItemLegenda({
   linhasFinais?: string[];
   remanescentes: number;
   mostrarPrevia: boolean;
+  aoVerNoVideo?: () => void;
 }) {
   const alterada =
     mostrarPrevia && linhasFinais && linhasFinais.join('\n') !== cue.lines.join('\n');
@@ -68,6 +70,11 @@ export function ItemLegenda({
           <span className="chip border-bad bg-bad-100 text-bad">
             <span aria-hidden="true">✕</span> {remanescentes} violação(ões) permanecem
           </span>
+        ) : null}
+        {aoVerNoVideo ? (
+          <button type="button" className="btn-fantasma py-0.5 text-xs" onClick={aoVerNoVideo}>
+            <span aria-hidden="true">▶</span> Ver no vídeo
+          </button>
         ) : null}
         {sugestoes.length > 0 ? (
           <span className="ml-auto text-xs text-navy-700">

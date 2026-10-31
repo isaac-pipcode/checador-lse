@@ -37,6 +37,7 @@ export const ROTULO_VERIFICABILIDADE: Record<Verifiability, string> = {
   deterministica: 'Determinística',
   nlp: 'Assistida (NLP)',
   llm: 'Assistida (LLM)',
+  sinal: 'Assistida (sinal)',
   manual: 'Manual',
 };
 
@@ -44,6 +45,7 @@ export const EXPLICACAO_VERIFICABILIDADE: Record<Verifiability, string> = {
   deterministica: 'Verificação objetiva a partir do próprio arquivo.',
   nlp: 'Inferência do módulo de segmentação; vem com grau de confiança.',
   llm: 'Proposta gerada por modelo de linguagem; vem com grau de confiança.',
+  sinal: 'Inferência sobre o áudio e a imagem do vídeo (energia, diferença entre quadros); vem com grau de confiança.',
   manual: 'Não verificável a partir do texto isolado: exige o vídeo ou o áudio.',
 };
 

@@ -63,6 +63,9 @@ O build é estático: `dist/` pode ser servido por qualquer servidor de arquivos
 | L2 | Redução textual | quando CPS > alvo | aviso | LLM (opcional) |
 | X1 | Identificação de falante | janela de 20 legendas | revisão manual | manual (heurística parcial) |
 | X2 | Efeitos sonoros | — | revisão manual | manual |
+| M1 | Sincronia com o som | tolerância 300 ms | aviso | sinal (exige vídeo) |
+| M2 | Corte de plano | margem 500 ms | aviso | sinal (exige vídeo e detecção de cortes) |
+| M3 | Som sem legenda | ≥ 1500 ms | revisão manual | sinal (exige vídeo) |
 
 Todos os limiares são configuráveis. Perfis prontos: **Guia MinC 145 / 160 / 180 ppm** e
 **Mercado (referência alternativa)** — este último explicitamente sinalizado como *não* aderente ao
@@ -77,6 +80,41 @@ fica registrado no relatório de QA.
 
 `cps = caracteres / ((endMs − startMs) / 1000)`.
 
+## Estúdio: vídeo, mapa temporal e linha do tempo (protótipo)
+
+Primeiro passo de um programa unificado de acessibilidade audiovisual (LSE, audiodescrição e
+Libras sobre a mesma linha do tempo). Ativado pela caixa *Abrir estúdio* na tela de revisão.
+
+Ao carregar um vídeo local, o estúdio monta um **mapa temporal** da obra:
+
+- **Som**: o áudio é decodificado a 16 kHz, filtrado na banda de voz (150–4000 Hz) e reduzido a
+  um envelope de energia em janelas de 10 ms. Um limiar adaptativo (dB acima do piso de ruído,
+  ajustável) marca os trechos com som. **Não é reconhecimento de fala**: música e ruído também
+  contam.
+- **Cortes de plano** (opcional, sob demanda): um quadro a cada 250/500/1000 ms, reduzido a 64×36,
+  vira histograma de cor; saltos de distância acima da vizinhança são candidatos, refinados por
+  bisseção até ~1 quadro. Cortes mais próximos que o passo de amostragem e fusões lentas escapam.
+- **Lacunas para audiodescrição**: intervalos sem legenda de fala acima da duração mínima. A
+  própria trilha de LSE serve de mapa de diálogo; legendas só com `[efeito]` ou `♪` não fecham
+  lacuna. Cada lacuna informa quanto dela tem som. Exportáveis em CSV.
+
+O mapa alimenta as regras M1–M3, que entram no mesmo fluxo de aprovação das demais (com grau de
+confiança, nunca em lote). As propostas de M1 e M2 mexem só nos tempos, e o relatório de QA
+registra se havia vídeo, os parâmetros de detecção e se os cortes foram verificados.
+
+A linha do tempo mostra régua, forma de onda, som detectado, cortes, legendas (com a pior
+severidade pendente, em ícone e cor) e lacunas. Clicar numa legenda posiciona o vídeo e leva a
+lista até ela; o botão *Ver no vídeo* de cada legenda faz o caminho inverso.
+
+Para demonstrar: `exemplos/gerar-video-exemplo.sh` gera `exemplos/exemplo-estudio.webm` (30 s,
+três planos, falas sintéticas), que acompanha `exemplos/exemplo-estudio.srt`, com problemas
+temporais propositais.
+
+**Limites do protótipo.** `decodeAudioData` decodifica a trilha inteira em memória: obras acima
+de ~1 h podem passar de 1 GB (o caminho para produção é demultiplexar em streaming com WebCodecs).
+Codecs que o navegador não lê (ProRes, por exemplo) exigem um proxy. A tela do estúdio ainda **não
+passou** pela verificação com axe-core nem por leitor de tela.
+
 ## Arquitetura
 
 ```
@@ -85,6 +123,7 @@ src/
   model/      tipos (Cue, Suggestion, ReviewState, RuleConfig) e perfis
   core/       contagem de caracteres, CPS, métricas, contraste
   rules/      uma regra por arquivo, funções puras (cues, config, ctx) => Suggestion[]
+  mapa/       mapa temporal: envelope de áudio, atividade, cortes, lacunas (puro) + camada de navegador
   nlp/        léxico de classes fechadas do pt-BR + segmentador, atrás de uma interface
   llm/        cliente opcional (Anthropic), atrás de feature flag
   export/     aplicação dos diffs aprovados, serialização, relatório de QA

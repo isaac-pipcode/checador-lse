@@ -21,6 +21,9 @@ import { SegmentadorPtBr } from '../nlp/segmentador';
 import type { ParseError } from '../parser/srt';
 import { aplicarDecisoes } from '../export/aplicar';
 import { calcularMetricas } from '../core/metricas';
+import type { Corte, MapaTemporal, ParametrosAtividade, StatusCortes } from '../mapa/tipos';
+import { detectarAtividade } from '../mapa/sinal';
+import type { ContextoRegras } from '../rules';
 
 export interface Filtros {
   regra: string;
@@ -52,6 +55,12 @@ export interface Estado {
   anuncio: string;
   /** pilha de operações em lote, para desfazer */
   historicoLote: Array<{ rotulo: string; anterior: ReviewState }>;
+  /** vídeo local (object URL); independe do arquivo de legenda */
+  video: { url: string; nome: string } | null;
+  mapa: MapaTemporal | null;
+  /** pedidos de navegação entre lista e linha do tempo (n distingue pedidos repetidos) */
+  pedidoSeek: { ms: number; n: number } | null;
+  pedidoLista: { index: number; n: number } | null;
 }
 
 const FILTROS_INICIAIS: Filtros = {
@@ -76,6 +85,10 @@ export const estadoInicial: Estado = {
   llm: { apiKey: '', modelo: 'claude-sonnet-5', ocupadas: [], erro: null },
   anuncio: '',
   historicoLote: [],
+  video: null,
+  mapa: null,
+  pedidoSeek: null,
+  pedidoLista: null,
 };
 
 type Acao =
@@ -96,15 +109,26 @@ type Acao =
   | { tipo: 'filtros'; mudanca: Partial<Filtros> }
   | { tipo: 'llm'; mudanca: Partial<EstadoLlm> }
   | { tipo: 'sugestaoLlm'; base: Suggestion; after: CueSnapshot; confianca: number; texto: string }
-  | { tipo: 'anunciar'; texto: string };
+  | { tipo: 'anunciar'; texto: string }
+  | { tipo: 'video'; url: string; nome: string }
+  | { tipo: 'mapa'; mapa: MapaTemporal | null }
+  | { tipo: 'atividade'; parametros: ParametrosAtividade }
+  | { tipo: 'cortes'; status: StatusCortes; cortes?: Corte[] }
+  | { tipo: 'seek'; ms: number }
+  | { tipo: 'irParaLegenda'; index: number };
 
 /** Descreve o escopo de um apontamento para os anúncios de leitor de tela. */
 function escopo(cueIndex: number): string {
   return cueIndex === DOCUMENT_SCOPE ? 'da obra inteira' : `da legenda ${cueIndex}`;
 }
 
-function motor(config: RuleConfig) {
-  return { nlp: config.nlpAtivo ? new SegmentadorPtBr() : null };
+function motor(config: RuleConfig, mapa: MapaTemporal | null): ContextoRegras {
+  return { nlp: config.nlpAtivo ? new SegmentadorPtBr() : null, mapa };
+}
+
+/** Preserva o que independe do arquivo de legenda (configuração, LLM, vídeo). */
+function persistentes(estado: Estado) {
+  return { config: estado.config, llm: estado.llm, video: estado.video, mapa: estado.mapa };
 }
 
 function chaveConteudo(s: Suggestion): string {
@@ -118,7 +142,7 @@ function chaveConteudo(s: Suggestion): string {
  * algo que o usuário não aprovou.
  */
 function reanalisar(estado: Estado, config: RuleConfig): Estado {
-  const sugestoes = analisar(estado.cues, config, motor(config));
+  const sugestoes = analisar(estado.cues, config, motor(config, estado.mapa));
   const review: ReviewState = {};
   for (const s of sugestoes) {
     const anterior = estado.review[s.id];
@@ -135,8 +159,7 @@ function redutor(estado: Estado, acao: Acao): Estado {
     case 'carregar': {
       const base: Estado = {
         ...estadoInicial,
-        config: estado.config,
-        llm: estado.llm,
+        ...persistentes(estado),
         arquivoNome: acao.nome,
         encoding: acao.encoding,
         cues: acao.cues,
@@ -151,7 +174,7 @@ function redutor(estado: Estado, acao: Acao): Estado {
     }
 
     case 'limpar':
-      return { ...estadoInicial, config: estado.config, llm: estado.llm };
+      return { ...estadoInicial, ...persistentes(estado) };
 
     case 'config': {
       const config = { ...estado.config, ...acao.mudanca };
@@ -253,6 +276,46 @@ function redutor(estado: Estado, acao: Acao): Estado {
     case 'anunciar':
       return { ...estado, anuncio: acao.texto };
 
+    case 'video': {
+      const novo = { ...estado, video: { url: acao.url, nome: acao.nome }, mapa: null };
+      return estado.cues.length > 0 ? reanalisar(novo, estado.config) : novo;
+    }
+
+    case 'mapa': {
+      const novo = { ...estado, mapa: acao.mapa };
+      return estado.cues.length > 0 ? reanalisar(novo, estado.config) : novo;
+    }
+
+    case 'atividade': {
+      if (!estado.mapa) return estado;
+      const { atividade, pisoDb } = detectarAtividade(
+        estado.mapa.envelopeDb,
+        estado.mapa.janelaMs,
+        acao.parametros,
+      );
+      const novo = { ...estado, mapa: { ...estado.mapa, parametros: acao.parametros, atividade, pisoDb } };
+      return estado.cues.length > 0 ? reanalisar(novo, estado.config) : novo;
+    }
+
+    case 'cortes': {
+      if (!estado.mapa) return estado;
+      const mapa = { ...estado.mapa, statusCortes: acao.status, cortes: acao.cortes ?? estado.mapa.cortes };
+      const novo = { ...estado, mapa };
+      const terminou = acao.status.tipo === 'concluido';
+      if (!terminou || estado.cues.length === 0) return novo;
+      const r = reanalisar(novo, estado.config);
+      return { ...r, anuncio: `${mapa.cortes.length} cortes de plano detectados.` };
+    }
+
+    case 'seek':
+      return { ...estado, pedidoSeek: { ms: acao.ms, n: (estado.pedidoSeek?.n ?? 0) + 1 } };
+
+    case 'irParaLegenda':
+      return {
+        ...estado,
+        pedidoLista: { index: acao.index, n: (estado.pedidoLista?.n ?? 0) + 1 },
+      };
+
     default:
       return estado;
   }
@@ -299,13 +362,13 @@ export function useResultadoFinal() {
   const { estado } = useEstado();
   return useMemo(() => {
     const aplicacao = aplicarDecisoes(estado.cues, estado.review);
-    const remanescentes = analisar(aplicacao.cues, estado.config, motor(estado.config));
+    const remanescentes = analisar(aplicacao.cues, estado.config, motor(estado.config, estado.mapa));
     return {
       ...aplicacao,
       remanescentes,
       metricas: calcularMetricas(aplicacao.cues, estado.config),
     };
-  }, [estado.cues, estado.review, estado.config]);
+  }, [estado.cues, estado.review, estado.config, estado.mapa]);
 }
 
 export function useAcoes() {

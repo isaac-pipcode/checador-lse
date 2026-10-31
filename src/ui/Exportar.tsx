@@ -43,8 +43,9 @@ export function Exportar() {
         review: estado.review,
         sugestoesRemanescentes: final.remanescentes,
         conflitos: final.conflitos,
+        mapa: estado.mapa,
       }),
-    [nome, estado.config, estado.cues, estado.sugestoes, estado.review, final],
+    [nome, estado.config, estado.cues, estado.sugestoes, estado.review, final, estado.mapa],
   );
 
   function gerar(formatos: { srt: boolean; vtt: boolean; md: boolean; json: boolean }) {
