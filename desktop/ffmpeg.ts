@@ -1,7 +1,13 @@
 import { spawn } from 'node:child_process';
 
+import { dirname, join } from 'node:path';
+
 /** Ordem de busca: variável de ambiente, depois o PATH. */
 export const FFMPEG = process.env.CHECADOR_FFMPEG || 'ffmpeg';
+/** ffprobe: variável própria, ou ao lado do ffmpeg indicado, ou o PATH. */
+export const FFPROBE =
+  process.env.CHECADOR_FFPROBE ||
+  (process.env.CHECADOR_FFMPEG ? join(dirname(process.env.CHECADOR_FFMPEG), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe') : 'ffprobe');
 
 export function versaoFfmpeg(): Promise<string | null> {
   return new Promise((ok) => {
@@ -105,4 +111,63 @@ export async function medirLoudness(arquivo: string) {
   const pk = /True peak:\s+Peak:\s+(-?[\d.]+|-inf) dBFS/.exec(resumo);
   const num = (s: string | undefined) => (s && s !== '-inf' ? Number(s) : null);
   return { integradoLufs: num(i?.[1]), picoVerdadeiroDbtp: num(pk?.[1]) };
+}
+
+export interface InfoMidia {
+  duracaoMs: number;
+  largura: number;
+  altura: number;
+  codecVideo: string | null;
+  temAudio: boolean;
+}
+
+export function sondar(arquivo: string): Promise<InfoMidia> {
+  return new Promise((ok, falha) => {
+    const p = spawn(FFPROBE, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,codec_name,width,height', '-of', 'json', arquivo]);
+    let out = '';
+    let err = '';
+    p.stdout.on('data', (d) => (out += d));
+    p.stderr.on('data', (d) => (err += d));
+    p.on('error', falha);
+    p.on('close', (c) => {
+      if (c !== 0) return falha(new Error(`ffprobe: ${err.trim().split('\n').pop()}`));
+      const j = JSON.parse(out) as {
+        format?: { duration?: string };
+        streams?: Array<{ codec_type: string; codec_name?: string; width?: number; height?: number }>;
+      };
+      const v = j.streams?.find((s) => s.codec_type === 'video');
+      ok({
+        duracaoMs: Math.round(Number(j.format?.duration ?? 0) * 1000),
+        largura: v?.width ?? 0,
+        altura: v?.height ?? 0,
+        codecVideo: v?.codec_name ?? null,
+        temAudio: !!j.streams?.some((s) => s.codec_type === 'audio'),
+      });
+    });
+  });
+}
+
+/** Executa o ffmpeg informando o progresso pelo campo time= do stderr. */
+export function executarComProgresso(
+  args: string[],
+  duracaoMs: number,
+  aoProgredir: (fracao: number) => void,
+): Promise<{ codigo: number; stderr: string }> {
+  return new Promise((ok, falha) => {
+    const p = spawn(FFMPEG, ['-hide_banner', '-nostdin', ...args]);
+    let stderr = '';
+    p.stderr.on('data', (d: Buffer) => {
+      const txt = d.toString();
+      stderr = (stderr + txt).slice(-20000);
+      const m = /time=(\d+):(\d+):(\d+(?:\.\d+)?)/g;
+      let ult: RegExpExecArray | null = null;
+      for (let x = m.exec(txt); x; x = m.exec(txt)) ult = x;
+      if (ult && duracaoMs > 0) {
+        const ms = (Number(ult[1]) * 3600 + Number(ult[2]) * 60 + Number(ult[3])) * 1000;
+        aoProgredir(Math.min(1, ms / duracaoMs));
+      }
+    });
+    p.on('error', falha);
+    p.on('close', (c) => ok({ codigo: c ?? -1, stderr }));
+  });
 }

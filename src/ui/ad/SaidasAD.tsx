@@ -5,7 +5,7 @@ import { clipesDosBlocos, curvaDeDucking } from '../../ad/mixagem';
 import { bytesDoTake } from '../../ad/audio';
 import { roteiroCsv, roteiroTexto, roteiroVtt } from '../../ad/roteiro';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
-import { baixar } from '../Estudio';
+import { baixar } from '../comum';
 
 /**
  * Saídas da AD: roteiro (texto para o locutor, VTT de descrições, CSV) e, no
@@ -63,12 +63,12 @@ export function SaidasAD() {
   }
 
   return (
-    <section aria-labelledby={`${id}-t`} className="border-t border-paper-400 px-4 py-4">
-      <h2 id={`${id}-t`} className="text-base font-semibold">
+    <section aria-labelledby={`${id}-t`} className="border-t border-paper-400 px-3 py-3">
+      <h2 id={`${id}-t`} className="secao-titulo">
         Saídas da audiodescrição
       </h2>
 
-      <div className="mt-3 grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3">
         <div className="cartao">
           <h3 className="text-sm font-semibold">Roteiro</h3>
           <p className="mt-1 text-xs text-navy-500">

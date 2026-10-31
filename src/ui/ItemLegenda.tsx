@@ -49,7 +49,7 @@ export function ItemLegenda({
   return (
     <article
       aria-labelledby={`legenda-${cue.index}`}
-      className="border-b border-paper-400 px-4 py-4"
+      className="border-b border-paper-400 px-3 py-3"
       id={`cue-${cue.index}`}
     >
       <header className="flex flex-wrap items-center gap-2">
@@ -84,8 +84,8 @@ export function ItemLegenda({
       </header>
 
       {/* Renderização aproximada de como a legenda aparece em tela. */}
-      <div className="mt-2 rounded border border-paper-400 bg-navy px-3 py-2">
-        <div className="mx-auto max-w-[38ch] text-center font-mono text-sm text-paper">
+      <div className="mt-2 rounded border border-paper-400 bg-preto px-3 py-2">
+        <div className="mx-auto max-w-[38ch] text-center font-mono text-sm text-cabine-texto">
           {linhas.map((l, i) => (
             <div key={i} className="whitespace-pre-wrap">
               {l.replace(/<\/?[^>]+>/g, '') || ' '}

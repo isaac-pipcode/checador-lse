@@ -1,56 +1,54 @@
 import { describe, expect, it } from 'vitest';
 import { razaoDeContraste, AA_TEXTO, AA_COMPONENTE } from '../src/core/contraste';
+import { FIXAS, TEMAS, type Tema } from '../src/ui/tema/tokens';
 
-const T = {
-  navy: '#1B2230',
-  navy700: '#2C3547',
-  navy500: '#4A566E',
-  paper: '#FAF8F3',
-  paper200: '#F2EEE4',
-  paper400: '#E3DDCD',
-  terra: '#B85F3E',
-  terra700: '#8E4227',
-  ok: '#1F6B4A',
-  ok100: '#E4F1EA',
-  warn: '#8A5B00',
-  warn100: '#FBF0DA',
-  bad: '#A3242B',
-  bad100: '#FBE6E7',
-};
+/** Os mesmos valores que geram as variáveis CSS (fonte única). */
+describe.each(['escuro', 'claro'] as Tema[])('contraste dos tokens — tema %s (WCAG 2.2 AA)', (tema) => {
+  const T = TEMAS[tema];
 
-describe('contraste dos tokens de marca (WCAG 2.2 AA)', () => {
-  it('texto de corpo sobre fundo claro passa em 4,5:1', () => {
-    expect(razaoDeContraste(T.navy, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.navy700, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.navy500, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.navy700, T.paper200)).toBeGreaterThanOrEqual(AA_TEXTO);
+  it('toda tinta de texto passa 4,5:1 sobre painel e painel elevado', () => {
+    for (const tinta of ['navy', 'navy-700', 'navy-500', 'navy-300'] as const) {
+      for (const sup of ['paper', 'paper-200', 'fundo'] as const) {
+        expect(razaoDeContraste(T[tinta], T[sup]), `${tinta} sobre ${sup}`).toBeGreaterThanOrEqual(AA_TEXTO);
+      }
+    }
   });
 
-  it('texto claro sobre fundo escuro passa em 4,5:1', () => {
-    expect(razaoDeContraste(T.paper, T.navy)).toBeGreaterThanOrEqual(AA_TEXTO);
+  it('severidades passam 4,5:1 sobre o painel e sobre o próprio fundo', () => {
+    for (const s of ['ok', 'warn', 'bad'] as const) {
+      expect(razaoDeContraste(T[s], T.paper), s).toBeGreaterThanOrEqual(AA_TEXTO);
+      expect(razaoDeContraste(T[s], T[`${s}-100`]), `${s} sobre ${s}-100`).toBeGreaterThanOrEqual(AA_TEXTO);
+    }
   });
 
-  it('cores de severidade passam em 4,5:1 sobre seus fundos', () => {
-    expect(razaoDeContraste(T.ok, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.ok, T.ok100)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.warn, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.warn, T.warn100)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.bad, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
-    expect(razaoDeContraste(T.bad, T.bad100)).toBeGreaterThanOrEqual(AA_TEXTO);
-  });
-
-  it('Terra reprova como texto de corpo — por isso não é usada nesse papel', () => {
-    // Verificação da suspeita registrada na especificação: o acento da marca
-    // não atinge 4,5:1 sobre o fundo Paper.
-    expect(razaoDeContraste(T.terra, T.paper)).toBeLessThan(AA_TEXTO);
-    // Serve, porém, como cor de componente/borda (≥ 3:1)…
+  it('acento: componente ≥ 3:1; como texto, a variação 700 ≥ 4,5:1', () => {
     expect(razaoDeContraste(T.terra, T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
-    // …e a variação escura resolve o texto quando o acento é necessário.
-    expect(razaoDeContraste(T.terra700, T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(T['terra-700'], T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
-  it('bordas e separadores atingem 3:1', () => {
-    expect(razaoDeContraste(T.paper400, T.paper)).toBeLessThan(AA_COMPONENTE); // decorativa
-    expect(razaoDeContraste(T.navy500, T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
+  it('bordas de controle (navy-500) ≥ 3:1; separadores (paper-400) são decorativos', () => {
+    expect(razaoDeContraste(T['navy-500'], T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
+    expect(razaoDeContraste(T['paper-400'], T.paper)).toBeLessThan(AA_COMPONENTE);
+  });
+});
+
+describe('contraste — botão primário e cores fixas', () => {
+  it('no escuro, texto preto sobre o acento (botão primário) passa 4,5:1', () => {
+    expect(razaoDeContraste(FIXAS.preto, TEMAS.escuro.terra)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+  it('no claro, texto paper sobre o navy (botão primário) passa 4,5:1', () => {
+    expect(razaoDeContraste(TEMAS.claro.paper, TEMAS.claro.navy)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+  it('cabine do locutor: texto e texto suave legíveis', () => {
+    expect(razaoDeContraste(FIXAS['cabine-texto'], FIXAS.cabine)).toBeGreaterThanOrEqual(7);
+    expect(razaoDeContraste(FIXAS['cabine-suave'], FIXAS.cabine)).toBeGreaterThanOrEqual(AA_TEXTO);
+  });
+  it('cabine: faixas de fase e resultado do take', () => {
+    expect(razaoDeContraste(FIXAS['cabine-texto'], FIXAS['cabine-gravando'])).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(FIXAS['cabine-texto'], FIXAS['cabine-faixa'])).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(FIXAS['cabine-preparo-texto'], FIXAS['cabine-preparo'])).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(FIXAS['cabine-ok'], FIXAS.cabine)).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(FIXAS['cabine-erro'], FIXAS.cabine)).toBeGreaterThanOrEqual(AA_TEXTO);
+    expect(razaoDeContraste(FIXAS['cabine-suave'], FIXAS['cabine-faixa'])).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 });

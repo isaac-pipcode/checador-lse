@@ -29,6 +29,13 @@ const ponte: PonteDesktop = {
   salvarTexto: (nome, conteudo) => ipcRenderer.invoke('texto:salvar', { nome, conteudo }),
   mostrarNaPasta: (caminho) => ipcRenderer.invoke('pasta:mostrar', caminho),
 
+  escolherClipeLibras: () => ipcRenderer.invoke('libras:escolher'),
+  renderizarEntrega: (pedido, aoProgredir) => comProgresso('entrega:renderizar', { pedido }, aoProgredir),
+  projetosRecentes: () => ipcRenderer.invoke('projetos:recentes'),
+  novoProjeto: (nome) => ipcRenderer.invoke('projetos:novo', nome),
+  abrirProjetoEm: (caminho) => ipcRenderer.invoke('projetos:abrirEm', caminho),
+  esquecerProjeto: (caminho) => ipcRenderer.invoke('projetos:esquecer', caminho),
+
   prompterAbrir: () => ipcRenderer.invoke('prompter:abrir'),
   prompterFechar: () => ipcRenderer.invoke('prompter:fechar'),
   prompterEnviar: (estado) => ipcRenderer.send('prompter:estado', estado),

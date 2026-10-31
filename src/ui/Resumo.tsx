@@ -21,12 +21,12 @@ export function Resumo() {
   }, [estado.review]);
 
   return (
-    <section aria-labelledby="titulo-resumo" className="border-b border-paper-400 px-4 py-3">
-      <h2 id="titulo-resumo" className="text-lg font-semibold">
+    <section aria-labelledby="titulo-resumo" className="border-b border-paper-400 px-3 py-2">
+      <h2 id="titulo-resumo" className="sr-only-focusable">
         Resumo da análise
       </h2>
 
-      <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+      <ul className="flex flex-wrap gap-1.5 text-sm">
         <li className="chip border-bad bg-bad-100 text-bad">
           <span aria-hidden="true">✕</span> {contagem.erro} erro{contagem.erro === 1 ? '' : 's'}
         </li>
@@ -44,7 +44,9 @@ export function Resumo() {
         </li>
       </ul>
 
-      <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <details className="mt-1.5">
+        <summary className="cursor-pointer text-2xs font-medium uppercase tracking-wide text-navy-500">Métricas da obra</summary>
+      <dl className="mt-1.5 grid grid-cols-3 gap-1.5">
         <Metrica rotulo="Legendas" valor={String(metricas.totalLegendas)} />
         <Metrica
           rotulo="CPS média"
@@ -72,6 +74,7 @@ export function Resumo() {
           detalhe={`${final.metricas.sobreposicoes} após decisões`}
         />
       </dl>
+      </details>
     </section>
   );
 }

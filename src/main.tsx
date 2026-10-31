@@ -4,6 +4,10 @@ import { App } from './App';
 import { ProvedorEstado } from './state/store';
 import { JanelaPrompter } from './ui/ad/JanelaPrompter';
 import './index.css';
+import { aplicarTema, temaSalvo } from './ui/tema/tokens';
+
+// Antes do primeiro render: sem piscar o tema errado.
+aplicarTema(window.location.hash === '#prompter' ? 'escuro' : temaSalvo());
 
 const raiz = document.getElementById('root');
 if (!raiz) throw new Error('Elemento #root não encontrado.');

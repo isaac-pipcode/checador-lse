@@ -40,8 +40,8 @@ export function Carregador() {
   );
 
   return (
-    <section aria-labelledby="titulo-carregar" className="mx-auto max-w-3xl px-4 py-10">
-      <h2 id="titulo-carregar" className="text-2xl font-semibold">
+    <section aria-labelledby="titulo-carregar" className="p-4">
+      <h2 id="titulo-carregar" className="text-base font-semibold">
         Carregar legenda
       </h2>
       <p className="mt-2 text-navy-700">
@@ -75,7 +75,7 @@ export function Carregador() {
             id={inputId}
             type="file"
             accept=".srt,.vtt,text/plain"
-            className="campo max-w-md file:mr-3 file:rounded file:border-0 file:bg-navy file:px-3 file:py-1 file:text-paper"
+            className="campo max-w-md file:mr-3 file:rounded file:border-0 file:bg-paper-200 file:px-3 file:py-1 file:text-navy"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void processar(f);

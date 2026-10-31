@@ -28,6 +28,9 @@ import type { BlocoAD, ParametrosAD, Take } from '../ad/tipos';
 import { PARAMETROS_AD_PADRAO } from '../ad/tipos';
 import type { Intervalo } from '../mapa/tipos';
 import { novoId } from '../ad/takes';
+import { JANELA_PADRAO, type JanelaLibras } from '../libras/tipos';
+
+export type Pagina = 'projetos' | 'lse' | 'ad' | 'libras' | 'entrega';
 
 export interface Filtros {
   regra: string;
@@ -63,7 +66,9 @@ export interface Estado {
   video: { url: string; nome: string; caminho: string | null } | null;
   ad: { blocos: BlocoAD[]; parametros: ParametrosAD };
   /** projeto desktop: caminho do .estudio.json e se há mudanças não salvas */
-  projeto: { caminho: string | null; sujo: boolean };
+  projeto: { caminho: string | null; sujo: boolean; nome: string | null };
+  libras: JanelaLibras;
+  pagina: Pagina;
   mapa: MapaTemporal | null;
   /** pedidos de navegação entre lista e linha do tempo (n distingue pedidos repetidos) */
   pedidoSeek: { ms: number; n: number } | null;
@@ -94,7 +99,9 @@ export const estadoInicial: Estado = {
   historicoLote: [],
   video: null,
   ad: { blocos: [], parametros: PARAMETROS_AD_PADRAO },
-  projeto: { caminho: null, sujo: false },
+  projeto: { caminho: null, sujo: false, nome: null },
+  libras: JANELA_PADRAO,
+  pagina: 'projetos',
   mapa: null,
   pedidoSeek: null,
   pedidoLista: null,
@@ -130,7 +137,10 @@ type Acao =
   | { tipo: 'adAtivarTake'; blocoId: string; takeId: string }
   | { tipo: 'adRemoverTake'; blocoId: string; takeId: string }
   | { tipo: 'adParametros'; mudanca: Partial<ParametrosAD> }
-  | { tipo: 'projetoCarregado'; caminho: string; ad: Estado['ad'] }
+  | { tipo: 'projetoCarregado'; caminho: string; ad: Estado['ad']; libras?: JanelaLibras }
+  | { tipo: 'projetoNovo'; caminho: string | null; nome: string }
+  | { tipo: 'navegar'; pagina: Pagina }
+  | { tipo: 'libras'; mudanca: Partial<JanelaLibras> }
   | { tipo: 'projetoSalvo'; caminho: string; arquivosTakes: Record<string, string> }
   | { tipo: 'mapa'; mapa: MapaTemporal | null }
   | { tipo: 'atividade'; parametros: ParametrosAtividade }
@@ -156,6 +166,8 @@ function persistentes(estado: Estado) {
     mapa: estado.mapa,
     ad: estado.ad,
     projeto: estado.projeto,
+    libras: estado.libras,
+    pagina: estado.pagina,
   };
 }
 
@@ -180,6 +192,10 @@ function reanalisar(estado: Estado, config: RuleConfig): Estado {
       : { suggestion: s, decision: 'pendente' };
   }
   return { ...estado, config, sugestoes, review, historicoLote: [] };
+}
+
+function nomeDoCaminho(c: string): string {
+  return (c.split(/[\\/]/).pop() ?? c).replace(/\.estudio\.json$/i, '').replace(/\.json$/i, '');
 }
 
 function ordenarBlocos(blocos: BlocoAD[]): BlocoAD[] {
@@ -463,7 +479,8 @@ function redutor(estado: Estado, acao: Acao): Estado {
             legenda: { ...PARAMETROS_AD_PADRAO.legenda, ...(acao.ad.parametros.legenda ?? {}) },
           },
         },
-        projeto: { caminho: acao.caminho, sujo: false },
+        libras: acao.libras ?? JANELA_PADRAO,
+        projeto: { caminho: acao.caminho, sujo: false, nome: nomeDoCaminho(acao.caminho) },
         anuncio: `Projeto aberto: ${acao.ad.blocos.length} blocos de audiodescrição.`,
       };
 
@@ -477,8 +494,29 @@ function redutor(estado: Estado, acao: Acao): Estado {
             takes: b.takes.map((t) => (acao.arquivosTakes[t.id] ? { ...t, arquivo: acao.arquivosTakes[t.id] } : t)),
           })),
         },
-        projeto: { caminho: acao.caminho, sujo: false },
+        projeto: { caminho: acao.caminho, sujo: false, nome: nomeDoCaminho(acao.caminho) },
         anuncio: 'Projeto salvo.',
+      };
+
+    case 'projetoNovo':
+      // projeto em branco: só a configuração de regras e o LLM sobrevivem
+      return {
+        ...estadoInicial,
+        config: estado.config,
+        llm: estado.llm,
+        projeto: { caminho: acao.caminho, sujo: true, nome: acao.nome },
+        pagina: 'lse',
+        anuncio: `Projeto «${acao.nome}» criado.`,
+      };
+
+    case 'navegar':
+      return { ...estado, pagina: acao.pagina };
+
+    case 'libras':
+      return {
+        ...estado,
+        libras: { ...estado.libras, ...acao.mudanca },
+        projeto: { ...estado.projeto, sujo: true },
       };
 
     case 'seek':

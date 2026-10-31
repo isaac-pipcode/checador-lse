@@ -14,22 +14,28 @@ import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
  * teclado e nomeados para leitor de tela. Só o trecho visível é renderizado.
  */
 
-const COR = {
-  navy: '#1B2230',
-  navy500: '#4A566E',
-  navy300: '#8A93A6',
-  paper: '#FAF8F3',
-  paper200: '#F2EEE4',
-  paper400: '#E3DDCD',
-  terra: '#B85F3E',
-  ok: '#1F6B4A',
-};
+/** Cores do canvas lidas dos tokens (variáveis CSS): acompanham o tema. */
+function coresDoTema() {
+  const css = getComputedStyle(document.documentElement);
+  const c = (n: string) => `rgb(${css.getPropertyValue(`--c-${n}`).trim() || '128 128 128'})`;
+  return {
+    navy: c('navy'),
+    navy500: c('navy-500'),
+    navy300: c('navy-300'),
+    paper: c('fundo'),
+    paper200: c('paper-200'),
+    paper400: c('paper-400'),
+    terra: c('terra'),
+    ok: c('ok'),
+  };
+}
 
 const H_REGUA = 22;
 const H_SOM = 64;
 const H_LEGENDAS = 44;
 const H_LACUNAS = 30;
 const H_AD = 40;
+const H_LIBRAS = 26;
 const H_CANVAS = H_REGUA + H_SOM;
 
 const ZOOMS = [2, 5, 10, 20, 40, 80, 160, 320];
@@ -90,6 +96,8 @@ export interface PropsLinhaDoTempo {
   aoSelecionarBloco?: (id: string) => void;
   /** curva de ganho do original, desenhada sobre a forma de onda */
   curvaGanho?: PontoGanho[];
+  /** trecho coberto pelo clipe do intérprete */
+  trilhaLibras?: { inicioMs: number; fimMs: number; rotulo: string } | null;
 }
 
 export function LinhaDoTempo(p: PropsLinhaDoTempo) {
@@ -104,7 +112,8 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
 
   const total = Math.max(1, (p.duracaoMs / 1000) * pxs);
   const hAd = p.trilhaAd ? H_AD : 0;
-  const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + H_LACUNAS;
+  const hLib = p.trilhaLibras !== undefined ? H_LIBRAS : 0;
+  const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + hLib + H_LACUNAS;
   const x = (ms: number) => (ms / 1000) * pxs;
   const t0 = (scroll / pxs) * 1000;
   const t1 = ((scroll + largura) / pxs) * 1000;
@@ -148,6 +157,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
     c.height = Math.round(H_CANVAS * dpr);
     const g = c.getContext('2d');
     if (!g) return;
+    const COR = coresDoTema();
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, largura, H_CANVAS);
 
@@ -167,6 +177,15 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
       g.lineTo(px + 0.5, H_REGUA);
       g.stroke();
       g.fillText(rotuloTempo(Math.round(s * 10) / 10, passo), px + 3, H_REGUA / 2 - 1);
+    }
+
+    // além do fim da obra: hachurado discreto
+    const fimPx = (p.duracaoMs / 1000) * pxs - scroll;
+    if (fimPx < largura) {
+      g.fillStyle = COR.paper400;
+      g.globalAlpha = 0.35;
+      g.fillRect(Math.max(0, fimPx), 0, largura - Math.max(0, fimPx), H_CANVAS);
+      g.globalAlpha = 1;
     }
 
     // Som
@@ -255,39 +274,29 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const atual = p.cues.find((c) => p.tempoMs >= c.startMs && p.tempoMs < c.endMs);
 
   return (
-    <section aria-labelledby={`${id}-t`} className="mt-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 id={`${id}-t`} className="text-sm font-semibold">
-          Linha do tempo
-        </h3>
-        <div className="flex items-center gap-1" role="group" aria-label="Zoom">
-          <button type="button" className="btn-fantasma" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
+    <section aria-labelledby={`${id}-t`} className="painel">
+      <div className="painel-cabeca">
+        <h2 id={`${id}-t`}>Linha do tempo</h2>
+        <div className="flex items-center gap-0.5 normal-case tracking-normal" role="group" aria-label="Zoom">
+          <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
             <span aria-hidden="true">−</span>
-            <span className="sr-only-focusable">Afastar</span>
           </button>
-          <span className="w-20 text-center font-mono text-xs text-navy-700">{pxs} px/s</span>
-          <button
-            type="button"
-            className="btn-fantasma"
-            onClick={() => mudarZoom(zoom + 1)}
-            disabled={zoom === ZOOMS.length - 1}
-          >
+          <span className="w-16 text-center font-mono text-2xs font-normal text-navy-500">{pxs} px/s</span>
+          <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
             <span aria-hidden="true">+</span>
-            <span className="sr-only-focusable">Aproximar</span>
           </button>
         </div>
-        <label className="flex items-center gap-1.5 text-sm">
+        <label className="flex items-center gap-1.5 font-normal normal-case tracking-normal">
           <input type="checkbox" checked={acompanhar} onChange={(e) => setAcompanhar(e.target.checked)} />
-          Acompanhar a reprodução
+          Acompanhar
         </label>
-        <p className="ml-auto text-xs text-navy-500">
-          Com a linha do tempo em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd>: 5 s) · <kbd>+</kbd>/
-          <kbd>−</kbd> zoom
+        <p className="ml-auto truncate font-normal normal-case tracking-normal text-navy-500">
+          Em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s) · <kbd>+</kbd>/<kbd>−</kbd> zoom
         </p>
       </div>
 
-      <div className="mt-1 flex rounded border border-paper-400">
-        <div aria-hidden="true" className="w-24 shrink-0 border-r border-paper-400 bg-paper-200 text-xs text-navy-700">
+      <div className="flex">
+        <div aria-hidden="true" className="w-28 shrink-0 border-r border-paper-400 bg-paper-200 text-2xs font-medium uppercase tracking-wide text-navy-500">
           <div style={{ height: H_REGUA }} />
           <div style={{ height: H_SOM }} className="flex items-center px-2">
             Som
@@ -298,6 +307,11 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           {p.trilhaAd ? (
             <div style={{ height: H_AD }} className="flex items-center border-t border-paper-400 px-2 font-medium">
               Audiodescrição
+            </div>
+          ) : null}
+          {hLib ? (
+            <div style={{ height: H_LIBRAS }} className="flex items-center border-t border-paper-400 px-2">
+              Libras
             </div>
           ) : null}
           <div style={{ height: H_LACUNAS }} className="flex items-center border-t border-paper-400 px-2">
@@ -329,7 +343,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                 aria-hidden="true"
                 title={`Corte em ${formatarTimecode(c.ms)} (±${c.precisaoMs} ms)`}
                 className="pointer-events-none absolute border-l border-navy"
-                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS + hAd }}
+                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS + hAd + hLib }}
               />
             ))}
 
@@ -399,9 +413,25 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               </div>
             ) : null}
 
+            {hLib ? (
+              <div className="absolute left-0 border-t border-paper-400" style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LIBRAS }}>
+                {p.trilhaLibras ? (
+                  <button
+                    type="button"
+                    onClick={() => p.aoBuscar(Math.max(0, p.trilhaLibras!.inicioMs))}
+                    aria-label={`Clipe de Libras ${p.trilhaLibras.rotulo}, de ${formatarTimecode(Math.max(0, p.trilhaLibras.inicioMs))} a ${formatarTimecode(p.trilhaLibras.fimMs)}`}
+                    className="absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-terra bg-terra/20 px-1 text-left text-[11px] leading-[16px] text-terra-700"
+                    style={{ left: Math.max(0, x(p.trilhaLibras.inicioMs)), width: Math.max(3, x(p.trilhaLibras.fimMs - Math.max(0, p.trilhaLibras.inicioMs))), height: H_LIBRAS - 8 }}
+                  >
+                    <span aria-hidden="true">🤟 {p.trilhaLibras.rotulo}</span>
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
             <div
               className="absolute left-0 border-t border-paper-400"
-              style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LACUNAS }}
+              style={{ top: H_CANVAS + H_LEGENDAS + hAd + hLib, width: total, height: H_LACUNAS }}
             >
               {lacunasVisiveis.map((l) => {
                 const w = Math.max(3, x(l.fimMs - l.inicioMs));
@@ -412,7 +442,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                     key={l.inicioMs}
                     type="button"
                     onClick={() => p.aoBuscar(l.inicioMs)}
-                    aria-label={`Lacuna para audiodescrição de ${dur} segundos, a partir de ${formatarTimecode(l.inicioMs)}${som ? ', com som na maior parte' : ''}`}
+                    aria-label={`${dur} s: lacuna para audiodescrição a partir de ${formatarTimecode(l.inicioMs)}${som ? ', com som na maior parte' : ''}`}
                     className="absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-dashed border-ok bg-ok-100 px-1 text-left text-[11px] leading-[20px] text-ok"
                     style={{ left: x(l.inicioMs), width: w, height: H_LACUNAS - 8 }}
                   >
@@ -435,7 +465,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           </div>
         </div>
       </div>
-      <p className="mt-1 text-xs text-navy-500">
+      <p className="border-t border-paper-400 px-3 py-1 text-2xs text-navy-500">
         Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
         detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
         {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}.

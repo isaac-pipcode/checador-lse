@@ -1,11 +1,18 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { DOCUMENT_SCOPE } from '../model/types';
 import { useEstado, useResultadoFinal, useSugestoesFiltradas } from '../state/store';
 import { ItemLegenda } from './ItemLegenda';
 import { CardSugestao } from './CardSugestao';
 
-export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
+export function ListaLegendas({
+  mostrarPrevia,
+  rolagem,
+}: {
+  mostrarPrevia: boolean;
+  /** elemento que rola (o corpo do painel); a lista se virtualiza dentro dele */
+  rolagem: RefObject<HTMLElement>;
+}) {
   const { estado, despachar } = useEstado();
   const filtradas = useSugestoesFiltradas();
   const final = useResultadoFinal();
@@ -56,21 +63,23 @@ export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
     return m;
   }, [final.remanescentes]);
 
-  // Virtualização ancorada na rolagem da própria página: evita um contêiner de
-  // rolagem aninhado (armadilha de teclado e de leitor de tela) e continua
-  // dando conta de milhares de legendas.
+  // Virtualização dentro do painel (layout de editor: cada painel rola por si).
+  // O deslocamento é a posição da lista dentro do elemento que rola.
   const [offset, setOffset] = useState(0);
   useLayoutEffect(() => {
     const medir = () => {
-      if (container.current) setOffset(container.current.offsetTop);
+      const c = container.current;
+      const r = rolagem.current;
+      if (c && r) setOffset(c.getBoundingClientRect().top - r.getBoundingClientRect().top + r.scrollTop);
     };
     medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
-  }, [visiveis.length, documento.length]);
+  }, [visiveis.length, documento.length, rolagem]);
 
-  const virtualizer = useWindowVirtualizer({
+  const virtualizer = useVirtualizer({
     count: visiveis.length,
+    getScrollElement: () => rolagem.current,
     estimateSize: () => 220,
     overscan: 6,
     scrollMargin: offset,
@@ -117,7 +126,7 @@ export function ListaLegendas({ mostrarPrevia }: { mostrarPrevia: boolean }) {
         </section>
       ) : null}
 
-      <div ref={container} aria-label="Lista de legendas">
+      <div ref={container} role="region" aria-label="Lista de legendas">
         {visiveis.length === 0 ? (
           <p className="px-4 py-8 text-center text-navy-700">
             Nenhuma legenda corresponde aos filtros atuais.

@@ -5,10 +5,10 @@ import { useAcoes, useEstado } from '../state/store';
 import { Campo } from './primitivos';
 import { msParaFrames } from '../core/texto';
 
-export function PainelConfig() {
+export function PainelConfig({ embutido = false }: { embutido?: boolean }) {
   const { estado } = useEstado();
   const acoes = useAcoes();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(embutido);
   const idBase = useId();
   const c = estado.config;
   const perfil = PERFIS.find((p) => p.perfilId === c.perfilId);
@@ -19,14 +19,14 @@ export function PainelConfig() {
   };
 
   return (
-    <section aria-labelledby={`${idBase}-titulo`} className="border-b border-paper-400 bg-paper-200">
-      <div className="mx-auto max-w-6xl px-4 py-2">
+    <section aria-labelledby={`${idBase}-titulo`} className={embutido ? '' : 'border-b border-paper-400 bg-paper-200'}>
+      <div className={embutido ? '' : 'mx-auto max-w-6xl px-4 py-2'}>
         <h2 id={`${idBase}-titulo`} className="sr-only">
           Configuração dos parâmetros
         </h2>
         <button
           type="button"
-          className="btn-fantasma"
+          className={embutido ? 'hidden' : 'btn-fantasma'}
           aria-expanded={aberto}
           aria-controls={`${idBase}-corpo`}
           onClick={() => setAberto((v) => !v)}
@@ -35,7 +35,7 @@ export function PainelConfig() {
           Parâmetros: {c.perfilNome} · {c.maxCaracteresPorLinha} CPL · alvo {c.cpsAlvo} cps
         </button>
 
-        <div id={`${idBase}-corpo`} hidden={!aberto} className="pb-4 pt-2">
+        <div id={`${idBase}-corpo`} hidden={!aberto} className={embutido ? '' : 'pb-4 pt-2'}>
           {perfil && !perfil.aderenteAoGuia ? (
             <p role="status" className="mb-3 rounded border border-warn bg-warn-100 px-3 py-2 text-sm text-warn">
               <span aria-hidden="true">! </span>
@@ -44,7 +44,7 @@ export function PainelConfig() {
             </p>
           ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={embutido ? 'grid grid-cols-2 gap-x-2 gap-y-2' : 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4'}>
             <Campo id={`${idBase}-perfil`} rotulo="Perfil" dica={perfil?.descricao}>
               <select
                 id={`${idBase}-perfil`}
@@ -177,7 +177,7 @@ export function PainelConfig() {
 
           <fieldset className="mt-4 rounded border border-paper-400 p-3">
             <legend className="px-1 text-sm font-medium">Verificações com vídeo (M1–M3) e lacunas</legend>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={embutido ? 'grid grid-cols-2 gap-x-2 gap-y-2' : 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4'}>
               <Campo id={`${idBase}-sinc`} rotulo="Tolerância de sincronia (ms)" dica="M1: defasagem aceita entre a entrada da legenda e o som.">
                 <input
                   id={`${idBase}-sinc`}
@@ -231,7 +231,7 @@ export function PainelConfig() {
 
           <fieldset className="mt-4 rounded border border-paper-400 p-3">
             <legend className="px-1 text-sm font-medium">Contagem e checagens</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className={embutido ? 'grid gap-2' : 'grid gap-2 sm:grid-cols-2'}>
               <label className="flex items-start gap-2 text-sm">
                 <input
                   type="checkbox"

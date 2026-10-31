@@ -65,8 +65,8 @@ export function Exportar() {
   const [vtt, setVtt] = useState(false);
 
   return (
-    <section aria-labelledby="titulo-exportar" className="cartao mx-4 my-4">
-      <h2 id="titulo-exportar" className="text-lg font-semibold">
+    <section aria-labelledby="titulo-exportar" className="p-3">
+      <h2 id="titulo-exportar" className="secao-titulo">
         Gerar legenda final
       </h2>
 

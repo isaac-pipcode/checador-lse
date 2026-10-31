@@ -2,10 +2,12 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell }
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { FFMPEG, decodificarStream, versaoFfmpeg } from './ffmpeg';
+import { FFMPEG, decodificarStream, executar, sondar, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
+import { renderizarEntrega } from './entrega';
+import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
-import type { ArquivoTake, PedidoRender, ProjetoArquivo } from '../src/desktop/ponte';
+import type { ArquivoTake, PedidoEntrega, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
 import type { EstadoPrompter } from '../src/ad/prompter';
 
 /**
@@ -31,7 +33,7 @@ function urlDeMidia(caminho: string): string {
 
 const MIME: Record<string, string> = {
   '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
-  '.mkv': 'video/x-matroska', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg',
+  '.mkv': 'video/x-matroska', '.wav': 'audio/wav', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg',
 };
 
 /** Serve arquivo local com suporte a Range (necessário para buscar no vídeo). */
@@ -152,6 +154,79 @@ function janela(): BrowserWindow {
 const progresso = (e: Electron.IpcMainInvokeEvent, id: string, fracao: number, etapa = '') =>
   e.sender.send('estudio:progresso', { id, fracao, etapa });
 
+// ---- Projetos recentes --------------------------------------------------
+
+const arquivoRecentes = () => join(app.getPath('userData'), 'projetos-recentes.json');
+/** Caminhos de projeto que o renderer pode gravar ou abrir sem diálogo. */
+const projetosPermitidos = new Set<string>();
+
+function lerRecentes(): ResumoProjeto[] {
+  try {
+    const lista = JSON.parse(readFileSync(arquivoRecentes(), 'utf-8')) as ResumoProjeto[];
+    return lista.filter((p) => existsSync(p.caminho));
+  } catch {
+    return [];
+  }
+}
+
+function resumir(caminho: string, p: ProjetoArquivo, miniatura: string | null): ResumoProjeto {
+  return {
+    caminho,
+    nome: basename(caminho).replace(/\.estudio\.json$/i, '').replace(/\.json$/i, ''),
+    atualizadoEm: p.salvoEm,
+    video: p.video?.nome ?? null,
+    miniatura,
+    lse: p.legenda ? { legendas: (p.legenda.conteudo.match(/-->/g) ?? []).length } : null,
+    ad: {
+      blocos: p.ad.blocos.length,
+      aprovados: p.ad.blocos.filter((b) => b.aprovado).length,
+      gravados: p.ad.blocos.filter((b) => b.takeAtivoId).length,
+    },
+    libras: { clipe: !!p.libras?.clipe, sincronizado: !!p.libras && p.libras.sincronia.metodo !== 'nenhuma' },
+  };
+}
+
+/** Quadro a 10% da obra, 480 px de largura, em cache por caminho do vídeo. */
+async function miniatura(video: string | null | undefined): Promise<string | null> {
+  if (!video || !existsSync(video)) return null;
+  const pasta = join(app.getPath('userData'), 'miniaturas');
+  mkdirSync(pasta, { recursive: true });
+  const arq = join(pasta, `${createHash('sha1').update(video).digest('hex').slice(0, 16)}.jpg`);
+  if (!existsSync(arq)) {
+    try {
+      const info = await sondar(video);
+      const t = Math.max(0, (info.duracaoMs / 1000) * 0.1);
+      await executar(['-y', '-ss', t.toFixed(2), '-i', video, '-frames:v', '1', '-vf', 'scale=480:-2', '-q:v', '4', arq]);
+    } catch {
+      return null;
+    }
+  }
+  return existsSync(arq) ? arq : null;
+}
+
+async function registrarRecente(caminho: string, p: ProjetoArquivo) {
+  const mini = await miniatura(p.video?.caminho);
+  const lista = lerRecentes().filter((r) => r.caminho !== caminho);
+  lista.unshift(resumir(caminho, p, mini));
+  mkdirSync(dirname(arquivoRecentes()), { recursive: true });
+  writeFileSync(arquivoRecentes(), JSON.stringify(lista.slice(0, 40), null, 2), 'utf-8');
+}
+
+function lerProjeto(caminho: string) {
+  const projeto = JSON.parse(readFileSync(caminho, 'utf-8')) as ProjetoArquivo;
+  if (projeto.formato !== 'estudio-acessibilidade') throw new Error('Arquivo não é um projeto do estúdio.');
+  const pastaTakes = join(dirname(caminho), 'takes');
+  const takes: ArquivoTake[] = [];
+  for (const b of projeto.ad.blocos) {
+    for (const t of b.takes) {
+      if (!t.arquivo || !/^[\w.-]+$/.test(t.arquivo)) continue;
+      const arq = join(pastaTakes, t.arquivo);
+      if (existsSync(arq)) takes.push({ arquivo: t.arquivo, bytes: readFileSync(arq) });
+    }
+  }
+  return { caminho, projeto, takes };
+}
+
 function registrarIpc() {
   ipcMain.handle('ffmpeg', async () => {
     const versao = await versaoFfmpeg();
@@ -206,6 +281,8 @@ function registrarIpc() {
   ipcMain.handle(
     'projeto:salvar',
     async (e, { caminho, projeto, takes }: { caminho: string | null; projeto: ProjetoArquivo; takes: ArquivoTake[] }) => {
+      // só se grava onde o usuário escolheu (diálogo, novo projeto ou projeto aberto)
+      if (caminho && !projetosPermitidos.has(resolve(caminho))) throw new Error('Caminho de projeto não autorizado.');
       let destino = caminho;
       if (!destino) {
         const w = BrowserWindow.fromWebContents(e.sender);
@@ -224,6 +301,8 @@ function registrarIpc() {
         writeFileSync(join(pastaTakes, t.arquivo), t.bytes);
       }
       writeFileSync(destino, JSON.stringify(projeto, null, 2), 'utf-8');
+      projetosPermitidos.add(resolve(destino));
+      await registrarRecente(destino, projeto);
       return { caminho: destino };
     },
   );
@@ -236,20 +315,76 @@ function registrarIpc() {
       filters: [{ name: 'Projeto do estúdio', extensions: ['json'] }],
     });
     if (r.canceled || !r.filePaths[0]) return null;
+    return abrirProjetoAutorizado(r.filePaths[0]);
+  });
+
+  const abrirProjetoAutorizado = async (caminho: string) => {
+    const lido = lerProjeto(caminho);
+    projetosPermitidos.add(resolve(caminho));
+    if (lido.projeto.video?.caminho) caminhosDeProjeto.add(resolve(lido.projeto.video.caminho));
+    if (lido.projeto.libras?.clipe?.caminho) caminhosDeProjeto.add(resolve(lido.projeto.libras.clipe.caminho));
+    await registrarRecente(caminho, lido.projeto);
+    return lido;
+  };
+
+  ipcMain.handle('projetos:recentes', () =>
+    lerRecentes().map((p) => {
+      // miniaturas são servidas pelo mesmo protocolo autorizado
+      if (p.miniatura && existsSync(p.miniatura)) return { ...p, miniatura: urlDeMidia(p.miniatura) };
+      return { ...p, miniatura: null };
+    }),
+  );
+
+  ipcMain.handle('projetos:abrirEm', (_e, caminho: string) => {
+    if (!lerRecentes().some((p) => resolve(p.caminho) === resolve(caminho))) throw new Error('Projeto fora da lista de recentes.');
+    return abrirProjetoAutorizado(caminho);
+  });
+
+  ipcMain.handle('projetos:esquecer', (_e, caminho: string) => {
+    const lista = lerRecentes().filter((p) => resolve(p.caminho) !== resolve(caminho));
+    writeFileSync(arquivoRecentes(), JSON.stringify(lista, null, 2), 'utf-8');
+  });
+
+  ipcMain.handle('projetos:novo', async (e, nome: string) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const r = await dialog.showOpenDialog(w!, {
+      title: 'Pasta onde criar o projeto',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const limpo = nome.trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80) || 'projeto';
+    const pasta = join(r.filePaths[0], limpo);
+    mkdirSync(pasta, { recursive: true });
+    const caminho = join(pasta, `${limpo}.estudio.json`);
+    projetosPermitidos.add(resolve(caminho));
+    return caminho;
+  });
+
+  ipcMain.handle('libras:escolher', async (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const r = await dialog.showOpenDialog(w!, {
+      title: 'Vídeo do intérprete de Libras',
+      properties: ['openFile'],
+      filters: [{ name: 'Vídeo', extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv'] }],
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
     const caminho = r.filePaths[0];
-    const projeto = JSON.parse(readFileSync(caminho, 'utf-8')) as ProjetoArquivo;
-    if (projeto.formato !== 'estudio-acessibilidade') throw new Error('Arquivo não é um projeto do estúdio.');
-    const pastaTakes = join(dirname(caminho), 'takes');
-    const takes: ArquivoTake[] = [];
-    for (const b of projeto.ad.blocos) {
-      for (const t of b.takes) {
-        if (!t.arquivo || !/^[\w.-]+$/.test(t.arquivo)) continue;
-        const arq = join(pastaTakes, t.arquivo);
-        if (existsSync(arq)) takes.push({ arquivo: t.arquivo, bytes: readFileSync(arq) });
-      }
-    }
-    if (projeto.video?.caminho) caminhosDeProjeto.add(resolve(projeto.video.caminho));
-    return { caminho, projeto, takes };
+    const info = await sondar(caminho);
+    return { caminho, nome: basename(caminho), url: urlDeMidia(caminho), duracaoMs: info.duracaoMs, largura: info.largura, altura: info.altura };
+  });
+
+  ipcMain.handle('entrega:renderizar', async (e, { id, pedido }: { id: string; pedido: PedidoEntrega }) => {
+    const permitidos = [...autorizados.values()];
+    if (!permitidos.includes(resolve(pedido.videoCaminho))) throw new Error('Caminho não autorizado.');
+    if (pedido.libras && !permitidos.includes(resolve(pedido.libras.caminho))) throw new Error('Clipe de Libras não autorizado.');
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const r = await dialog.showOpenDialog(w!, {
+      title: 'Pasta de saída da entrega',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: dirname(pedido.videoCaminho),
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    return renderizarEntrega(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
   });
 
   ipcMain.handle('ad:renderizar', async (e, { id, pedido }: { id: string; pedido: PedidoRender }) => {

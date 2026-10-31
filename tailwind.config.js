@@ -1,22 +1,40 @@
 /** @type {import('tailwindcss').Config} */
+// Cores por papel, via variáveis CSS geradas de src/ui/tema/tokens.ts (fonte única).
+const v = (nome) => `rgb(var(--c-${nome}) / <alpha-value>)`;
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Tokens de marca Ouver. Terra é reservado a bordas/ícones/fundos de
-        // realce: sobre Paper ele não atinge 4,5:1 (ver test/contraste.test.ts),
-        // por isso o corpo de texto usa navy/navy-700.
-        navy: { DEFAULT: '#1B2230', 700: '#2C3547', 500: '#4A566E', 300: '#8A93A6' },
-        paper: { DEFAULT: '#FAF8F3', 200: '#F2EEE4', 400: '#E3DDCD' },
-        terra: { DEFAULT: '#B85F3E', 700: '#8E4227', 900: '#5E2B19' },
-        ok: { DEFAULT: '#1F6B4A', 100: '#E4F1EA' },
-        warn: { DEFAULT: '#8A5B00', 100: '#FBF0DA' },
-        bad: { DEFAULT: '#A3242B', 100: '#FBE6E7' },
+        fundo: v('fundo'),
+        navy: { DEFAULT: v('navy'), 700: v('navy-700'), 500: v('navy-500'), 300: v('navy-300') },
+        paper: { DEFAULT: v('paper'), 200: v('paper-200'), 400: v('paper-400') },
+        terra: { DEFAULT: v('terra'), 700: v('terra-700'), 900: v('terra-900') },
+        ok: { DEFAULT: v('ok'), 100: v('ok-100') },
+        warn: { DEFAULT: v('warn'), 100: v('warn-100') },
+        bad: { DEFAULT: v('bad'), 100: v('bad-100') },
+        // fixas (não mudam com o tema): monitor e cabine do locutor
+        preto: '#0A0B0D',
+        cabine: {
+          DEFAULT: '#161A22',
+          texto: '#F4F2EC',
+          suave: '#A9B0BE',
+          faixa: '#2C3547',
+          gravando: '#A3242B',
+          preparo: '#FBF0DA',
+          'preparo-texto': '#7A5000',
+          ok: '#9BE3BC',
+          erro: '#FFB3B7',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      fontSize: {
+        // escala densa de editor: 11/12/13 para painéis, 14+ para conteúdo
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
       },
     },
   },

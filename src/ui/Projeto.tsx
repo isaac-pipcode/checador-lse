@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { useDespachar, useEstado } from '../state/store';
 import { ponte, type ArquivoTake, type ProjetoArquivo } from '../desktop/ponte';
 import { bytesDoTake, registrarTake } from '../ad/audio';
@@ -6,59 +6,55 @@ import { serializarSrt } from '../export/serializar';
 import { parseSubtitle } from '../parser/srt';
 import { carregarMidia } from './carregarMidia';
 import { JANELA_MS } from '../mapa/midia';
+import { JANELA_PADRAO, type JanelaLibras } from '../libras/tipos';
 
 /**
- * Abrir e salvar projeto (desktop): um .estudio.json com o roteiro de AD, os
- * parâmetros, a legenda e o caminho do vídeo, mais a pasta `takes/` ao lado.
+ * Ações de projeto (desktop): um .estudio.json com legenda, roteiro de AD,
+ * parâmetros, janela de Libras e caminhos das mídias, mais a pasta `takes/`.
  * Limite: as decisões de revisão da LSE ainda não são salvas no projeto.
  */
-export function BarraProjeto() {
-  const desktop = ponte();
+export function useAcoesProjeto() {
   const { estado } = useEstado();
   const despachar = useDespachar();
-  const [erro, setErro] = useState<string | null>(null);
-  if (!desktop) return null;
+  const desktop = ponte();
 
-  async function salvar(como: boolean) {
-    if (!desktop) return;
-    setErro(null);
-    const takes: ArquivoTake[] = [];
-    const arquivos: Record<string, string> = {};
-    for (const b of estado.ad.blocos) {
-      for (const t of b.takes) {
-        const arquivo = t.arquivo ?? `${t.id}.webm`;
-        arquivos[t.id] = arquivo;
-        if (t.arquivo) continue; // já está no disco
-        const bytes = await bytesDoTake(t.id);
-        if (bytes) takes.push({ arquivo, bytes });
+  const salvar = useCallback(
+    async (como = false): Promise<boolean> => {
+      if (!desktop) return false;
+      const takes: ArquivoTake[] = [];
+      const arquivos: Record<string, string> = {};
+      for (const b of estado.ad.blocos) {
+        for (const t of b.takes) {
+          const arquivo = t.arquivo ?? `${t.id}.webm`;
+          arquivos[t.id] = arquivo;
+          if (t.arquivo) continue; // já está no disco
+          const bytes = await bytesDoTake(t.id);
+          if (bytes) takes.push({ arquivo, bytes });
+        }
       }
-    }
-    const projeto: ProjetoArquivo = {
-      formato: 'estudio-acessibilidade',
-      versao: 1,
-      salvoEm: new Date().toISOString(),
-      video: estado.video ? { nome: estado.video.nome, caminho: estado.video.caminho } : null,
-      legenda: estado.cues.length ? { nome: estado.arquivoNome ?? 'legenda.srt', conteudo: serializarSrt(estado.cues) } : null,
-      ad: {
-        parametros: estado.ad.parametros,
-        blocos: estado.ad.blocos.map((b) => ({ ...b, takes: b.takes.map((t) => ({ ...t, arquivo: arquivos[t.id] })) })),
-      },
-    };
-    try {
+      const { clipe, ...janela } = estado.libras;
+      const projeto: ProjetoArquivo = {
+        formato: 'estudio-acessibilidade',
+        versao: 1,
+        salvoEm: new Date().toISOString(),
+        video: estado.video ? { nome: estado.video.nome, caminho: estado.video.caminho } : null,
+        legenda: estado.cues.length ? { nome: estado.arquivoNome ?? 'legenda.srt', conteudo: serializarSrt(estado.cues) } : null,
+        ad: {
+          parametros: estado.ad.parametros,
+          blocos: estado.ad.blocos.map((b) => ({ ...b, takes: b.takes.map((t) => ({ ...t, arquivo: arquivos[t.id] })) })),
+        },
+        libras: { ...janela, clipe: clipe ? { nome: clipe.nome, caminho: clipe.caminho, duracaoMs: clipe.duracaoMs } : null },
+      };
       const r = await desktop.salvarProjeto({ caminho: como ? null : estado.projeto.caminho, projeto, takes });
       if (r) despachar({ tipo: 'projetoSalvo', caminho: r.caminho, arquivosTakes: arquivos });
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
-    }
-  }
+      return !!r;
+    },
+    [desktop, estado, despachar],
+  );
 
-  async function abrir() {
-    if (!desktop) return;
-    if (estado.projeto.sujo && !window.confirm('Há mudanças não salvas. Abrir outro projeto mesmo assim?')) return;
-    setErro(null);
-    try {
-      const r = await desktop.abrirProjeto();
-      if (!r) return;
+  const carregar = useCallback(
+    async (r: { caminho: string; projeto: ProjetoArquivo; takes: ArquivoTake[] } | null) => {
+      if (!desktop || !r) return;
       const porArquivo = new Map(r.takes.map((t) => [t.arquivo, t.bytes]));
       for (const b of r.projeto.ad.blocos) {
         for (const t of b.takes) {
@@ -66,45 +62,48 @@ export function BarraProjeto() {
           if (bytes) await registrarTake(t.id, new Blob([bytes as BlobPart], { type: 'audio/webm' }));
         }
       }
+      despachar({ tipo: 'projetoNovo', caminho: r.caminho, nome: '' });
       if (r.projeto.legenda) {
         const p = parseSubtitle(r.projeto.legenda.conteudo);
         despachar({ tipo: 'carregar', nome: r.projeto.legenda.nome, encoding: 'utf-8', cues: p.cues, erros: p.erros, avisos: p.avisos });
       }
-      despachar({ tipo: 'projetoCarregado', caminho: r.caminho, ad: r.projeto.ad });
-      const v = r.projeto.video;
-      if (v?.caminho) {
+      // Libras: o clipe precisa de uma URL servível, pedida ao processo desktop
+      const lib = r.projeto.libras;
+      let libras: JanelaLibras | undefined = lib ? { ...JANELA_PADRAO, ...lib, clipe: null } : undefined;
+      if (lib?.clipe?.caminho) {
         try {
-          const url = await desktop.urlDeMidia(v.caminho);
-          const caminho = v.caminho;
-          await carregarMidia(despachar, { url, nome: v.nome, caminho }, () => desktop.analisarAudio(caminho, JANELA_MS, () => {}));
+          const url = await desktop.urlDeMidia(lib.clipe.caminho);
+          libras = { ...JANELA_PADRAO, ...lib, clipe: { ...lib.clipe, url } };
         } catch {
-          setErro(`Vídeo não encontrado em ${v.caminho}. Abra-o de novo pelo estúdio.`);
+          /* clipe movido ou apagado: a janela abre sem clipe (J3 aponta) */
         }
       }
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  const nome = estado.projeto.caminho?.split(/[\\/]/).pop();
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
-      <button type="button" className="btn-fantasma" onClick={() => void abrir()}>
-        Abrir projeto…
-      </button>
-      <button type="button" className="btn-secundario" onClick={() => void salvar(false)}>
-        Salvar projeto{estado.projeto.sujo ? ' •' : ''}
-      </button>
-      {nome ? (
-        <button type="button" className="btn-fantasma" onClick={() => void salvar(true)}>
-          Salvar como…
-        </button>
-      ) : null}
-      <span className="text-xs text-navy-500">
-        {nome ?? 'Projeto não salvo'}
-        {estado.projeto.sujo ? <span className="sr-only-focusable"> (alterações não salvas)</span> : null}
-      </span>
-      {erro ? <span className="text-xs text-bad">{erro}</span> : null}
-    </div>
+      despachar({ tipo: 'projetoCarregado', caminho: r.caminho, ad: r.projeto.ad, libras });
+      despachar({ tipo: 'navegar', pagina: 'lse' });
+      const v = r.projeto.video;
+      if (v?.caminho) {
+        const url = await desktop.urlDeMidia(v.caminho);
+        const caminho = v.caminho;
+        await carregarMidia(despachar, { url, nome: v.nome, caminho }, () => desktop.analisarAudio(caminho, JANELA_MS, () => {}));
+      }
+    },
+    [desktop, despachar],
   );
+
+  return {
+    disponivel: !!desktop,
+    salvar,
+    abrir: async () => desktop && carregar(await desktop.abrirProjeto()),
+    abrirEm: async (caminho: string) => desktop && carregar(await desktop.abrirProjetoEm(caminho)),
+    novo: async (nome: string): Promise<boolean> => {
+      if (!desktop) {
+        despachar({ tipo: 'projetoNovo', caminho: null, nome });
+        return true;
+      }
+      const caminho = await desktop.novoProjeto(nome);
+      if (!caminho) return false;
+      despachar({ tipo: 'projetoNovo', caminho, nome });
+      return true;
+    },
+  };
 }

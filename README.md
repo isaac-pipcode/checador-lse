@@ -1,6 +1,15 @@
-# Checador de LSE
+# Estúdio de Acessibilidade (antigo Checador de LSE)
 
-Validador, revisor assistido e exportador de legendas para **Surdos e Ensurdecidos (LSE)** em
+Programa unificado para as três camadas de acessibilidade audiovisual — **legendagem para surdos
+e ensurdecidos (LSE)**, **audiodescrição (AD)** e **janela de Libras** — sobre uma mesma linha do
+tempo, com interface de editor de vídeo (ver [docs/design-system.md](docs/design-system.md)).
+Aplicativo desktop (Electron); o módulo de LSE também roda no navegador.
+
+**Fluxo:** *Projetos* (dashboard) → *Legendas* → *Audiodescrição* → *Libras* → *Entrega*, em
+páginas na barra inferior. A *Entrega* gera um **pacote acessível**: um único arquivo com vídeo (com
+a janela de Libras queimada), faixa de áudio original, faixa com AD e LSE como legenda selecionável.
+
+O núcleo de LSE é um validador, revisor assistido e exportador de legendas para **Surdos e Ensurdecidos (LSE)** em
 português brasileiro, conforme o *Guia para Produções Audiovisuais Acessíveis* (NAVES; MAUCH;
 ALVES; ARAÚJO — MinC/SAv, 2016).
 
@@ -80,10 +89,10 @@ fica registrado no relatório de QA.
 
 `cps = caracteres / ((endMs − startMs) / 1000)`.
 
-## Estúdio: vídeo, mapa temporal e linha do tempo (protótipo)
+## Mapa temporal e linha do tempo (passo 1)
 
-Primeiro passo de um programa unificado de acessibilidade audiovisual (LSE, audiodescrição e
-Libras sobre a mesma linha do tempo). Ativado pela caixa *Abrir estúdio* na tela de revisão.
+Primeiro passo do programa unificado. O monitor e a linha do tempo são compartilhados por todas
+as páginas.
 
 Ao carregar um vídeo local, o estúdio monta um **mapa temporal** da obra:
 
@@ -212,6 +221,62 @@ compensação, mas ainda sem calibração automática. A prévia pode divergir a
 reprodução longa; a renderização, não. Áudio 5.1 é reduzido a estéreo. A tela de AD não passou por
 axe-core nem por leitor de tela. Empacotamento (instaladores) ainda não configurado.
 
+## Janela de Libras (passo 3, protótipo)
+
+Página **Libras**. O intérprete é gravado à parte, em geral com fundo verde e com o som da obra
+como guia. O clipe é composto sobre a obra.
+
+- **Sincronização pelo som-guia.** Correlação de Pearson entre os envelopes de energia da obra e
+  do clipe (banda de voz, 10 ms), em duas resoluções (50 ms até ±60 s; depois 10 ms em ±100 ms).
+  A sobreposição mínima é de 5 s ou 1/4 do sinal; a confiança é a correlação no pico, penalizada
+  quando há um rival acima de 70% fora do lóbulo principal. Sem som-guia, a confiança sai baixa e
+  a interface pede ajuste manual (±1 quadro, ±1 s, "começar aqui"). Nos arquivos de exemplo,
+  encontra +1,99 s para +2,00 s reais (diferença de 1 janela, compatível com o atraso inicial do
+  Opus).
+- **Posição, tamanho, enquadramento.** Quatro cantos, margem, altura e largura em fração da tela
+  (o mínimo da norma aparece marcado nos controles deslizantes), zoom e posição vertical do
+  intérprete dentro da janela (o clipe é recortado para preencher a janela).
+- **Recorte de fundo (chroma key).** Cor-chave, similaridade e suavidade, com a mesma fórmula do
+  filtro `chromakey` do ffmpeg usado na entrega. A prévia roda em WebGL e, sem GPU, em CPU numa
+  resolução reduzida. Concordância medida com o ffmpeg num quadro real: acima de 97% dos pixels
+  (a diferença fica nas bordas, porque o ffmpeg tira média 3×3). Fundo opcional em cor sólida.
+- **Verificações.** J1/J2 altura e largura mínimas · J3 sem clipe · J4 a janela não cobre a obra
+  inteira · J5 a janela invade a faixa onde a LSE costuma ficar (heurística) · J6 sincronia não
+  verificada ou de baixa confiança.
+
+**Norma.** ABNT NBR 15290:2005, com **altura mínima de 1/2 e largura mínima de 1/4 da tela**,
+segundo fontes secundárias (INES, Câmara dos Deputados, MPF). **O texto integral da norma não foi
+consultado**: os limites são parâmetros e a interface declara a fonte. Uma consequência que o
+verificador expõe: com 1/4 da largura, uma janela no canto já invade a faixa central em que a LSE
+costuma aparecer (J5). A legenda precisa ser deslocada, ou isso deve ser aceito conscientemente.
+
+## Entrega
+
+Página **Entrega**: prontidão por etapa (em texto, com atalho para a página), arquivos avulsos
+(LSE e relatório de QA; roteiro de AD em texto, VTT e CSV; mixagem e trilha de AD em WAV) e o
+**pacote acessível**:
+
+- **Com Libras:** MP4 (H.264 recodificado, CRF 18), janela queimada no vídeo.
+- **Sem Libras:** MKV, com o vídeo copiado sem recompressão.
+- **Faixas de áudio:** *Original* e *Audiodescrição* (AAC, `por`). O nome vai em `title` e em
+  `handler_name`, porque MP4 lê o segundo.
+- **Legenda:** *LSE*, com as decisões aprovadas na revisão (`mov_text` no MP4, SRT no MKV).
+
+Testado com ffmpeg real: as faixas e os nomes são conferidos, e os pixels na região da janela
+também, antes, durante e depois do clipe.
+
+## Interface
+
+Tema escuro por padrão, com tema claro alternativo; layout de editor de vídeo com dashboard de
+projetos, painéis, monitor, inspetor, linha do tempo multipista e páginas por etapa. Tokens,
+componentes, padrões e a auditoria de partida estão em
+[docs/design-system.md](docs/design-system.md).
+
+O **dashboard** lista os projetos recentes, com miniatura gerada pelo ffmpeg a 10% da obra e o
+estado de cada etapa, e permite filtrar, criar (o estúdio cria uma subpasta com o projeto e as
+gravações) e abrir. O processo desktop só grava projetos em caminhos escolhidos pelo usuário em
+diálogos do sistema ou já abertos por ele.
+
 ## Arquitetura
 
 ```
@@ -223,12 +288,14 @@ src/
   ad/         audiodescrição: modelo, estimativa, verificações, curva de mixagem, roteiro (puro)
               + gravador, prévia (Web Audio) e cache de takes (navegador)
   desktop/    contrato da ponte com o processo desktop
+  libras/     janela de Libras: modelo, geometria e verificações, sincronia, chroma (puro)
   mapa/       mapa temporal: envelope de áudio, atividade, cortes, lacunas (puro) + camada de navegador
   nlp/        léxico de classes fechadas do pt-BR + segmentador, atrás de uma interface
   llm/        cliente opcional (Anthropic), atrás de feature flag
   export/     aplicação dos diffs aprovados, serialização, relatório de QA
   state/      estado da revisão (useReducer + contexto)
-  ui/         interface (revisão de LSE, estúdio, AD)
+  ui/         interface: shell/ (dashboard, espaço de trabalho, barras), paginas/ (uma por
+              etapa), ad/, libras/, tema/ (tokens), componentes de LSE
 desktop/      processo principal do Electron: protocolo midia://, IPC, ffmpeg, renderização
 ```
 
@@ -261,14 +328,14 @@ mesmo fluxo de aprovação das demais sugestões, com grau de confiança. Sem ex
 - Severidade e status nunca sinalizados só por cor: sempre ícone **e** texto.
 - `aria-live="polite"` anuncia mudanças de decisão.
 - `prefers-reduced-motion` respeitado.
-- Contraste dos tokens de marca verificado em teste automatizado (`test/contraste.test.ts`).
-  O acento Terra (`#B85F3E`) **reprova** em 4,5:1 sobre o fundo Paper e por isso é usado apenas em
-  bordas e realces, nunca em corpo de texto; `terra-700` cobre os casos em que o acento precisa
-  virar texto.
+- Contraste dos tokens verificado em teste automatizado nos dois temas
+  (`test/contraste.test.ts`). O acento (terra) é cor de componente; como texto, usa-se
+  `terra-700`.
 
 **Verificação feita:** axe-core (regras WCAG 2.0/2.1/2.2 A e AA + *best practices*) sem violações
-nas telas de carregamento, revisão, parâmetros, módulo assistido e metodologia; navegação e decisões
-exercitadas por teclado em Chromium.
+no app desktop reformulado: dashboard e as quatro páginas no tema escuro, incluindo o modo de
+gravação; dashboard, Legendas, Libras e Entrega no tema claro. Contraste de todos os tokens dos dois
+temas verificado em `test/contraste.test.ts`. Diálogos modais tornam o fundo `inert`.
 
 **Verificação pendente:** teste com leitor de tela real (NVDA/VoiceOver). Ferramentas automatizadas
 cobrem parte das falhas de acessibilidade; a validação com usuários de tecnologia assistiva não foi

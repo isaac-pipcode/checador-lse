@@ -21,7 +21,7 @@ export function Filtros() {
     ).length;
 
   return (
-    <section aria-labelledby={`${idBase}-titulo`} className="border-b border-paper-400 px-4 py-3">
+    <section aria-labelledby={`${idBase}-titulo`} className="border-b border-paper-400 px-3 py-2">
       <h3 id={`${idBase}-titulo`} className="sr-only">
         Filtros e ações em lote
       </h3>
@@ -33,7 +33,7 @@ export function Filtros() {
           </label>
           <select
             id={`${idBase}-regra`}
-            className="campo w-56"
+            className="campo w-44"
             value={f.regra}
             onChange={(e) => acoes.filtros({ regra: e.target.value })}
           >
@@ -97,7 +97,7 @@ export function Filtros() {
           </label>
           <input
             id={`${idBase}-busca`}
-            className="campo w-56"
+            className="campo w-44"
             type="search"
             value={f.busca}
             onChange={(e) => acoes.filtros({ busca: e.target.value })}
