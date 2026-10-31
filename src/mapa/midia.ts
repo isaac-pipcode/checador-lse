@@ -56,6 +56,8 @@ class LeitorDeQuadros {
   constructor(url: string) {
     this.video = document.createElement('video');
     this.video.muted = true;
+    // midia:// (desktop) é outra origem: sem CORS, o canvas fica "contaminado"
+    this.video.crossOrigin = 'anonymous';
     this.video.preload = 'auto';
     this.video.src = url;
     this.canvas = document.createElement('canvas');

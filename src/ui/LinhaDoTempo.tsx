@@ -2,6 +2,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import type { Cue, Severity } from '../model/types';
 import type { Intervalo, MapaTemporal } from '../mapa/tipos';
 import type { Lacuna } from '../mapa/lacunas';
+import type { PontoGanho } from '../ad/mixagem';
+import type { NivelAD } from '../ad/verificacoes';
 import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
 
@@ -27,8 +29,8 @@ const H_REGUA = 22;
 const H_SOM = 64;
 const H_LEGENDAS = 44;
 const H_LACUNAS = 30;
+const H_AD = 40;
 const H_CANVAS = H_REGUA + H_SOM;
-const H_TOTAL = H_CANVAS + H_LEGENDAS + H_LACUNAS;
 
 const ZOOMS = [2, 5, 10, 20, 40, 80, 160, 320];
 
@@ -55,6 +57,24 @@ function passoDaRegua(pxPorSegundo: number): number {
   return 3600;
 }
 
+export interface BlocoNaLinha {
+  id: string;
+  inicioMs: number;
+  fimMs: number;
+  texto: string;
+  take: { inicioMs: number; fimMs: number } | null;
+  nivel: NivelAD;
+}
+
+const CLASSE_NIVEL: Record<NivelAD, string> = {
+  ok: 'border-ok bg-ok-100 text-ok',
+  aviso: 'border-warn bg-warn-100 text-warn',
+  erro: 'border-bad bg-bad-100 text-bad',
+  pendente: 'border-navy-300 bg-paper text-navy-700',
+};
+const ICONE_NIVEL: Record<NivelAD, string> = { ok: '✓', aviso: '!', erro: '✕', pendente: '…' };
+const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'pronto', aviso: 'com aviso', erro: 'com erro', pendente: 'pendente' };
+
 export interface PropsLinhaDoTempo {
   duracaoMs: number;
   mapa: MapaTemporal | null;
@@ -65,6 +85,11 @@ export interface PropsLinhaDoTempo {
   tempoMs: number;
   aoBuscar: (ms: number) => void;
   aoSelecionarLegenda: (index: number) => void;
+  /** trilha de audiodescrição (módulo de AD) */
+  trilhaAd?: BlocoNaLinha[];
+  aoSelecionarBloco?: (id: string) => void;
+  /** curva de ganho do original, desenhada sobre a forma de onda */
+  curvaGanho?: PontoGanho[];
 }
 
 export function LinhaDoTempo(p: PropsLinhaDoTempo) {
@@ -78,6 +103,8 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const [largura, setLargura] = useState(800);
 
   const total = Math.max(1, (p.duracaoMs / 1000) * pxs);
+  const hAd = p.trilhaAd ? H_AD : 0;
+  const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + H_LACUNAS;
   const x = (ms: number) => (ms / 1000) * pxs;
   const t0 = (scroll / pxs) * 1000;
   const t1 = ((scroll + largura) / pxs) * 1000;
@@ -185,12 +212,31 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
         g.strokeRect(x(s.inicioMs) - scroll + 0.5, y0 + 2.5, Math.max(1, x(s.fimMs - s.inicioMs)) - 1, H_SOM - 9);
       }
       g.setLineDash([]);
+      // curva de ducking da AD: 0 dB no topo do traço, atenuação para baixo
+      if (p.curvaGanho && p.curvaGanho.length > 1) {
+        g.strokeStyle = COR.ok;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        const yG = (ganho: number) => y0 + 4 + (1 - ganho) * (H_SOM - 14);
+        for (let px = 0; px <= largura; px += 2) {
+          const ms = ((scroll + px) / pxs) * 1000;
+          let k = 0;
+          while (k + 1 < p.curvaGanho.length && p.curvaGanho[k + 1].ms <= ms) k++;
+          const a = p.curvaGanho[k];
+          const b = p.curvaGanho[k + 1];
+          const ganho = !b || b.ms === a.ms ? a.ganho : a.ganho + ((b.ganho - a.ganho) * (ms - a.ms)) / (b.ms - a.ms);
+          if (px === 0) g.moveTo(px, yG(ganho));
+          else g.lineTo(px, yG(ganho));
+        }
+        g.stroke();
+        g.lineWidth = 1;
+      }
     } else {
       g.fillStyle = COR.navy500;
       g.font = '12px system-ui, sans-serif';
       g.fillText(mapa && !mapa.audio ? 'Áudio não decodificado' : 'Sem análise de áudio', 8, y0 + H_SOM / 2);
     }
-  }, [scroll, largura, pxs, p.mapa, p.alertasSom, t0, t1]);
+  }, [scroll, largura, pxs, p.mapa, p.alertasSom, p.curvaGanho, t0, t1]);
 
   function teclado(e: KeyboardEvent<HTMLDivElement>) {
     if (e.target !== e.currentTarget) return;
@@ -249,6 +295,11 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           <div style={{ height: H_LEGENDAS }} className="flex items-center border-t border-paper-400 px-2">
             Legendas
           </div>
+          {p.trilhaAd ? (
+            <div style={{ height: H_AD }} className="flex items-center border-t border-paper-400 px-2 font-medium">
+              Audiodescrição
+            </div>
+          ) : null}
           <div style={{ height: H_LACUNAS }} className="flex items-center border-t border-paper-400 px-2">
             Lacunas (AD)
           </div>
@@ -278,7 +329,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                 aria-hidden="true"
                 title={`Corte em ${formatarTimecode(c.ms)} (±${c.precisaoMs} ms)`}
                 className="pointer-events-none absolute border-l border-navy"
-                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS }}
+                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS + hAd }}
               />
             ))}
 
@@ -311,9 +362,46 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               })}
             </div>
 
+            {p.trilhaAd ? (
+              <div className="absolute left-0 border-t border-paper-400" style={{ top: H_CANVAS + H_LEGENDAS, width: total, height: H_AD }}>
+                {p.trilhaAd
+                  .filter((b) => b.fimMs >= t0 && b.inicioMs <= t1)
+                  .map((b) => {
+                    const w = Math.max(3, x(b.fimMs - b.inicioMs));
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          p.aoBuscar(b.take?.inicioMs ?? b.inicioMs);
+                          p.aoSelecionarBloco?.(b.id);
+                        }}
+                        aria-label={`Bloco de audiodescrição de ${formatarTimecode(b.inicioMs)} a ${formatarTimecode(b.fimMs)}, ${ROTULO_NIVEL[b.nivel]}${b.take ? ', gravado' : ''}: ${b.texto || 'sem roteiro'}`}
+                        title={b.texto}
+                        className={`absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-dashed text-left text-[11px] ${CLASSE_NIVEL[b.nivel]}`}
+                        style={{ left: x(b.inicioMs), width: w, height: H_AD - 8 }}
+                      >
+                        {b.take ? (
+                          <span
+                            aria-hidden="true"
+                            className="absolute bottom-0.5 top-0.5 rounded-sm bg-navy/25"
+                            style={{ left: x(b.take.inicioMs - b.inicioMs), width: Math.max(2, x(b.take.fimMs - b.take.inicioMs)) }}
+                          />
+                        ) : null}
+                        {w > 14 ? (
+                          <span aria-hidden="true" className="relative px-1 font-semibold leading-[30px]">
+                            {ICONE_NIVEL[b.nivel]} {w > 40 ? b.texto : ''}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+              </div>
+            ) : null}
+
             <div
               className="absolute left-0 border-t border-paper-400"
-              style={{ top: H_CANVAS + H_LEGENDAS, width: total, height: H_LACUNAS }}
+              style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LACUNAS }}
             >
               {lacunasVisiveis.map((l) => {
                 const w = Math.max(3, x(l.fimMs - l.inicioMs));
@@ -349,7 +437,8 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
       </div>
       <p className="mt-1 text-xs text-navy-500">
         Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
-        detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano.
+        detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
+        {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}.
       </p>
     </section>
   );

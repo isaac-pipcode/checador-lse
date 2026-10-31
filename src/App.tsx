@@ -9,8 +9,12 @@ import { ListaLegendas } from './ui/ListaLegendas';
 import { Exportar } from './ui/Exportar';
 import { Sobre } from './ui/Sobre';
 import { Estudio } from './ui/Estudio';
+import { PainelAD } from './ui/ad/PainelAD';
+import { SaidasAD } from './ui/ad/SaidasAD';
+import { BarraProjeto } from './ui/Projeto';
+import { ponte } from './desktop/ponte';
 
-type Tela = 'revisao' | 'sobre';
+type Tela = 'revisao' | 'ad' | 'sobre';
 
 export function App() {
   const { estado } = useEstado();
@@ -32,9 +36,9 @@ export function App() {
       <header className="sticky top-0 z-30 border-b border-paper-400 bg-paper px-4 py-3">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2">
           <h1 className="text-xl font-semibold">
-            Checador de LSE
+            {ponte() ? 'Estúdio de Acessibilidade' : 'Checador de LSE'}
             <span className="block text-xs font-normal text-navy-700">
-              Legendagem para Surdos e Ensurdecidos · Guia MinC/SAv (2016)
+              LSE e audiodescrição · Guia MinC/SAv (2016)
             </span>
           </h1>
 
@@ -45,7 +49,15 @@ export function App() {
               aria-current={tela === 'revisao' ? 'page' : undefined}
               onClick={() => setTela('revisao')}
             >
-              Revisão
+              Legendas (LSE)
+            </button>
+            <button
+              type="button"
+              className={tela === 'ad' ? 'btn-secundario' : 'btn-fantasma'}
+              aria-current={tela === 'ad' ? 'page' : undefined}
+              onClick={() => setTela('ad')}
+            >
+              Audiodescrição
             </button>
             <button
               type="button"
@@ -58,6 +70,7 @@ export function App() {
           </nav>
 
           <div className="ml-auto flex flex-wrap items-center gap-3">
+            <BarraProjeto />
             <ConfigLlm />
             {carregado ? (
               <>
@@ -85,6 +98,19 @@ export function App() {
       <main id="conteudo" className="flex min-h-0 flex-1 flex-col">
         {tela === 'sobre' ? (
           <Sobre />
+        ) : tela === 'ad' ? (
+          <div className="mx-auto w-full max-w-6xl">
+            {!carregado ? (
+              <p className="mx-4 mt-3 rounded border border-paper-400 bg-paper-200 px-3 py-2 text-sm text-navy-700">
+                Sem legenda carregada, as lacunas vêm dos silêncios do áudio e a checagem de sobreposição com a fala
+                (A3) não é feita. Carregue a LSE na aba <em>Legendas</em> para um mapa de diálogo confiável.
+              </p>
+            ) : null}
+            <Estudio previa modo="ad">
+              <PainelAD />
+              <SaidasAD />
+            </Estudio>
+          </div>
         ) : !carregado ? (
           <>
             <Carregador />
@@ -122,7 +148,7 @@ export function App() {
               </p>
             </div>
 
-            {estudio ? <Estudio previa={previa} /> : null}
+            {estudio ? <Estudio previa={previa} modo="lse" /> : null}
 
             <ListaLegendas mostrarPrevia={previa} />
             <Exportar />

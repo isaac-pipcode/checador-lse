@@ -1,0 +1,125 @@
+import { describe, expect, it } from 'vitest';
+import { calibrarPpm, contarPalavras, duracaoEstimadaMs } from '../src/ad/estimativa';
+import { verificarBloco, nivelDoBloco } from '../src/ad/verificacoes';
+import { clipesDosBlocos, curvaDeDucking, ganhoEm, CursorDeGanho, dbParaLinear } from '../src/ad/mixagem';
+import { aparar } from '../src/ad/takes';
+import { roteiroVtt } from '../src/ad/roteiro';
+import { PARAMETROS_AD_PADRAO, type BlocoAD, type Take } from '../src/ad/tipos';
+import { AcumuladorEnvelope, envelopeRmsDb } from '../src/mapa/sinal';
+import { cuesDe } from './auxiliares';
+
+const P = PARAMETROS_AD_PADRAO;
+
+function take(over: Partial<Take> = {}): Take {
+  return { id: 't1', arquivo: null, duracaoMs: 3000, trimInicioMs: 200, trimFimMs: 2200, posicaoMs: 5000, ganhoDb: 0, gravadoEm: '', ...over };
+}
+function bloco(over: Partial<BlocoAD> = {}): BlocoAD {
+  return { id: 'b1', inicioMs: 4000, fimMs: 9000, texto: 'Ana abre a porta devagar.', takes: [], takeAtivoId: null, nota: '', ...over };
+}
+
+describe('estimativa de leitura', () => {
+  it('conta palavras com hífen e apóstrofo como uma', () => {
+    expect(contarPalavras('Ana pega o guarda-chuva d’água.')).toBe(5);
+    expect(duracaoEstimadaMs('um dois três quatro', 120)).toBe(2000);
+  });
+
+  it('calibra pela mediana dos takes, com no mínimo três amostras', () => {
+    const b = (i: number, palavras: number, ms: number): BlocoAD =>
+      bloco({ id: `b${i}`, texto: Array(palavras).fill('p').join(' '), takes: [take({ id: `t${i}`, trimInicioMs: 0, trimFimMs: ms })], takeAtivoId: `t${i}` });
+    expect(calibrarPpm([b(1, 10, 4000), b(2, 10, 4000)])).toBeNull();
+    expect(calibrarPpm([b(1, 10, 4000), b(2, 10, 3000), b(3, 10, 5000)])).toEqual({ ppm: 150, amostras: 3 });
+  });
+});
+
+describe('verificações de bloco', () => {
+  const { cues } = cuesDe(`1
+00:00:03,000 --> 00:00:04,000
+Fala antes.
+
+2
+00:00:08,500 --> 00:00:10,000
+Fala depois.
+
+3
+00:00:06,000 --> 00:00:06,800
+[CAMPAINHA]`);
+
+  it('A1: texto estimado maior que a janela', () => {
+    const longo = Array(40).fill('palavra').join(' '); // 15 s a 160 ppm
+    const ap = verificarBloco(bloco({ texto: longo }), cues, P);
+    expect(ap.find((a) => a.codigo === 'A1')?.nivel).toBe('erro');
+  });
+
+  it('A3: take sobre fala é erro; sobre [efeito] não', () => {
+    const t = take({ posicaoMs: 7000, trimInicioMs: 0, trimFimMs: 2000 }); // 7–9 s, fala em 8,5
+    const ap = verificarBloco(bloco({ takes: [t], takeAtivoId: 't1' }), cues, P);
+    expect(ap.map((a) => a.codigo).sort()).toEqual(['A3']);
+    const t2 = take({ posicaoMs: 5500, trimInicioMs: 0, trimFimMs: 1500 }); // cobre só a campainha
+    expect(nivelDoBloco(verificarBloco(bloco({ takes: [t2], takeAtivoId: 't1' }), cues, P))).toBe('ok');
+  });
+
+  it('A2: take fora da janela; A5: sem take', () => {
+    const t = take({ posicaoMs: 3500, trimInicioMs: 0, trimFimMs: 1000 });
+    expect(verificarBloco(bloco({ takes: [t], takeAtivoId: 't1' }), [], P).map((a) => a.codigo)).toEqual(['A2']);
+    expect(verificarBloco(bloco(), [], P).map((a) => a.codigo)).toEqual(['A5']);
+  });
+});
+
+describe('mixagem', () => {
+  const blocos = [
+    bloco({ id: 'a', takes: [take({ id: 'x', posicaoMs: 5000, trimInicioMs: 100, trimFimMs: 1100 })], takeAtivoId: 'x' }),
+    bloco({ id: 'b', takes: [take({ id: 'y', posicaoMs: 6400, trimInicioMs: 0, trimFimMs: 1000 })], takeAtivoId: 'y' }),
+    bloco({ id: 'c', takes: [take({ id: 'z', posicaoMs: 20000, trimInicioMs: 0, trimFimMs: 1000 })], takeAtivoId: 'z' }),
+  ];
+  const clipes = clipesDosBlocos(blocos, P);
+  const curva = curvaDeDucking(clipes, P);
+  const g = dbParaLinear(P.duckingDb);
+
+  it('clipes usam o trecho aparado', () => {
+    expect(clipes[0]).toMatchObject({ posicaoMs: 5000, offsetMs: 100, duracaoMs: 1000 });
+  });
+
+  it('ducking: rampa antes, patamar durante, fusão de clipes próximos', () => {
+    expect(ganhoEm(curva, 0)).toBe(1);
+    expect(ganhoEm(curva, 5000 - P.ataqueMs)).toBe(1);
+    expect(ganhoEm(curva, 5000)).toBeCloseTo(g);
+    // entre o fim do 1º (6000) e o início do 2º (6400): continua abaixado
+    expect(ganhoEm(curva, 6200)).toBeCloseTo(g);
+    expect(ganhoEm(curva, 7400 + P.liberacaoMs)).toBe(1);
+    expect(ganhoEm(curva, 7400 + P.liberacaoMs / 2)).toBeCloseTo((1 + g) / 2);
+    expect(ganhoEm(curva, 20500)).toBeCloseTo(g);
+  });
+
+  it('cursor monotônico coincide com a busca binária', () => {
+    const c = new CursorDeGanho(curva);
+    for (let ms = 0; ms < 25000; ms += 37) expect(c.em(ms)).toBeCloseTo(ganhoEm(curva, ms), 9);
+  });
+});
+
+describe('takes e envelope', () => {
+  it('apara silêncio de cabeça e cauda', () => {
+    const taxa = 16000;
+    const a = new Float32Array(taxa * 3);
+    for (let i = taxa; i < taxa * 2; i++) a[i] = 0.3 * Math.sin(i / 5);
+    const r = aparar(a, taxa, 30);
+    expect(r.trimInicioMs).toBeGreaterThanOrEqual(900);
+    expect(r.trimInicioMs).toBeLessThanOrEqual(1000);
+    expect(r.trimFimMs).toBeGreaterThanOrEqual(2000);
+    expect(r.trimFimMs).toBeLessThanOrEqual(2200);
+  });
+
+  it('acumulador incremental = envelope de uma vez', () => {
+    const a = Float32Array.from({ length: 16000 * 2 + 77 }, (_, i) => Math.sin(i / 7) * (i % 3000) / 3000);
+    const acc = new AcumuladorEnvelope(16000, 10);
+    for (let i = 0; i < a.length; i += 1234) acc.adicionar(a.subarray(i, i + 1234));
+    const x = acc.concluir();
+    const y = envelopeRmsDb(a, 16000, 10);
+    expect(x.length).toBe(y.length);
+    for (let i = 0; i < x.length; i++) expect(x[i]).toBeCloseTo(y[i], 3);
+  });
+
+  it('VTT de descrições usa a posição do take', () => {
+    const b = bloco({ takes: [take()], takeAtivoId: 't1' });
+    expect(roteiroVtt([b])).toContain('00:00:05.000 --> 00:00:07.000');
+  });
+});

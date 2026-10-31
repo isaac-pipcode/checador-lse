@@ -115,6 +115,73 @@ de ~1 h podem passar de 1 GB (o caminho para produção é demultiplexar em stre
 Codecs que o navegador não lê (ProRes, por exemplo) exigem um proxy. A tela do estúdio ainda **não
 passou** pela verificação com axe-core nem por leitor de tela.
 
+## Aplicativo desktop
+
+O projeto roda também como aplicativo desktop (Electron), que é o alvo a partir do passo 2. Requer o
+**ffmpeg** instalado (no `PATH`, ou indicado em `CHECADOR_FFMPEG`).
+
+```bash
+npm install
+npm run desktop        # build da interface + processo desktop, e abre o app
+```
+
+Para desenvolver com recarga: `npm run dev` num terminal e `npm run desktop:dev` em outro.
+
+O que o desktop acrescenta ao navegador:
+
+- **Análise de áudio pelo ffmpeg, em streaming**: qualquer duração e qualquer codec que o ffmpeg
+  leia. No navegador, o limite é a memória de `decodeAudioData`.
+- **Vídeo servido do disco** por um protocolo próprio (`midia://`) com suporte a `Range`; só
+  arquivos escolhidos em diálogos do sistema ou registrados num projeto aberto são servidos.
+- **Projeto em disco**: `nome.estudio.json` (roteiro, parâmetros, legenda, caminho do vídeo) e a
+  pasta `takes/` ao lado. As decisões da revisão de LSE ainda **não** são salvas no projeto.
+- **Renderização da mixagem** (abaixo).
+
+Segurança: renderer isolado (`contextIsolation`, `sandbox`, sem Node); tudo que toca disco ou
+ffmpeg passa pela ponte tipada em `src/desktop/ponte.ts`. O microfone é a única permissão concedida.
+
+## Audiodescrição (passo 2, protótipo)
+
+Aba **Audiodescrição**. Usa o mesmo vídeo, mapa temporal e linha do tempo do estúdio, com uma
+trilha a mais.
+
+1. **Blocos a partir das lacunas.** Um clique cria um bloco em cada intervalo sem fala. As lacunas vêm
+   da LSE carregada ou, sem ela, dos silêncios do áudio (bem menos confiável). Também é possível
+   criar um bloco na posição do vídeo e ajustar a janela em passos de ¼ s.
+2. **Roteiro com estimativa de leitura.** Cada bloco mostra palavras, duração estimada e quantas
+   palavras cabem na janela. A velocidade parte de 160 ppm, um valor de partida e não uma norma.
+   Com três ou mais takes, o estúdio mede a velocidade real do locutor (mediana) e oferece trocá-la.
+3. **Gravação por bloco.** O vídeo volta a pré-rolagem (2 s), toca o som original e grava; um aviso
+   indica *LEIA AGORA* quando o bloco começa. Para sozinho ao fim da janela (ou com Esc). Eco,
+   supressão de ruído e ganho automático do sistema ficam desligados. O take é aparado (silêncio
+   de cabeça e cauda; o que foi captado na pré-rolagem é sempre descartado) e posicionado onde o
+   locutor de fato falou. Takes múltiplos por bloco, com escolha do ativo, deslocamento de 0,1 s
+   e ganho de 1 dB.
+4. **Verificações por bloco** (determinísticas, exceto a estimativa de A1):
+   A1 texto estimado não cabe na janela · A2 gravação sai da janela · A3 gravação sobre legenda
+   de fala (legendas só de `[efeito]` não contam) · A4 sem roteiro · A5 sem gravação.
+5. **Prévia da mixagem** em tempo real: o som original passa por um ganho que segue a curva de
+   *ducking* (−10 dB, ataque 250 ms, liberação 500 ms, configuráveis; clipes próximos fundem o
+   patamar para evitar bombeamento), desenhada em verde sobre a forma de onda.
+6. **Saídas.** Roteiro em texto para o locutor, WebVTT de descrições e CSV. No desktop,
+   **renderização** com a mesma curva e os mesmos clipes da prévia: mixagem WAV 24 bits/48 kHz
+   estéreo, trilha de AD isolada (para finalizar em outro programa) e MKV com faixa extra
+   *Audiodescrição* (`por`), vídeo copiado sem recompressão. O relatório traz loudness integrada e
+   pico verdadeiro (EBU R128, filtro `ebur128`), amostras saturadas e avisos. **A loudness é
+   medida, não normalizada**: a especificação de entrega varia por cliente.
+
+**Verificado.** Testes unitários do núcleo (estimativa, verificações, curva, aparo); teste da
+renderização com ffmpeg real (atenuação medida dentro de ±2 dB do ducking pedido; voz na posição;
+faixa titulada no MKV); fluxo completo no Electron sob Xvfb: análise, blocos, duas gravações
+com microfone simulado, renderização, salvar e reabrir projeto.
+
+**Não verificado / limites.** Gravação com microfone e locutor reais. O medidor de nível ficou
+mudo no ambiente de teste (sem dispositivo de áudio; a gravação em si funcionou), então precisa
+ser conferido numa máquina real. A latência de captura varia por máquina: há um campo de
+compensação, mas ainda sem calibração automática. A prévia pode divergir alguns milissegundos em
+reprodução longa; a renderização, não. Áudio 5.1 é reduzido a estéreo. A tela de AD não passou por
+axe-core nem por leitor de tela. Empacotamento (instaladores) ainda não configurado.
+
 ## Arquitetura
 
 ```
@@ -123,12 +190,16 @@ src/
   model/      tipos (Cue, Suggestion, ReviewState, RuleConfig) e perfis
   core/       contagem de caracteres, CPS, métricas, contraste
   rules/      uma regra por arquivo, funções puras (cues, config, ctx) => Suggestion[]
+  ad/         audiodescrição: modelo, estimativa, verificações, curva de mixagem, roteiro (puro)
+              + gravador, prévia (Web Audio) e cache de takes (navegador)
+  desktop/    contrato da ponte com o processo desktop
   mapa/       mapa temporal: envelope de áudio, atividade, cortes, lacunas (puro) + camada de navegador
   nlp/        léxico de classes fechadas do pt-BR + segmentador, atrás de uma interface
   llm/        cliente opcional (Anthropic), atrás de feature flag
   export/     aplicação dos diffs aprovados, serialização, relatório de QA
   state/      estado da revisão (useReducer + contexto)
-  ui/         interface de revisão
+  ui/         interface (revisão de LSE, estúdio, AD)
+desktop/      processo principal do Electron: protocolo midia://, IPC, ffmpeg, renderização
 ```
 
 ### Sobre o módulo de segmentação (L1)

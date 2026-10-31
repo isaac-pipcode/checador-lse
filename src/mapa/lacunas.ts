@@ -71,3 +71,17 @@ export function lacunasCsv(lacunas: Lacuna[], tc: (ms: number) => string): strin
   });
   return linhas.join('\r\n') + '\r\n';
 }
+
+/**
+ * Sem legenda carregada, a única pista de diálogo é o som: lacunas viram os
+ * silêncios do mapa. Bem mais pobre (trilha musical fecha tudo) — a interface
+ * avisa que a fonte é essa.
+ */
+export function lacunasPorSilencio(
+  mapa: Pick<MapaTemporal, 'atividade' | 'duracaoMs'>,
+  minimaMs: number,
+): Lacuna[] {
+  return complemento(mapa.atividade, mapa.duracaoMs)
+    .filter((l) => l.fimMs - l.inicioMs >= minimaMs)
+    .map((l) => ({ ...l, fracaoComSom: 0, efeitos: [] }));
+}

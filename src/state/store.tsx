@@ -24,6 +24,10 @@ import { calcularMetricas } from '../core/metricas';
 import type { Corte, MapaTemporal, ParametrosAtividade, StatusCortes } from '../mapa/tipos';
 import { detectarAtividade } from '../mapa/sinal';
 import type { ContextoRegras } from '../rules';
+import type { BlocoAD, ParametrosAD, Take } from '../ad/tipos';
+import { PARAMETROS_AD_PADRAO } from '../ad/tipos';
+import type { Intervalo } from '../mapa/tipos';
+import { novoId } from '../ad/takes';
 
 export interface Filtros {
   regra: string;
@@ -56,7 +60,10 @@ export interface Estado {
   /** pilha de operações em lote, para desfazer */
   historicoLote: Array<{ rotulo: string; anterior: ReviewState }>;
   /** vídeo local (object URL); independe do arquivo de legenda */
-  video: { url: string; nome: string } | null;
+  video: { url: string; nome: string; caminho: string | null } | null;
+  ad: { blocos: BlocoAD[]; parametros: ParametrosAD };
+  /** projeto desktop: caminho do .estudio.json e se há mudanças não salvas */
+  projeto: { caminho: string | null; sujo: boolean };
   mapa: MapaTemporal | null;
   /** pedidos de navegação entre lista e linha do tempo (n distingue pedidos repetidos) */
   pedidoSeek: { ms: number; n: number } | null;
@@ -86,6 +93,8 @@ export const estadoInicial: Estado = {
   anuncio: '',
   historicoLote: [],
   video: null,
+  ad: { blocos: [], parametros: PARAMETROS_AD_PADRAO },
+  projeto: { caminho: null, sujo: false },
   mapa: null,
   pedidoSeek: null,
   pedidoLista: null,
@@ -110,7 +119,18 @@ type Acao =
   | { tipo: 'llm'; mudanca: Partial<EstadoLlm> }
   | { tipo: 'sugestaoLlm'; base: Suggestion; after: CueSnapshot; confianca: number; texto: string }
   | { tipo: 'anunciar'; texto: string }
-  | { tipo: 'video'; url: string; nome: string }
+  | { tipo: 'video'; url: string; nome: string; caminho: string | null }
+  | { tipo: 'adCriarDasLacunas'; lacunas: Intervalo[] }
+  | { tipo: 'adAdicionar'; inicioMs: number; fimMs: number }
+  | { tipo: 'adEditar'; id: string; mudanca: Partial<Pick<BlocoAD, 'texto' | 'nota' | 'inicioMs' | 'fimMs'>> }
+  | { tipo: 'adRemover'; id: string }
+  | { tipo: 'adNovoTake'; blocoId: string; take: Take }
+  | { tipo: 'adAjustarTake'; blocoId: string; takeId: string; mudanca: Partial<Take> }
+  | { tipo: 'adAtivarTake'; blocoId: string; takeId: string }
+  | { tipo: 'adRemoverTake'; blocoId: string; takeId: string }
+  | { tipo: 'adParametros'; mudanca: Partial<ParametrosAD> }
+  | { tipo: 'projetoCarregado'; caminho: string; ad: Estado['ad'] }
+  | { tipo: 'projetoSalvo'; caminho: string; arquivosTakes: Record<string, string> }
   | { tipo: 'mapa'; mapa: MapaTemporal | null }
   | { tipo: 'atividade'; parametros: ParametrosAtividade }
   | { tipo: 'cortes'; status: StatusCortes; cortes?: Corte[] }
@@ -128,7 +148,14 @@ function motor(config: RuleConfig, mapa: MapaTemporal | null): ContextoRegras {
 
 /** Preserva o que independe do arquivo de legenda (configuração, LLM, vídeo). */
 function persistentes(estado: Estado) {
-  return { config: estado.config, llm: estado.llm, video: estado.video, mapa: estado.mapa };
+  return {
+    config: estado.config,
+    llm: estado.llm,
+    video: estado.video,
+    mapa: estado.mapa,
+    ad: estado.ad,
+    projeto: estado.projeto,
+  };
 }
 
 function chaveConteudo(s: Suggestion): string {
@@ -152,6 +179,19 @@ function reanalisar(estado: Estado, config: RuleConfig): Estado {
       : { suggestion: s, decision: 'pendente' };
   }
   return { ...estado, config, sugestoes, review, historicoLote: [] };
+}
+
+function ordenarBlocos(blocos: BlocoAD[]): BlocoAD[] {
+  return [...blocos].sort((a, b) => a.inicioMs - b.inicioMs);
+}
+
+function comAd(estado: Estado, blocos: BlocoAD[], anuncio?: string): Estado {
+  return {
+    ...estado,
+    ad: { ...estado.ad, blocos },
+    projeto: { ...estado.projeto, sujo: true },
+    ...(anuncio ? { anuncio } : {}),
+  };
 }
 
 function redutor(estado: Estado, acao: Acao): Estado {
@@ -277,7 +317,7 @@ function redutor(estado: Estado, acao: Acao): Estado {
       return { ...estado, anuncio: acao.texto };
 
     case 'video': {
-      const novo = { ...estado, video: { url: acao.url, nome: acao.nome }, mapa: null };
+      const novo = { ...estado, video: { url: acao.url, nome: acao.nome, caminho: acao.caminho }, mapa: null };
       return estado.cues.length > 0 ? reanalisar(novo, estado.config) : novo;
     }
 
@@ -306,6 +346,113 @@ function redutor(estado: Estado, acao: Acao): Estado {
       const r = reanalisar(novo, estado.config);
       return { ...r, anuncio: `${mapa.cortes.length} cortes de plano detectados.` };
     }
+
+    case 'adCriarDasLacunas': {
+      const existentes = estado.ad.blocos;
+      const livres = acao.lacunas.filter(
+        (l) => !existentes.some((b) => b.inicioMs < l.fimMs && b.fimMs > l.inicioMs),
+      );
+      if (livres.length === 0) return { ...estado, anuncio: 'Nenhuma lacuna nova: todas já têm bloco.' };
+      const novos: BlocoAD[] = livres.map((l) => ({
+        id: novoId('b'),
+        inicioMs: l.inicioMs,
+        fimMs: l.fimMs,
+        texto: '',
+        nota: '',
+        takes: [],
+        takeAtivoId: null,
+      }));
+      return comAd(estado, ordenarBlocos([...existentes, ...novos]), `${novos.length} blocos criados a partir das lacunas.`);
+    }
+
+    case 'adAdicionar':
+      return comAd(
+        estado,
+        ordenarBlocos([
+          ...estado.ad.blocos,
+          { id: novoId('b'), inicioMs: acao.inicioMs, fimMs: acao.fimMs, texto: '', nota: '', takes: [], takeAtivoId: null },
+        ]),
+        'Bloco de audiodescrição criado.',
+      );
+
+    case 'adEditar':
+      return comAd(
+        estado,
+        ordenarBlocos(estado.ad.blocos.map((b) => (b.id === acao.id ? { ...b, ...acao.mudanca } : b))),
+      );
+
+    case 'adRemover':
+      return comAd(estado, estado.ad.blocos.filter((b) => b.id !== acao.id), 'Bloco removido.');
+
+    case 'adNovoTake':
+      return comAd(
+        estado,
+        estado.ad.blocos.map((b) =>
+          b.id === acao.blocoId ? { ...b, takes: [...b.takes, acao.take], takeAtivoId: acao.take.id } : b,
+        ),
+        'Gravação adicionada e escolhida para a mixagem.',
+      );
+
+    case 'adAjustarTake':
+      return comAd(
+        estado,
+        estado.ad.blocos.map((b) =>
+          b.id === acao.blocoId
+            ? { ...b, takes: b.takes.map((t) => (t.id === acao.takeId ? { ...t, ...acao.mudanca } : t)) }
+            : b,
+        ),
+      );
+
+    case 'adAtivarTake':
+      return comAd(
+        estado,
+        estado.ad.blocos.map((b) => (b.id === acao.blocoId ? { ...b, takeAtivoId: acao.takeId } : b)),
+        'Gravação escolhida para a mixagem.',
+      );
+
+    case 'adRemoverTake':
+      return comAd(
+        estado,
+        estado.ad.blocos.map((b) =>
+          b.id === acao.blocoId
+            ? {
+                ...b,
+                takes: b.takes.filter((t) => t.id !== acao.takeId),
+                takeAtivoId: b.takeAtivoId === acao.takeId ? null : b.takeAtivoId,
+              }
+            : b,
+        ),
+        'Gravação descartada.',
+      );
+
+    case 'adParametros':
+      return {
+        ...estado,
+        ad: { ...estado.ad, parametros: { ...estado.ad.parametros, ...acao.mudanca } },
+        projeto: { ...estado.projeto, sujo: true },
+      };
+
+    case 'projetoCarregado':
+      return {
+        ...estado,
+        ad: acao.ad,
+        projeto: { caminho: acao.caminho, sujo: false },
+        anuncio: `Projeto aberto: ${acao.ad.blocos.length} blocos de audiodescrição.`,
+      };
+
+    case 'projetoSalvo':
+      return {
+        ...estado,
+        ad: {
+          ...estado.ad,
+          blocos: estado.ad.blocos.map((b) => ({
+            ...b,
+            takes: b.takes.map((t) => (acao.arquivosTakes[t.id] ? { ...t, arquivo: acao.arquivosTakes[t.id] } : t)),
+          })),
+        },
+        projeto: { caminho: acao.caminho, sujo: false },
+        anuncio: 'Projeto salvo.',
+      };
 
     case 'seek':
       return { ...estado, pedidoSeek: { ms: acao.ms, n: (estado.pedidoSeek?.n ?? 0) + 1 } };

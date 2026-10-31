@@ -98,3 +98,37 @@ export function primeiroApos(lista: Intervalo[], ms: number): number {
   }
   return lo;
 }
+
+/**
+ * Versão incremental de `envelopeRmsDb`, para áudio que chega em blocos
+ * (decodificação em streaming no desktop). Mesmo resultado, memória O(janelas).
+ */
+export class AcumuladorEnvelope {
+  private porJanela: number;
+  private soma = 0;
+  private n = 0;
+  private valores: number[] = [];
+
+  constructor(taxa: number, janelaMs: number) {
+    this.porJanela = Math.max(1, Math.round((taxa * janelaMs) / 1000));
+  }
+
+  adicionar(amostras: Float32Array) {
+    for (let i = 0; i < amostras.length; i++) {
+      this.soma += amostras[i] * amostras[i];
+      if (++this.n === this.porJanela) this.fecharJanela();
+    }
+  }
+
+  private fecharJanela() {
+    const rms = Math.sqrt(this.soma / Math.max(1, this.n));
+    this.valores.push(rms > 0 ? Math.max(PISO_ABSOLUTO_DB, 20 * Math.log10(rms)) : PISO_ABSOLUTO_DB);
+    this.soma = 0;
+    this.n = 0;
+  }
+
+  concluir(): Float32Array {
+    if (this.n > 0) this.fecharJanela();
+    return Float32Array.from(this.valores);
+  }
+}

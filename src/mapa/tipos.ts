@@ -50,6 +50,7 @@ export interface MapaTemporal {
   duracaoMs: number;
   /** falso quando o áudio não pôde ser decodificado: M1 e M3 não executam */
   audio: boolean;
+  erroAudio?: string;
   /** resolução do envelope */
   janelaMs: number;
   /** energia por janela, em dBFS, banda de voz (≈150–4000 Hz) */
