@@ -12,13 +12,38 @@ const temFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('f
 
 describe('filtro da janela de Libras', () => {
   it('clipe que começa depois da obra: desloca o tempo; antes: corta o início', () => {
-    const base = { quadro: { w: 1920, h: 1080 }, fonte: { w: 1920, h: 1080 }, janela: JANELA_PADRAO, entrada: 1 };
+    const base = { quadro: { w: 1920, h: 1080 }, fonte: { w: 1920, h: 1080 }, janela: { ...JANELA_PADRAO, margem: 0.02 }, entrada: 1 };
     const depois = filtroLibras({ ...base, inicioNaObraMs: 1500 }).filtro;
-    expect(depois).toContain('setpts=PTS-STARTPTS+1.500/TB');
+    expect(depois).toContain('setpts=(PTS-STARTPTS)+1.500/TB');
     expect(depois).toContain('chromakey=0x00B140:0.120:0.080');
     expect(depois).toContain('overlay=1418:518:eof_action=pass');
     const antes = filtroLibras({ ...base, inicioNaObraMs: -2000 }).filtro;
-    expect(antes).toContain('trim=start=2.000,setpts=PTS-STARTPTS');
+    expect(antes).toContain('trim=start=2.000,setpts=(PTS-STARTPTS)');
+  });
+
+  it('velocidade (deriva/cadência) entra no setpts; o corte inicial é medido no tempo do clipe', () => {
+    const base = { quadro: { w: 1920, h: 1080 }, fonte: { w: 1920, h: 1080 }, entrada: 1 };
+    const v = 25 / (24000 / 1001);
+    const f = filtroLibras({ ...base, janela: { ...JANELA_PADRAO, velocidade: v }, inicioNaObraMs: 1000 }).filtro;
+    expect(f).toContain('setpts=(PTS-STARTPTS)*1.042708+1.000/TB');
+    const g = filtroLibras({ ...base, janela: { ...JANELA_PADRAO, velocidade: 2 }, inicioNaObraMs: -4000 }).filtro;
+    expect(g).toContain('trim=start=2.000,setpts=(PTS-STARTPTS)*2.000000');
+  });
+
+  it('ordem da cadeia: recorte → chroma → encolher → suavizar → cor → despill → bordas → escala', () => {
+    const j = {
+      ...JANELA_PADRAO,
+      chroma: { ...JANELA_PADRAO.chroma, encolher: 2, suavizarBorda: 1.5, bordas: { esq: 0.1, dir: 0, topo: 0, base: 0 } },
+      cor: { brilho: 0.05, contraste: 1.1, saturacao: 0.9 },
+    };
+    const f = filtroLibras({ quadro: { w: 1920, h: 1080 }, fonte: { w: 1920, h: 1080 }, entrada: 1, janela: j, inicioNaObraMs: 0 }).filtro;
+    const ordem = ['crop=', 'chromakey=', 'erosion=', 'erosion=', 'gblur=sigma=1.50:planes=8', 'eq=brightness=0.050', 'despill=type=green', 'pad=', 'scale='];
+    let pos = -1;
+    for (const t of ordem) {
+      const i = f.indexOf(t, pos + 1);
+      expect(i, t).toBeGreaterThan(pos);
+      pos = i;
+    }
   });
 
   it('fundo sólido atrás do intérprete', () => {

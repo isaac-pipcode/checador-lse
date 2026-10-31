@@ -68,7 +68,10 @@ export interface PedidoEntrega {
   libras: {
     caminho: string;
     inicioNaObraMs: number;
-    janela: Pick<JanelaLibras, 'canto' | 'altura' | 'largura' | 'margem' | 'zoom' | 'deslocY' | 'chroma' | 'fundo' | 'corFundo'>;
+    janela: Pick<
+      JanelaLibras,
+      'canto' | 'altura' | 'largura' | 'margem' | 'zoom' | 'deslocY' | 'deslocX' | 'chroma' | 'cor' | 'velocidade' | 'fundo' | 'corFundo'
+    >;
   } | null;
   /** faixa de AD: os mesmos dados da renderização do passo 2 */
   ad: Pick<PedidoRender, 'clipes' | 'curva' | 'takes'> | null;

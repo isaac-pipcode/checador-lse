@@ -12,7 +12,14 @@ export function uvDaCor(hex: string): [number, number] {
 }
 
 /** Alfa (0–1) de um pixel RGB (0–255). */
-export function alfaChroma(r: number, g: number, b: number, chave: [number, number], sim: number, mistura: number): number {
+export function alfaChroma(
+  r: number,
+  g: number,
+  b: number,
+  chave: [number, number],
+  sim: number,
+  mistura: number,
+): number {
   const u = (-0.168736 * r - 0.331264 * g + 0.5 * b) / 255 + 0.5;
   const v = (0.5 * r - 0.418688 * g - 0.081312 * b) / 255 + 0.5;
   const du = u - chave[0];
@@ -20,4 +27,31 @@ export function alfaChroma(r: number, g: number, b: number, chave: [number, numb
   const dif = Math.sqrt((du * du + dv * dv) / 2);
   if (mistura > 0.0001) return Math.min(1, Math.max(0, (dif - sim) / mistura));
   return dif > sim ? 1 : 0;
+}
+
+/**
+ * Saturação da cor-chave: distância (na métrica do chromakey) entre ela e o
+ * cinza neutro. Tons neutros — a roupa preta do intérprete, cabelo grisalho,
+ * camisa branca — ficam todos a essa distância da chave, quaisquer que sejam.
+ */
+export function saturacaoDaChave(hex: string): number {
+  const [u, v] = uvDaCor(hex);
+  return Math.sqrt(((u - 0.5) ** 2 + (v - 0.5) ** 2) / 2);
+}
+
+/**
+ * Tolerância e transição a partir da saturação da chave, deixando folga para
+ * os tons neutros: tolerância + transição = 75% da saturação. Um pano verde
+ * real (menos saturado que o verde puro) pede tolerância menor.
+ */
+export function toleranciaSugerida(hex: string): { similaridade: number; suavidade: number } {
+  const d = saturacaoDaChave(hex);
+  const r = (x: number) => Math.round(x * 100) / 100;
+  return { similaridade: Math.max(0.02, r(0.45 * d)), suavidade: Math.max(0.01, r(0.3 * d)) };
+}
+
+/** Fração da saturação da chave consumida por tolerância + transição (> 1: neutros viram transparentes). */
+export function invasaoDosNeutros(hex: string, similaridade: number, suavidade: number): number {
+  const d = saturacaoDaChave(hex);
+  return d > 0 ? (similaridade + suavidade) / d : Infinity;
 }

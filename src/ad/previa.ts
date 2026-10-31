@@ -19,6 +19,9 @@ export class MotorPrevia {
   private fonte: MediaElementAudioSourceNode;
   private ganhoOriginal: GainNode;
   private ganhoAd: GainNode;
+  /** volume e posição estéreo do filme, para a conferência de sincronia da Libras */
+  private volFilme: GainNode;
+  private panFilme: StereoPannerNode;
   private ativos: AudioBufferSourceNode[] = [];
   private clipes: Clipe[] = [];
   private curva: PontoGanho[] = [];
@@ -36,8 +39,10 @@ export class MotorPrevia {
     this.fonte.disconnect();
     this.ganhoOriginal = this.ctx.createGain();
     this.ganhoAd = this.ctx.createGain();
-    this.fonte.connect(this.ganhoOriginal).connect(this.ctx.destination);
-    this.ganhoAd.connect(this.ctx.destination);
+    this.volFilme = this.ctx.createGain();
+    this.panFilme = this.ctx.createStereoPanner();
+    this.fonte.connect(this.ganhoOriginal).connect(this.volFilme).connect(this.panFilme).connect(this.ctx.destination);
+    this.ganhoAd.connect(this.volFilme);
     for (const e of this.eventos) video.addEventListener(e, this.reagendar);
   }
 
@@ -101,13 +106,59 @@ export class MotorPrevia {
     }
   }
 
+  /** Conferência de ouvido: filme ao centro, à esquerda (com o intérprete à direita) ou mudo. */
+  definirEscuta(modo: 'filme' | 'ambos' | 'interprete') {
+    this.volFilme.gain.value = modo === 'interprete' ? 0 : 1;
+    this.panFilme.pan.value = modo === 'ambos' ? -1 : 0;
+  }
+
   descartar() {
     this.parar();
     for (const e of this.eventos) this.video.removeEventListener(e, this.reagendar);
     this.fonte.disconnect();
     this.ganhoOriginal.disconnect();
     this.ganhoAd.disconnect();
+    this.volFilme.disconnect();
+    this.panFilme.disconnect();
     // devolve o som do vídeo ao destino, sem processamento
     this.fonte.connect(this.ctx.destination);
+  }
+}
+
+/**
+ * Som-guia do clipe de Libras na conferência de sincronia: à direita no modo
+ * "ambos", ao centro no modo "intérprete", mudo no modo "filme".
+ */
+export class CanalInterprete {
+  private ctx = contextoAudio();
+  private fonte: MediaElementAudioSourceNode;
+  private vol: GainNode;
+  private pan: StereoPannerNode;
+
+  constructor(private video: HTMLVideoElement) {
+    let f = fontes.get(video);
+    if (!f) {
+      f = this.ctx.createMediaElementSource(video);
+      fontes.set(video, f);
+    }
+    this.fonte = f;
+    this.fonte.disconnect();
+    this.vol = this.ctx.createGain();
+    this.pan = this.ctx.createStereoPanner();
+    this.fonte.connect(this.vol).connect(this.pan).connect(this.ctx.destination);
+    this.definirEscuta('filme');
+  }
+
+  definirEscuta(modo: 'filme' | 'ambos' | 'interprete') {
+    this.video.muted = modo === 'filme';
+    this.vol.gain.value = modo === 'filme' ? 0 : 1;
+    this.pan.pan.value = modo === 'ambos' ? 1 : 0;
+    if (modo !== 'filme') void this.ctx.resume();
+  }
+
+  descartar() {
+    this.fonte.disconnect();
+    this.vol.disconnect();
+    this.pan.disconnect();
   }
 }

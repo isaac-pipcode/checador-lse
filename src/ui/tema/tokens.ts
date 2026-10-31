@@ -25,7 +25,9 @@ export type NomeToken =
   | 'warn'
   | 'warn-100'
   | 'bad'
-  | 'bad-100';
+  | 'bad-100'
+  | 'serie-1' // gráficos: 1ª série (azul), validada com o validador de paleta da skill dataviz
+  | 'serie-2'; // gráficos: 2ª série (laranja)
 
 export type Tema = 'escuro' | 'claro';
 
@@ -50,6 +52,8 @@ export const TEMAS: Record<Tema, Record<NomeToken, string>> = {
     'warn-100': '#322A13',
     bad: '#F4797F',
     'bad-100': '#3A1B20',
+    'serie-1': '#3987E5',
+    'serie-2': '#D95926',
   },
   // Paleta original do checador (Ouver), mantida como alternativa.
   claro: {
@@ -70,6 +74,8 @@ export const TEMAS: Record<Tema, Record<NomeToken, string>> = {
     'warn-100': '#FBF0DA',
     bad: '#A3242B',
     'bad-100': '#FBE6E7',
+    'serie-1': '#2A78D6',
+    'serie-2': '#EB6834',
   },
 };
 

@@ -108,6 +108,14 @@ ficam em "Janela e opções", recolhido.
 do original e a escolha Proxy/Original. Quando o original não é reproduzível, um aviso sobre a
 imagem diz por que e oferece a saída. A entrega nunca usa o proxy.
 
+**Gráficos.** Feitos com o procedimento da skill de visualização: forma antes da cor, um eixo
+só, e cores de série como tokens próprios (`serie-1` azul, `serie-2` laranja), validados com o
+script de paleta contra as superfícies dos dois temas (pior caso para daltonismo ΔE 24,7). O par
+azul + aqua foi descartado: fraco para tritanopia (ΔE 4,0) e abaixo de 3:1 no tema claro. Texto
+sempre em tinta, nunca na cor da série; cursor do gráfico em tinta neutra (o acento é do cursor da
+obra); legenda e rótulos diretos para duas séries; dica ao passar o mouse; tabela de dados ou
+equivalente textual (a correlação do trecho).
+
 **Indicador de etapa.** Cada aba da barra de páginas traz o estado em texto ("3 erros", "1/4
 gravados", "pronta"), com cor de reforço.
 

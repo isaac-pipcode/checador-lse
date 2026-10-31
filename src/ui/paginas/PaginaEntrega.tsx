@@ -156,8 +156,7 @@ export function EntregaDireita() {
           if (b) takes.push({ id: c.takeId, bytes: b });
         }
       }
-      const { clipe, inicioNaObraMs, canto, altura, largura, margem, zoom, deslocY, chroma, fundo, corFundo } =
-        estado.libras;
+      const { clipe, inicioNaObraMs, ...janela } = estado.libras;
       const r = await desktop.renderizarEntrega(
         {
           videoCaminho: estado.video.caminho,
@@ -168,7 +167,7 @@ export function EntregaDireita() {
               ? {
                   caminho: clipe.caminho,
                   inicioNaObraMs,
-                  janela: { canto, altura, largura, margem, zoom, deslocY, chroma, fundo, corFundo },
+                  janela,
                 }
               : null,
           ad: incluir.ad && temAd ? { clipes, curva: curvaDeDucking(clipes, estado.ad.parametros), takes } : null,

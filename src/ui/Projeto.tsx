@@ -6,7 +6,7 @@ import { serializarSrt } from '../export/serializar';
 import { parseSubtitle } from '../parser/srt';
 import { carregarMidia } from './carregarMidia';
 import { JANELA_MS } from '../mapa/midia';
-import { JANELA_PADRAO, type JanelaLibras } from '../libras/tipos';
+import { normalizarJanela, type JanelaLibras } from '../libras/tipos';
 
 /**
  * Ações de projeto (desktop): um .estudio.json com legenda, roteiro de AD,
@@ -81,18 +81,17 @@ export function useAcoesProjeto() {
       }
       // Libras: o clipe precisa de uma URL servível, pedida ao processo desktop
       const lib = r.projeto.libras;
-      let libras: JanelaLibras | undefined = lib ? { ...JANELA_PADRAO, ...lib, clipe: null } : undefined;
+      let libras: JanelaLibras | undefined = lib ? normalizarJanela({ ...lib, clipe: null }) : undefined;
       if (lib?.clipe?.caminho) {
         try {
           const urlOriginal = await desktop.urlDeMidia(lib.clipe.caminho);
           // o proxy do clipe, se ainda existir, volta a ser o que a prévia toca
           let proxy: { caminho: string; url: string } | null = null;
           if (lib.clipe.proxy) proxy = await desktop.urlDeMidia(lib.clipe.proxy).then((url) => ({ caminho: lib.clipe!.proxy!, url }), () => null);
-          libras = {
-            ...JANELA_PADRAO,
+          libras = normalizarJanela({
             ...lib,
             clipe: { nome: lib.clipe.nome, caminho: lib.clipe.caminho, duracaoMs: lib.clipe.duracaoMs, urlOriginal, proxy, url: proxy?.url ?? urlOriginal },
-          };
+          });
         } catch {
           /* clipe movido ou apagado: a janela abre sem clipe (J3 aponta) */
         }

@@ -14,6 +14,7 @@ export default {
         ok: { DEFAULT: v('ok'), 100: v('ok-100') },
         warn: { DEFAULT: v('warn'), 100: v('warn-100') },
         bad: { DEFAULT: v('bad'), 100: v('bad-100') },
+        serie: { 1: v('serie-1'), 2: v('serie-2') },
         // fixas (não mudam com o tema): monitor e cabine do locutor
         preto: '#0A0B0D',
         cabine: {

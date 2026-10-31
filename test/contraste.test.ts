@@ -26,6 +26,11 @@ describe.each(['escuro', 'claro'] as Tema[])('contraste dos tokens — tema %s (
     expect(razaoDeContraste(T['terra-700'], T.paper)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
+  it('séries de gráfico: marcas ≥ 3:1 sobre o painel', () => {
+    expect(razaoDeContraste(T['serie-1'], T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
+    expect(razaoDeContraste(T['serie-2'], T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
+  });
+
   it('bordas de controle (navy-500) ≥ 3:1; separadores (paper-400) são decorativos', () => {
     expect(razaoDeContraste(T['navy-500'], T.paper)).toBeGreaterThanOrEqual(AA_COMPONENTE);
     expect(razaoDeContraste(T['paper-400'], T.paper)).toBeLessThan(AA_COMPONENTE);

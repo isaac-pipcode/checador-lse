@@ -223,32 +223,97 @@ axe-core nem por leitor de tela. Empacotamento (instaladores) ainda não configu
 
 ## Janela de Libras (passo 3, protótipo)
 
-Página **Libras**. O intérprete é gravado à parte, em geral com fundo verde e com o som da obra
-como guia. O clipe é composto sobre a obra.
+Página **Libras**. O intérprete é gravado à parte, com fundo verde e com a trilha do filme como
+som-guia. O clipe é sincronizado pelo som-guia, enquadrado, recortado, tratado e composto sobre a
+obra.
 
-- **Sincronização pelo som-guia.** Correlação de Pearson entre os envelopes de energia da obra e
-  do clipe (banda de voz, 10 ms), em duas resoluções (50 ms até ±60 s; depois 10 ms em ±100 ms).
-  A sobreposição mínima é de 5 s ou 1/4 do sinal; a confiança é a correlação no pico, penalizada
-  quando há um rival acima de 70% fora do lóbulo principal. Sem som-guia, a confiança sai baixa e
-  a interface pede ajuste manual (±1 quadro, ±1 s, "começar aqui"). Nos arquivos de exemplo,
-  encontra +1,99 s para +2,00 s reais (diferença de 1 janela, compatível com o atraso inicial do
-  Opus).
-- **Posição, tamanho, enquadramento.** Quatro cantos, margem, altura e largura em fração da tela
-  (o mínimo da norma aparece marcado nos controles deslizantes), zoom e posição vertical do
-  intérprete dentro da janela (o clipe é recortado para preencher a janela).
-- **Recorte de fundo (chroma key).** Cor-chave, similaridade e suavidade, com a mesma fórmula do
-  filtro `chromakey` do ffmpeg usado na entrega. A prévia roda em WebGL e, sem GPU, em CPU numa
-  resolução reduzida. Concordância medida com o ffmpeg num quadro real: acima de 97% dos pixels
-  (a diferença fica nas bordas, porque o ffmpeg tira média 3×3). Fundo opcional em cor sólida.
-- **Verificações.** J1/J2 altura e largura mínimas · J3 sem clipe · J4 a janela não cobre a obra
-  inteira · J5 a janela invade a faixa onde a LSE costuma ficar (heurística) · J6 sincronia não
-  verificada ou de baixa confiança.
+### Sincronização pelo som-guia
 
-**Norma.** ABNT NBR 15290:2005, com **altura mínima de 1/2 e largura mínima de 1/4 da tela**,
+A sincronização funciona como um plugin de sincronia por áudio (à maneira do PluralEyes), mas
+integrada ao projeto:
+
+1. **Cadência.** Testa as razões de velocidade típicas de conversão (1000/1001, 24↔25,
+   25↔23,976…) reamostrando o envelope do som-guia, e fica com a de maior correlação. A "mesma
+   cadência" vence quando está a até 0,05 da melhor, para não inventar conversão.
+2. **Início.** Correlação de Pearson entre os envelopes de energia (banda de voz, 10 ms), com
+   sobreposição mínima, em duas resoluções.
+3. **Deriva.** A defasagem é medida em trechos de 20 s ao longo de todo o clipe; uma reta, com
+   rejeição de discrepantes, dá a deriva. O relógio de câmeras e gravadores diferentes deriva
+   dezenas de ppm: 100 ppm somam 0,7 s num filme de duas horas. Se a deriva acumulada passa de
+   meio quadro, é corrigida pela **velocidade** do clipe (tObra = início + tClipe × velocidade),
+   aplicada na prévia (taxa de reprodução) e na entrega (`setpts`).
+4. **Conferência.** Dois gráficos: as formas de onda do filme e do som-guia, espelhadas, numa
+   janela de ±4 s em torno do cursor (picos alinhados = sincronia), com a correlação do trecho em
+   texto; e o resíduo de cada trecho depois da correção, com uma faixa de ±½ quadro e uma tabela
+   de dados. **De ouvido:** filme à esquerda e som-guia à direita, nos fones (descompasso soa
+   como eco), ou cada um isolado. Ajuste fino por quadro, por segundo ou por velocidade.
+
+Testado: sem deriva; deriva de relógio de +150 ppm em 20 min (medida entre 400 e 680 ms/h,
+residual ≤ 15 ms); conversão 25↔23,976 qd/s em sinal sintético e **em mídia real** (som-guia
+gerado pelo ffmpeg com 4,27% de aceleração: razão identificada, velocidade com erro < 0,001,
+início com erro ≤ 40 ms).
+
+### Proporção, espaço e enquadramento
+
+- **Proporção:** NBR (no quadro 16:9, os mínimos de 1/4 × 1/2 dão 8:9), 3:4, 1:1 ou livre. Com
+  uma proporção escolhida, a altura arrasta a largura, sempre respeitando os mínimos. A medida em
+  pixels do master é mostrada.
+- **Posição:** cantos e margem, com indicação de **área segura** (5% das bordas, convenção de
+  broadcast), botão para encaixar e guia no monitor. A margem padrão (9% do lado menor) já fica
+  dentro da área segura em 16:9 e 4:3. A margem anterior, de 2%, ficava fora; a verificação J7 o
+  acusou.
+- **Enquadramento automático:** em 16 quadros espalhados pelo clipe, recorta o fundo e une as
+  silhuetas, medindo o **espaço de sinalização** (as mãos se movem). Calcula então zoom e
+  deslocamento horizontal e vertical para caber na janela com folga. Objetos separados do corpo
+  por um vão (tripé, refletor, borda do pano) ficam de fora e são reportados. Ajuste manual de
+  zoom, horizontal e vertical.
+
+### Recorte do fundo e tratamento
+
+Cadeia única, na mesma ordem na prévia (CPU, `src/libras/tratamento.ts`) e na entrega (ffmpeg):
+
+**chromakey → encolher matte → suavizar borda → cor → despill → recorte das bordas → escala**
+
+- **Cor-chave:** detecção automática (mediana das bordas de 6 quadros, onde costuma haver só
+  pano), conta-gotas no monitor (média 5×5) ou predefinições verde/azul.
+- **Tolerância ajustada à cor do pano.** Tons neutros (a roupa preta do intérprete, cabelo, pele
+  escura) ficam todos à mesma distância da chave: a saturação do verde. Um pano real é menos
+  saturado que o verde puro. Com a tolerância padrão, a roupa preta ficava 35% transparente,
+  achado do teste com clipe realista. A detecção e o conta-gotas ajustam tolerância e transição
+  a 75% dessa distância, e a interface mostra a folga restante. **J8** aponta quando a tolerância
+  alcança os neutros.
+- **Borda:** encolher (erosão do matte, em px do clipe) tira a franja verde em volta do corpo;
+  suavizar (desfoque gaussiano do matte) evita o serrilhado.
+- **Recortar bordas do quadro:** para o que o verde não cobre (refletores, tripé).
+- **Despill:** neutraliza o verde refletido na pele e na roupa (mistura e expansão, como no
+  filtro do ffmpeg).
+- **Correção do intérprete:** brilho, contraste e saturação, aplicados depois do recorte (não
+  alteram a chave).
+- **Visualização:** composição, **matte** (branco = intérprete; buracos e sobras de verde
+  aparecem) e **sobre cinza** (revela franjas).
+
+**Fidelidade prévia × entrega**, medida num quadro real com todos os controles ativos: 99,99% dos
+pixels com o mesmo alfa e diferença média de cor de 2,9 níveis em 255 (conversões YUV/RGB). Num
+clipe realista (verde irregular com ruído, tripé, mãos esverdeadas), o quadro entregue não tem
+nenhum pixel verde remanescente. A prévia processa até 480 px de altura; o custo por quadro
+aparece no rótulo da janela.
+
+### Verificações
+
+J1/J2 altura e largura mínimas · J3 sem clipe · J4 a janela não cobre a obra inteira · J5 invade a
+faixa da LSE (heurística) · J6 sincronia não verificada ou de baixa confiança · J7 fora da área
+segura · J8 tolerância do recorte alcança tons neutros.
+
+**Norma.** ABNT NBR 15290:2005, com altura mínima de 1/2 e largura mínima de 1/4 da tela,
 segundo fontes secundárias (INES, Câmara dos Deputados, MPF). **O texto integral da norma não foi
-consultado**: os limites são parâmetros e a interface declara a fonte. Uma consequência que o
-verificador expõe: com 1/4 da largura, uma janela no canto já invade a faixa central em que a LSE
-costuma aparecer (J5). A legenda precisa ser deslocada, ou isso deve ser aceito conscientemente.
+consultado.** Com 1/4 da largura, uma janela no canto já invade a faixa central em que a LSE
+costuma aparecer (J5): a legenda precisa ser deslocada, ou isso deve ser aceito conscientemente.
+
+**Limites.** O som-guia precisa existir no clipe: gravação muda não sincroniza sozinha (a
+confiança sai baixa e o ajuste é manual). Clipes gravados em vários trechos, com cortes no meio,
+ainda são tratados como um só (a análise por trechos mostra os pontos discrepantes, mas não
+divide o clipe). O ProRes 4444 com canal alfa dispensaria o chroma, e isso ainda não é
+aproveitado. Ainda não há exportação da sincronia para Premiere ou Resolve (XML).
 
 ## Entrega
 

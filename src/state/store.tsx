@@ -28,7 +28,17 @@ import type { BlocoAD, ParametrosAD, Take } from '../ad/tipos';
 import { PARAMETROS_AD_PADRAO } from '../ad/tipos';
 import type { Intervalo } from '../mapa/tipos';
 import { novoId } from '../ad/takes';
-import { JANELA_PADRAO, type JanelaLibras } from '../libras/tipos';
+import { JANELA_PADRAO, normalizarJanela, type JanelaLibras } from '../libras/tipos';
+
+export interface LibrasUi {
+  /** o que o monitor mostra da janela: composição final, só o matte (alfa) ou o recorte sobre cinza */
+  visual: 'composicao' | 'matte' | 'cinza';
+  /** conferência de sincronia de ouvido */
+  escuta: 'filme' | 'ambos' | 'interprete';
+  /** clique no monitor escolhe a cor-chave */
+  contaGotas: boolean;
+  areaSegura: boolean;
+}
 import type { InfoVideo } from '../midia/avaliacao';
 
 export type Pagina = 'projetos' | 'lse' | 'ad' | 'libras' | 'entrega';
@@ -83,6 +93,8 @@ export interface Estado {
   /** projeto desktop: caminho do .estudio.json e se há mudanças não salvas */
   projeto: { caminho: string | null; sujo: boolean; nome: string | null };
   libras: JanelaLibras;
+  /** estado de trabalho da página de Libras (não vai para o projeto) */
+  librasUi: LibrasUi;
   pagina: Pagina;
   mapa: MapaTemporal | null;
   /** pedidos de navegação entre lista e linha do tempo (n distingue pedidos repetidos) */
@@ -117,6 +129,7 @@ export const estadoInicial: Estado = {
   ad: { blocos: [], parametros: PARAMETROS_AD_PADRAO },
   projeto: { caminho: null, sujo: false, nome: null },
   libras: JANELA_PADRAO,
+  librasUi: { visual: 'composicao', escuta: 'filme', contaGotas: false, areaSegura: false },
   pagina: 'projetos',
   mapa: null,
   pedidoSeek: null,
@@ -160,6 +173,7 @@ type Acao =
   | { tipo: 'projetoNovo'; caminho: string | null; nome: string }
   | { tipo: 'navegar'; pagina: Pagina }
   | { tipo: 'libras'; mudanca: Partial<JanelaLibras> }
+  | { tipo: 'librasUi'; mudanca: Partial<LibrasUi> }
   | { tipo: 'projetoSalvo'; caminho: string; arquivosTakes: Record<string, string> }
   | { tipo: 'mapa'; mapa: MapaTemporal | null }
   | { tipo: 'atividade'; parametros: ParametrosAtividade }
@@ -510,7 +524,7 @@ function redutor(estado: Estado, acao: Acao): Estado {
             legenda: { ...PARAMETROS_AD_PADRAO.legenda, ...(acao.ad.parametros.legenda ?? {}) },
           },
         },
-        libras: acao.libras ?? JANELA_PADRAO,
+        libras: normalizarJanela(acao.libras),
         projeto: { caminho: acao.caminho, sujo: false, nome: nomeDoCaminho(acao.caminho) },
         anuncio: `Projeto aberto: ${acao.ad.blocos.length} blocos de audiodescrição.`,
       };
@@ -579,6 +593,9 @@ function redutor(estado: Estado, acao: Acao): Estado {
       else proxies[acao.caminho] = { progresso: acao.progresso ?? 0, erro: acao.erro ?? null };
       return { ...estado, proxies };
     }
+
+    case 'librasUi':
+      return { ...estado, librasUi: { ...estado.librasUi, ...acao.mudanca } };
 
     case 'seek':
       return { ...estado, pedidoSeek: { ms: acao.ms, n: (estado.pedidoSeek?.n ?? 0) + 1 } };

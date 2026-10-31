@@ -18,6 +18,7 @@ import { BarraPaginas } from './BarraPaginas';
 import { AvisoOriginal, ControleProxy } from './ControleProxy';
 import { avaliarMidia } from '../../midia/avaliacao';
 import { gerarProxyDe } from '../proxy';
+import { toleranciaSugerida } from '../../libras/chroma';
 import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
@@ -115,6 +116,7 @@ export function Espaco() {
   const curva = useMemo(() => curvaDeDucking(clipes, ad.parametros), [clipes, ad.parametros]);
   useEffect(() => motor?.atualizar(clipes, curva), [motor, clipes, curva]);
   useEffect(() => motor?.definirLigado(ouvirAd), [motor, ouvirAd]);
+  useEffect(() => motor?.definirEscuta(estado.librasUi.escuta), [motor, estado.librasUi.escuta]);
 
   const duracaoMs = Math.max(
     mapa?.duracaoMs ?? 0,
@@ -259,7 +261,19 @@ export function Espaco() {
                     />
                     <AvisoOriginal erroDeReproducao={erroVideo} />
                     {verLibras && (libras.clipe || pagina === 'libras') ? (
-                      <CamadaLibras principal={videoPronto} janela={libras} tempoMs={tempoMs} tocando={tocando} guia={pagina === 'libras'} />
+                      <CamadaLibras
+                        principal={videoPronto}
+                        janela={libras}
+                        tempoMs={tempoMs}
+                        tocando={tocando}
+                        guia={pagina === 'libras'}
+                        ui={estado.librasUi}
+                        aoPegarCor={(cor) => {
+                          despachar({ tipo: 'libras', mudanca: { chroma: { ...libras.chroma, cor, ...toleranciaSugerida(cor) } } });
+                          despachar({ tipo: 'librasUi', mudanca: { contaGotas: false } });
+                          despachar({ tipo: 'anunciar', texto: `Cor-chave definida: ${cor}.` });
+                        }}
+                      />
                     ) : null}
                     {verLse && atual ? (
                       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-[6%] flex justify-center px-4">

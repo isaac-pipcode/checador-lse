@@ -17,9 +17,16 @@ const hex = (c: string) => `0x${c.replace('#', '').toUpperCase()}`;
 const num = (n: number, casas = 3) => n.toFixed(casas);
 
 /**
- * Monta o filtro da janela de Libras (puro, testável): recorte "cobrir" no
- * clipe, escala para a janela, chroma key opcional, fundo sólido opcional e
- * sobreposição no canto, deslocada no tempo.
+ * Monta o filtro da janela de Libras (puro, testável). Ordem — a mesma da
+ * prévia (src/libras/tratamento.ts):
+ *
+ *   tempo (início e velocidade) → enquadramento (crop "cobrir", zoom, desloc.)
+ *   → chromakey → encolher matte (erosion só no alfa) → suavizar borda
+ *   (gblur só no alfa) → cor (eq) → despill → recorte das bordas (crop + pad
+ *   transparente) → escala para a janela → fundo sólido opcional → overlay.
+ *
+ * O tratamento roda na resolução do clipe, antes da escala: os raios de
+ * erosão e desfoque estão em pixels do clipe, como na interface.
  */
 export function filtroLibras(args: {
   quadro: { w: number; h: number };
@@ -29,18 +36,48 @@ export function filtroLibras(args: {
   entrada: number;
 }): { filtro: string; rotuloSaida: string } {
   const { quadro, fonte, janela: j, inicioNaObraMs, entrada } = args;
+  const v = j.velocidade && j.velocidade > 0 ? j.velocidade : 1;
   const r = retanguloJanela(j, quadro.w, quadro.h);
-  const c = recorteNaFonte({ w: r.w, h: r.h }, fonte, j.zoom, j.deslocY);
+  const c = recorteNaFonte({ w: r.w, h: r.h }, fonte, j.zoom, j.deslocY, j.deslocX ?? 0);
   const par = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
-  const partes: string[] = [];
-  let tempo: string;
-  if (inicioNaObraMs >= 0) tempo = `setpts=PTS-STARTPTS+${num(inicioNaObraMs / 1000)}/TB`;
-  else tempo = `trim=start=${num(-inicioNaObraMs / 1000)},setpts=PTS-STARTPTS`;
-  let cadeia = `[${entrada}:v]${tempo},crop=${par(c.w)}:${par(c.h)}:${Math.round(c.x)}:${Math.round(c.y)},scale=${r.w}:${r.h},setsar=1`;
-  if (j.chroma.ativo) {
-    cadeia += `,chromakey=${hex(j.chroma.cor)}:${num(Math.max(0.01, j.chroma.similaridade))}:${num(j.chroma.suavidade)}`;
+  const cw = par(c.w);
+  const chh = par(c.h);
+  const etapas: string[] = [];
+
+  // tempo: tObra = início + tClipe × v
+  const fatorPts = v === 1 ? '' : `*${num(v, 6)}`;
+  if (inicioNaObraMs >= 0) etapas.push(`setpts=(PTS-STARTPTS)${fatorPts}+${num(inicioNaObraMs / 1000)}/TB`);
+  else etapas.push(`trim=start=${num(-inicioNaObraMs / 1000 / v)}`, `setpts=(PTS-STARTPTS)${fatorPts}`);
+
+  etapas.push(`crop=${cw}:${chh}:${Math.round(c.x)}:${Math.round(c.y)}`);
+  const ch = j.chroma;
+  if (ch.ativo) {
+    etapas.push('format=yuva444p', `chromakey=${hex(ch.cor)}:${num(Math.max(0.01, ch.similaridade))}:${num(ch.suavidade)}`);
+    for (let i = 0; i < Math.round(ch.encolher ?? 0); i++) etapas.push('erosion=threshold0=0:threshold1=0:threshold2=0');
+    if ((ch.suavizarBorda ?? 0) > 0.05) etapas.push(`gblur=sigma=${num(ch.suavizarBorda, 2)}:planes=8`);
   }
-  if (j.chroma.ativo && j.fundo === 'solido') {
+  const cor = j.cor ?? { brilho: 0, contraste: 1, saturacao: 1 };
+  if (cor.brilho !== 0 || cor.contraste !== 1 || cor.saturacao !== 1) {
+    etapas.push(`eq=brightness=${num(cor.brilho)}:contrast=${num(cor.contraste)}:saturation=${num(cor.saturacao)}`);
+  }
+  if (ch.ativo && ch.despill?.ativo) {
+    etapas.push('format=gbrap', `despill=type=green:mix=${num(ch.despill.mistura)}:expand=${num(ch.despill.expandir)}`);
+  }
+  if (ch.ativo && ch.bordas) {
+    const b = ch.bordas;
+    const x0 = Math.round(b.esq * cw);
+    const y0 = Math.round(b.topo * chh);
+    const w2 = cw - x0 - Math.round(b.dir * cw);
+    const h2 = chh - y0 - Math.round(b.base * chh);
+    if (x0 || y0 || w2 !== cw || h2 !== chh) {
+      etapas.push('format=yuva444p', `crop=${w2}:${h2}:${x0}:${y0}`, `pad=${cw}:${chh}:${x0}:${y0}:color=black@0`);
+    }
+  }
+  etapas.push(`scale=${r.w}:${r.h}`, 'setsar=1');
+
+  const partes: string[] = [];
+  const cadeia = `[${entrada}:v]${etapas.join(',')}`;
+  if (ch.ativo && j.fundo === 'solido') {
     partes.push(`${cadeia}[libk]`);
     partes.push(`color=c=${hex(j.corFundo)}:s=${r.w}x${r.h}[libf]`);
     partes.push(`[libf][libk]overlay=0:0:shortest=1[lib]`);
