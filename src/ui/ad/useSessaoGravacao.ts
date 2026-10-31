@@ -7,6 +7,7 @@ import { aparar, novoId } from '../../ad/takes';
 import type { Take } from '../../ad/tipos';
 import { takeAtivo } from '../../ad/tipos';
 import {
+  GRAVANDO,
   comandoDaTecla,
   montarEstadoPrompter,
   type ComandoGravacao,
@@ -17,8 +18,6 @@ import { ponte } from '../../desktop/ponte';
 
 /** Folga antes do bloco: o que foi captado antes disso é pré-rolagem e é descartado. */
 const FOLGA_INICIO_MS = 300;
-/** A captura continua um pouco além da janela, para não cortar o fim da frase. */
-const CAUDA_MS = 1500;
 /** Envio ao teleprompter: no máximo ~15 atualizações de tempo por segundo. */
 const INTERVALO_ENVIO_MS = 66;
 
@@ -119,11 +118,12 @@ export function useSessaoGravacao() {
     await gravador.current.iniciar();
     inicioGravacaoMs.current = video.currentTime * 1000;
     await video.play();
-    const limite = b.fimMs + CAUDA_MS;
+    const limite = b.fimMs + p.posrollMs;
     const laco = () => {
-      if (r.current.fase !== 'preroll' && r.current.fase !== 'agora') return;
+      if (!GRAVANDO.has(r.current.fase)) return;
       const t = video.currentTime * 1000;
       if (r.current.fase === 'preroll' && t >= b.inicioMs) setFase('agora');
+      if (r.current.fase === 'agora' && t >= b.fimMs) setFase('posroll');
       if (t >= limite || video.ended) void pararTake();
       else vigia.current = requestAnimationFrame(laco);
     };
@@ -131,7 +131,7 @@ export function useSessaoGravacao() {
   }
 
   async function pararTake() {
-    if (r.current.fase !== 'preroll' && r.current.fase !== 'agora') return;
+    if (!GRAVANDO.has(r.current.fase)) return;
     pararVigia();
     const b = bloco(r.current.blocoId);
     setFase('processando');
@@ -214,7 +214,7 @@ export function useSessaoGravacao() {
   function comando(c: ComandoGravacao) {
     const f = r.current.fase;
     if (c === 'encerrar') return encerrar('Sessão de gravação encerrada.');
-    if (c === 'parar' && (f === 'preroll' || f === 'agora')) return void pararTake();
+    if (c === 'parar' && GRAVANDO.has(f)) return void pararTake();
     if (f !== 'revisao') return;
     pararVigia();
     video?.pause();

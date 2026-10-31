@@ -7,7 +7,10 @@ import { duracaoUtil, takeAtivo } from './tipos';
  * única fonte de verdade; a do locutor só exibe e devolve comandos.
  */
 
-export type FaseGravacao = 'ocioso' | 'preroll' | 'agora' | 'processando' | 'revisao';
+export type FaseGravacao = 'ocioso' | 'preroll' | 'agora' | 'posroll' | 'processando' | 'revisao';
+
+/** fases em que o microfone está gravando */
+export const GRAVANDO: ReadonlySet<FaseGravacao> = new Set(['preroll', 'agora', 'posroll']);
 
 export interface EstadoPrompter {
   videoUrl: string | null;
@@ -23,6 +26,8 @@ export interface EstadoPrompter {
     nota: string;
     inicioMs: number;
     fimMs: number;
+    /** fim da captura: fim do bloco + pós-rolagem */
+    fimCapturaMs: number;
   } | null;
   proximo: { texto: string; inicioMs: number } | null;
   /** resultado do último take, na fase de revisão */
@@ -35,7 +40,7 @@ export type ComandoGravacao = 'parar' | 'manter' | 'regravar' | 'descartar' | 'o
 /** Teclas da sessão, iguais nas duas janelas. Devolve null se a tecla não é da sessão. */
 export function comandoDaTecla(tecla: string, fase: FaseGravacao): ComandoGravacao | null {
   if (tecla === 'Escape') return 'encerrar';
-  if (fase === 'preroll' || fase === 'agora') return tecla === 'Enter' || tecla === ' ' ? 'parar' : null;
+  if (GRAVANDO.has(fase)) return tecla === 'Enter' || tecla === ' ' ? 'parar' : null;
   if (fase === 'revisao') {
     if (tecla === 'Enter') return 'manter';
     if (tecla === 'r' || tecla === 'R') return 'regravar';
@@ -86,7 +91,15 @@ export function montarEstadoPrompter(args: {
     fase: args.fase,
     sequencia: args.sequencia,
     bloco: b
-      ? { n: i >= 0 ? i + 1 : 1, total: i >= 0 ? fila.length : 1, texto: b.texto, nota: b.nota, inicioMs: b.inicioMs, fimMs: b.fimMs }
+      ? {
+          n: i >= 0 ? i + 1 : 1,
+          total: i >= 0 ? fila.length : 1,
+          texto: b.texto,
+          nota: b.nota,
+          inicioMs: b.inicioMs,
+          fimMs: b.fimMs,
+          fimCapturaMs: b.fimMs + args.parametros.posrollMs,
+        }
       : null,
     proximo: prox ? { texto: prox.texto, inicioMs: prox.inicioMs } : null,
     take: t

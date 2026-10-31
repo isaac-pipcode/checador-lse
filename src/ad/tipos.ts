@@ -46,8 +46,10 @@ export interface ParametrosAD {
   duckingDb: number;
   ataqueMs: number;
   liberacaoMs: number;
-  /** quanto tocar antes do bloco ao gravar */
+  /** quanto tocar antes do bloco ao gravar: tempo para o locutor se preparar */
   prerollMs: number;
+  /** quanto continuar gravando depois do fim do bloco, para não cortar a frase */
+  posrollMs: number;
   /** limiar para aparar silêncio dos takes, em dB abaixo do pico do take */
   aparoDb: number;
   /** compensação da latência de captura (ms, somada à posição do take) */
@@ -60,7 +62,8 @@ export const PARAMETROS_AD_PADRAO: ParametrosAD = {
   duckingDb: -10,
   ataqueMs: 250,
   liberacaoMs: 500,
-  prerollMs: 2000,
+  prerollMs: 3000,
+  posrollMs: 2000,
   aparoDb: 30,
   latenciaMs: 0,
 };

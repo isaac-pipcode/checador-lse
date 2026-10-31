@@ -7,7 +7,7 @@ import { duracaoUtil, takeAtivo } from '../../ad/tipos';
 import { calibrarPpm, contarPalavras, duracaoEstimadaMs, palavrasQueCabem } from '../../ad/estimativa';
 import { verificarBloco, nivelDoBloco, type ApontamentoAD, type NivelAD } from '../../ad/verificacoes';
 import { descartarTake } from '../../ad/audio';
-import { blocosGravaveis } from '../../ad/prompter';
+import { blocosGravaveis, GRAVANDO } from '../../ad/prompter';
 import { ponte } from '../../desktop/ponte';
 import { useSessaoGravacao, type SessaoGravacao } from './useSessaoGravacao';
 import { Teleprompter } from './Teleprompter';
@@ -358,12 +358,18 @@ function ModoGravacao({ sessao }: { sessao: SessaoGravacao }) {
               </button>
             )}
             {sessao.erroMic ? <p className="mt-2 text-sm text-bad">{sessao.erroMic}</p> : null}
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-3 gap-2">
               <Numero
                 rotulo="Pré-rolagem (ms)"
                 valor={parametros.prerollMs}
                 passo={500}
                 aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { prerollMs: v } })}
+              />
+              <Numero
+                rotulo="Pós-rolagem (ms)"
+                valor={parametros.posrollMs}
+                passo={500}
+                aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { posrollMs: v } })}
               />
               <Numero
                 rotulo="Latência (ms)"
@@ -383,7 +389,7 @@ function ModoGravacao({ sessao }: { sessao: SessaoGravacao }) {
             <legend className="px-1 text-sm font-medium">Sessão</legend>
             {sessao.ativa ? (
               <div className="flex flex-wrap gap-2">
-                {sessao.fase === 'preroll' || sessao.fase === 'agora' ? (
+                {GRAVANDO.has(sessao.fase) ? (
                   <button type="button" className="btn-primario" onClick={() => sessao.comando('parar')}>
                     Encerrar take (Enter)
                   </button>
@@ -482,7 +488,7 @@ function ModoGravacao({ sessao }: { sessao: SessaoGravacao }) {
 
       {telaCheia ? (
         <div className="fixed inset-0 z-50">
-          <Teleprompter estado={{ ...sessao.estadoPrompter, videoUrl: null }} />
+          <Teleprompter estado={sessao.estadoPrompter} />
           {!sessao.ativa ? (
             <button type="button" className="btn-secundario fixed right-4 top-14" onClick={() => setTelaCheia(false)}>
               Fechar (Esc)

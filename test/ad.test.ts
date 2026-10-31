@@ -173,3 +173,29 @@ describe('aprovação do roteiro e teleprompter', () => {
     expect(comandoDaTecla('Escape', 'preroll')).toBe('encerrar');
   });
 });
+
+describe('pré e pós-rolagem', () => {
+  it('padrões: 3 s antes, 2 s depois', () => {
+    expect(PARAMETROS_AD_PADRAO.prerollMs).toBe(3000);
+    expect(PARAMETROS_AD_PADRAO.posrollMs).toBe(2000);
+  });
+
+  it('teleprompter recebe o fim da captura; pós-rolagem aceita encerrar o take', async () => {
+    const { montarEstadoPrompter, comandoDaTecla } = await import('../src/ad/prompter');
+    const e = montarEstadoPrompter({
+      blocos: [bloco({ aprovado: true })], fila: ['b1'], blocoId: 'b1', fase: 'posroll', sequencia: false,
+      videoUrl: null, tempoMs: 9500, tocando: true, aviso: null, parametros: P,
+    });
+    expect(e.bloco?.fimCapturaMs).toBe(9000 + 2000);
+    expect(comandoDaTecla('Enter', 'posroll')).toBe('parar');
+  });
+
+  it('projeto antigo sem pós-rolagem recebe o padrão; pré-rolagem salva é mantida', async () => {
+    const { redutorParaTeste, estadoInicial } = await import('../src/state/store');
+    const antigo = { prerollMs: 2000, palavrasPorMinuto: 150 } as unknown as typeof P;
+    const e = redutorParaTeste(estadoInicial, { tipo: 'projetoCarregado', caminho: 'x.json', ad: { blocos: [], parametros: antigo } });
+    expect(e.ad.parametros.posrollMs).toBe(2000);
+    expect(e.ad.parametros.prerollMs).toBe(2000);
+    expect(e.ad.parametros.duckingDb).toBe(P.duckingDb);
+  });
+});

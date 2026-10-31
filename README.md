@@ -156,17 +156,21 @@ trilha a mais.
    bloco na posição, `Ctrl+↑/↓` bloco anterior/seguinte, `Ctrl+Enter` aprova e avança). O
    trecho do bloco em foco se repete enquanto ela escreve (opcional). Cada bloco é **rascunho**
    ou **aprovado para gravação**; mudar o texto de um aprovado revoga a aprovação.
-   **Gravação** (operadora): só blocos aprovados. Inclui microfone, pré-rolagem, latência,
+   **Gravação** (operadora): só blocos aprovados. Inclui microfone, pré e pós-rolagem, latência,
    a lista dos aprovados e uma prévia do que o locutor vê.
 4. **Teleprompter no monitor do locutor.** No desktop, abre uma segunda janela em tela cheia no
-   segundo monitor (com um só, em janela comum). Mostra o vídeo mudo sincronizado, o texto
-   grande, a nota para o locutor, a fase (*Prepare-se · entra em 2,0 s* → *GRAVANDO — LEIA ·
-   restam 2,1 s*, com barra de tempo), o resultado do take (*cabe / sai da janela*) e o próximo
-   bloco. A janela principal é a única dona do estado; o teleprompter exibe e devolve
+   segundo monitor (com um só, em janela comum). A imagem (vídeo mudo sincronizado) ocupa a
+   tela; o roteiro aparece **sobre ela, embaixo, como uma legenda**, com a nota para o locutor.
+   Uma faixa fina no topo mostra a fase e o tempo: *Prepare-se · entra em 3,0 s* (com contagem
+   regressiva grande 3, 2, 1 no centro) → *GRAVANDO — LEIA · restam 2,0 s* (com barra) →
+   *Gravando a pós-rolagem · encerra em 2,0 s*. Uma faixa fina embaixo mostra o resultado do take
+   (*cabe / sai da janela*), as teclas e o próximo bloco. A janela principal é a única dona do estado; o teleprompter exibe e devolve
    comandos. No navegador, há um teleprompter em tela cheia na própria janela.
 5. **Gravação em sequência.** A operadora inicia a fila (todos os aprovados ou só os sem
-   gravação). Para cada bloco, a sessão faz pré-rolagem → leitura → parada automática ao fim da
-   janela (ou `Enter`) → revisão. Na revisão: `Enter` mantém e segue, `R` regrava (o take
+   gravação). Para cada bloco, a sessão faz **pré-rolagem de 3 s** → leitura →
+   **pós-rolagem de 2 s** (a captura continua, para não cortar o fim da frase) → parada
+   automática (ou `Enter` a qualquer momento) → revisão. As duas durações são ajustáveis no
+   console; projetos antigos mantêm a pré-rolagem que tinham salvo. Na revisão: `Enter` mantém e segue, `R` regrava (o take
    anterior é descartado), `Espaço` ouve com a mixagem, `Backspace` descarta e segue, `Esc`
    encerra. As teclas valem nas duas janelas, então o locutor pode conduzir sozinho. O take é
    aparado (silêncio de cabeça e cauda; o que foi captado na pré-rolagem é sempre descartado) e
