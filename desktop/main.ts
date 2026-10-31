@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell } from 'electron';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -6,6 +6,7 @@ import { FFMPEG, decodificarStream, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoRender, ProjetoArquivo } from '../src/desktop/ponte';
+import type { EstadoPrompter } from '../src/ad/prompter';
 
 /**
  * Processo principal. Segurança: renderer isolado (contextIsolation, sandbox,
@@ -69,25 +70,77 @@ function servirMidia(req: Request): Response {
   });
 }
 
+let principal: BrowserWindow | null = null;
+let prompter: BrowserWindow | null = null;
+let ultimoEstadoPrompter: EstadoPrompter | null = null;
+
+function carregar(w: BrowserWindow, hash?: string) {
+  // `--dev-server=URL` (ou VITE_DEV_SERVER_URL): carrega o Vite em modo dev, com recarga
+  const dev =
+    process.argv.find((a) => a.startsWith('--dev-server='))?.slice('--dev-server='.length) ??
+    process.env.VITE_DEV_SERVER_URL;
+  if (dev) void w.loadURL(hash ? `${dev}#${hash}` : dev);
+  else void w.loadFile(join(__dirname, '..', 'dist', 'index.html'), hash ? { hash } : undefined);
+}
+
+const PREFERENCIAS = {
+  preload: join(__dirname, 'preload.cjs'),
+  contextIsolation: true,
+  nodeIntegration: false,
+  sandbox: true,
+} as const;
+
+/**
+ * Janela do locutor. Vai para o primeiro monitor que não é o principal, em
+ * tela cheia; com um monitor só, abre como janela comum.
+ */
+function abrirPrompter(): { monitor: string; secundario: boolean } {
+  const primario = screen.getPrimaryDisplay();
+  const alvo = screen.getAllDisplays().find((d) => d.id !== primario.id) ?? null;
+  const tela = alvo ?? primario;
+  const descricao = `${tela.label || 'monitor'} (${tela.size.width}×${tela.size.height})`;
+  if (prompter && !prompter.isDestroyed()) {
+    prompter.focus();
+    return { monitor: descricao, secundario: alvo !== null };
+  }
+  const { x, y, width, height } = tela.workArea;
+  prompter = new BrowserWindow({
+    x: alvo ? x : x + 60,
+    y: alvo ? y : y + 60,
+    width: alvo ? width : Math.min(1100, width - 120),
+    height: alvo ? height : Math.min(800, height - 120),
+    fullscreen: alvo !== null,
+    title: 'Teleprompter — locutor',
+    backgroundColor: '#1B2230',
+    autoHideMenuBar: true,
+    webPreferences: PREFERENCIAS,
+  });
+  carregar(prompter, 'prompter');
+  prompter.webContents.on('did-finish-load', () => {
+    if (ultimoEstadoPrompter) prompter?.webContents.send('prompter:estado', ultimoEstadoPrompter);
+  });
+  prompter.on('closed', () => {
+    prompter = null;
+    principal?.webContents.send('prompter:fechado');
+  });
+  return { monitor: descricao, secundario: alvo !== null };
+}
+
 function janela(): BrowserWindow {
   const w = new BrowserWindow({
     width: 1440,
     height: 960,
     title: 'Estúdio de Acessibilidade',
     backgroundColor: '#FAF8F3',
-    webPreferences: {
-      preload: join(__dirname, 'preload.cjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
+    webPreferences: PREFERENCIAS,
   });
-  // `--dev-server=URL` (ou VITE_DEV_SERVER_URL): carrega o Vite em modo dev, com recarga
-  const dev =
-    process.argv.find((a) => a.startsWith('--dev-server='))?.slice('--dev-server='.length) ??
-    process.env.VITE_DEV_SERVER_URL;
-  if (dev) void w.loadURL(dev);
-  else void w.loadFile(join(__dirname, '..', 'dist', 'index.html'));
+  carregar(w);
+  principal = w;
+  // fechar a janela principal fecha a do locutor
+  w.on('closed', () => {
+    principal = null;
+    if (prompter && !prompter.isDestroyed()) prompter.close();
+  });
   // links externos abrem no navegador do sistema, nunca na janela do app
   w.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) void shell.openExternal(url);
@@ -220,6 +273,21 @@ function registrarIpc() {
   });
 
   ipcMain.handle('pasta:mostrar', (_e, caminho: string) => shell.showItemInFolder(caminho));
+
+  ipcMain.handle('prompter:abrir', () => abrirPrompter());
+  ipcMain.handle('prompter:fechar', () => {
+    if (prompter && !prompter.isDestroyed()) prompter.close();
+  });
+  // Retransmissão: só a principal publica estado; só o prompter publica comandos.
+  ipcMain.on('prompter:estado', (e, estado: EstadoPrompter) => {
+    if (e.sender !== principal?.webContents) return;
+    ultimoEstadoPrompter = estado;
+    if (prompter && !prompter.isDestroyed()) prompter.webContents.send('prompter:estado', estado);
+  });
+  ipcMain.on('prompter:comando', (e, comando: string) => {
+    if (e.sender !== prompter?.webContents) return;
+    principal?.webContents.send('prompter:comando', comando);
+  });
 }
 
 app.whenReady().then(() => {

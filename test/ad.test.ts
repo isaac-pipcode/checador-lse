@@ -61,7 +61,8 @@ Fala depois.
   it('A2: take fora da janela; A5: sem take', () => {
     const t = take({ posicaoMs: 3500, trimInicioMs: 0, trimFimMs: 1000 });
     expect(verificarBloco(bloco({ takes: [t], takeAtivoId: 't1' }), [], P).map((a) => a.codigo)).toEqual(['A2']);
-    expect(verificarBloco(bloco(), [], P).map((a) => a.codigo)).toEqual(['A5']);
+    expect(verificarBloco(bloco({ aprovado: true }), [], P).map((a) => a.codigo)).toEqual(['A5']);
+    expect(verificarBloco(bloco(), [], P).map((a) => a.codigo)).toEqual(['A6']);
   });
 });
 
@@ -121,5 +122,54 @@ describe('takes e envelope', () => {
   it('VTT de descrições usa a posição do take', () => {
     const b = bloco({ takes: [take()], takeAtivoId: 't1' });
     expect(roteiroVtt([b])).toContain('00:00:05.000 --> 00:00:07.000');
+  });
+});
+
+describe('aprovação do roteiro e teleprompter', () => {
+  it('editar o texto de um bloco aprovado revoga a aprovação; editar a nota, não', async () => {
+    const { redutorParaTeste } = await import('../src/state/store');
+    const { estadoInicial } = await import('../src/state/store');
+    let e = { ...estadoInicial, ad: { ...estadoInicial.ad, blocos: [bloco({ aprovado: true })] } };
+    e = redutorParaTeste(e, { tipo: 'adEditar', id: 'b1', mudanca: { nota: 'calmo' } });
+    expect(e.ad.blocos[0].aprovado).toBe(true);
+    e = redutorParaTeste(e, { tipo: 'adEditar', id: 'b1', mudanca: { texto: 'Outro texto.' } });
+    expect(e.ad.blocos[0].aprovado).toBe(false);
+    expect(e.anuncio).toMatch(/rascunho/);
+  });
+
+  it('só blocos aprovados e com texto entram na gravação', async () => {
+    const { blocosGravaveis } = await import('../src/ad/prompter');
+    const bs = [
+      bloco({ id: 'a', aprovado: true }),
+      bloco({ id: 'b', aprovado: false }),
+      bloco({ id: 'c', aprovado: true, texto: '  ' }),
+      bloco({ id: 'd', aprovado: true, takes: [take()], takeAtivoId: 't1' }),
+    ];
+    expect(blocosGravaveis(bs, false).map((b) => b.id)).toEqual(['a', 'd']);
+    expect(blocosGravaveis(bs, true).map((b) => b.id)).toEqual(['a']);
+  });
+
+  it('estado do teleprompter: posição na fila, próximo bloco e resultado do take', async () => {
+    const { montarEstadoPrompter } = await import('../src/ad/prompter');
+    const bs = [
+      bloco({ id: 'a', aprovado: true, texto: 'Primeiro.', takes: [take({ posicaoMs: 4500 })], takeAtivoId: 't1' }),
+      bloco({ id: 'b', aprovado: true, texto: 'Segundo.', inicioMs: 12000, fimMs: 15000 }),
+    ];
+    const e = montarEstadoPrompter({
+      blocos: bs, fila: ['a', 'b'], blocoId: 'a', fase: 'revisao', sequencia: true,
+      videoUrl: null, tempoMs: 0, tocando: false, aviso: null, parametros: P,
+    });
+    expect(e.bloco).toMatchObject({ n: 1, total: 2, texto: 'Primeiro.' });
+    expect(e.proximo?.texto).toBe('Segundo.');
+    expect(e.take).toEqual({ duracaoMs: 2000, posicaoMs: 4500, cabe: true });
+  });
+
+  it('teclas da sessão dependem da fase', async () => {
+    const { comandoDaTecla } = await import('../src/ad/prompter');
+    expect(comandoDaTecla('Enter', 'agora')).toBe('parar');
+    expect(comandoDaTecla('Enter', 'revisao')).toBe('manter');
+    expect(comandoDaTecla('r', 'agora')).toBeNull();
+    expect(comandoDaTecla('r', 'revisao')).toBe('regravar');
+    expect(comandoDaTecla('Escape', 'preroll')).toBe('encerrar');
   });
 });

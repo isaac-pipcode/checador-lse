@@ -8,6 +8,7 @@
  */
 import type { Clipe, PontoGanho } from '../ad/mixagem';
 import type { BlocoAD, ParametrosAD } from '../ad/tipos';
+import type { ComandoGravacao, EstadoPrompter } from '../ad/prompter';
 
 export interface MidiaEscolhida {
   caminho: string;
@@ -70,6 +71,20 @@ export interface PonteDesktop {
   renderizar(pedido: PedidoRender, aoProgredir: (fracao: number, etapa: string) => void): Promise<RelatorioRender | null>;
   salvarTexto(nomeSugerido: string, conteudo: string): Promise<string | null>;
   mostrarNaPasta(caminho: string): Promise<void>;
+
+  // ---- Teleprompter (janela do locutor) ----------------------------------
+  /** abre (ou traz à frente) a janela do locutor, no segundo monitor se houver */
+  prompterAbrir(): Promise<{ monitor: string; secundario: boolean }>;
+  prompterFechar(): Promise<void>;
+  /** janela principal → locutor */
+  prompterEnviar(estado: EstadoPrompter): void;
+  /** janela principal: comandos vindos do locutor; devolve função para cancelar */
+  aoComandoDoPrompter(cb: (c: ComandoGravacao) => void): () => void;
+  aoFecharPrompter(cb: () => void): () => void;
+  /** janela do locutor: estado vindo da principal */
+  aoEstadoDoPrompter(cb: (e: EstadoPrompter) => void): () => void;
+  /** janela do locutor → principal */
+  enviarComando(c: ComandoGravacao): void;
 }
 
 declare global {

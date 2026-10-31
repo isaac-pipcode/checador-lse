@@ -7,7 +7,7 @@ import { ehLegendaDeFala } from '../mapa/lacunas';
 export type NivelAD = 'ok' | 'aviso' | 'erro' | 'pendente';
 
 export interface ApontamentoAD {
-  codigo: 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
+  codigo: 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6';
   nivel: Exclude<NivelAD, 'ok'>;
   mensagem: string;
 }
@@ -19,7 +19,8 @@ const seg = (ms: number) => `${(ms / 1000).toFixed(1).replace('.', ',')} s`;
  * única inferência é a duração estimada (A1), declarada como estimativa.
  *
  * A1 texto estimado não cabe na janela · A2 take passa da janela ·
- * A3 take sobrepõe legenda de fala · A4 sem texto · A5 sem take.
+ * A3 take sobrepõe legenda de fala · A4 sem texto · A5 sem take ·
+ * A6 roteiro ainda não aprovado para gravação.
  */
 export function verificarBloco(b: BlocoAD, cues: Cue[], p: ParametrosAD): ApontamentoAD[] {
   const out: ApontamentoAD[] = [];
@@ -40,7 +41,13 @@ export function verificarBloco(b: BlocoAD, cues: Cue[], p: ParametrosAD): Aponta
   }
 
   if (!t) {
-    if (b.texto.trim() !== '') out.push({ codigo: 'A5', nivel: 'pendente', mensagem: 'Sem gravação.' });
+    if (b.texto.trim() !== '') {
+      out.push(
+        b.aprovado
+          ? { codigo: 'A5', nivel: 'pendente', mensagem: 'Sem gravação.' }
+          : { codigo: 'A6', nivel: 'pendente', mensagem: 'Roteiro não aprovado para gravação.' },
+      );
+    }
     return out;
   }
 

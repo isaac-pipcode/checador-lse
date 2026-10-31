@@ -124,6 +124,7 @@ type Acao =
   | { tipo: 'adAdicionar'; inicioMs: number; fimMs: number }
   | { tipo: 'adEditar'; id: string; mudanca: Partial<Pick<BlocoAD, 'texto' | 'nota' | 'inicioMs' | 'fimMs'>> }
   | { tipo: 'adRemover'; id: string }
+  | { tipo: 'adAprovar'; id: string; aprovado: boolean }
   | { tipo: 'adNovoTake'; blocoId: string; take: Take }
   | { tipo: 'adAjustarTake'; blocoId: string; takeId: string; mudanca: Partial<Take> }
   | { tipo: 'adAtivarTake'; blocoId: string; takeId: string }
@@ -375,10 +376,28 @@ function redutor(estado: Estado, acao: Acao): Estado {
         'Bloco de audiodescrição criado.',
       );
 
-    case 'adEditar':
+    case 'adEditar': {
+      const alvo = estado.ad.blocos.find((b) => b.id === acao.id);
+      // Mudar o texto de um roteiro aprovado revoga a aprovação: o locutor
+      // não pode gravar algo que a editora não liberou.
+      const revoga =
+        alvo?.aprovado === true && acao.mudanca.texto !== undefined && acao.mudanca.texto !== alvo.texto;
       return comAd(
         estado,
-        ordenarBlocos(estado.ad.blocos.map((b) => (b.id === acao.id ? { ...b, ...acao.mudanca } : b))),
+        ordenarBlocos(
+          estado.ad.blocos.map((b) =>
+            b.id === acao.id ? { ...b, ...acao.mudanca, ...(revoga ? { aprovado: false } : {}) } : b,
+          ),
+        ),
+        revoga ? 'Texto alterado: o bloco voltou a rascunho e precisa ser aprovado de novo.' : undefined,
+      );
+    }
+
+    case 'adAprovar':
+      return comAd(
+        estado,
+        estado.ad.blocos.map((b) => (b.id === acao.id ? { ...b, aprovado: acao.aprovado } : b)),
+        acao.aprovado ? 'Roteiro aprovado para gravação.' : 'Aprovação retirada.',
       );
 
     case 'adRemover':
@@ -535,4 +554,6 @@ export function useAcoes() {
 }
 
 export const useDespachar = () => useEstado().despachar;
+/** exposto só para testes do redutor */
+export const redutorParaTeste = redutor;
 export type { Acao };

@@ -151,19 +151,35 @@ trilha a mais.
 2. **Roteiro com estimativa de leitura.** Cada bloco mostra palavras, duração estimada e quantas
    palavras cabem na janela. A velocidade parte de 160 ppm, um valor de partida e não uma norma.
    Com três ou mais takes, o estúdio mede a velocidade real do locutor (mediana) e oferece trocá-la.
-3. **Gravação por bloco.** O vídeo volta a pré-rolagem (2 s), toca o som original e grava; um aviso
-   indica *LEIA AGORA* quando o bloco começa. Para sozinho ao fim da janela (ou com Esc). Eco,
-   supressão de ruído e ganho automático do sistema ficam desligados. O take é aparado (silêncio
-   de cabeça e cauda; o que foi captado na pré-rolagem é sempre descartado) e posicionado onde o
-   locutor de fato falou. Takes múltiplos por bloco, com escolha do ativo, deslocamento de 0,1 s
-   e ganho de 1 dB.
-4. **Verificações por bloco** (determinísticas, exceto a estimativa de A1):
+3. **Dois modos de trabalho.** **Roteiro** (editora): escreve vendo o vídeo, com atalhos que
+   valem dentro da caixa de texto (`Ctrl/⌘+Espaço` toca/pausa, `Ctrl+←/→` ±2 s, `Ctrl+B` novo
+   bloco na posição, `Ctrl+↑/↓` bloco anterior/seguinte, `Ctrl+Enter` aprova e avança). O
+   trecho do bloco em foco se repete enquanto ela escreve (opcional). Cada bloco é **rascunho**
+   ou **aprovado para gravação**; mudar o texto de um aprovado revoga a aprovação.
+   **Gravação** (operadora): só blocos aprovados. Inclui microfone, pré-rolagem, latência,
+   a lista dos aprovados e uma prévia do que o locutor vê.
+4. **Teleprompter no monitor do locutor.** No desktop, abre uma segunda janela em tela cheia no
+   segundo monitor (com um só, em janela comum). Mostra o vídeo mudo sincronizado, o texto
+   grande, a nota para o locutor, a fase (*Prepare-se · entra em 2,0 s* → *GRAVANDO — LEIA ·
+   restam 2,1 s*, com barra de tempo), o resultado do take (*cabe / sai da janela*) e o próximo
+   bloco. A janela principal é a única dona do estado; o teleprompter exibe e devolve
+   comandos. No navegador, há um teleprompter em tela cheia na própria janela.
+5. **Gravação em sequência.** A operadora inicia a fila (todos os aprovados ou só os sem
+   gravação). Para cada bloco, a sessão faz pré-rolagem → leitura → parada automática ao fim da
+   janela (ou `Enter`) → revisão. Na revisão: `Enter` mantém e segue, `R` regrava (o take
+   anterior é descartado), `Espaço` ouve com a mixagem, `Backspace` descarta e segue, `Esc`
+   encerra. As teclas valem nas duas janelas, então o locutor pode conduzir sozinho. O take é
+   aparado (silêncio de cabeça e cauda; o que foi captado na pré-rolagem é sempre descartado) e
+   posicionado onde o locutor de fato falou. Por bloco, há também gravação avulsa, escolha do take
+   ativo, deslocamento de 0,1 s e ganho de 1 dB.
+6. **Verificações por bloco** (determinísticas, exceto a estimativa de A1):
    A1 texto estimado não cabe na janela · A2 gravação sai da janela · A3 gravação sobre legenda
-   de fala (legendas só de `[efeito]` não contam) · A4 sem roteiro · A5 sem gravação.
-5. **Prévia da mixagem** em tempo real: o som original passa por um ganho que segue a curva de
+   de fala (legendas só de `[efeito]` não contam) · A4 sem roteiro · A5 sem gravação ·
+   A6 roteiro não aprovado.
+7. **Prévia da mixagem** em tempo real: o som original passa por um ganho que segue a curva de
    *ducking* (−10 dB, ataque 250 ms, liberação 500 ms, configuráveis; clipes próximos fundem o
    patamar para evitar bombeamento), desenhada em verde sobre a forma de onda.
-6. **Saídas.** Roteiro em texto para o locutor, WebVTT de descrições e CSV. No desktop,
+8. **Saídas.** Roteiro em texto para o locutor, WebVTT de descrições e CSV. No desktop,
    **renderização** com a mesma curva e os mesmos clipes da prévia: mixagem WAV 24 bits/48 kHz
    estéreo, trilha de AD isolada (para finalizar em outro programa) e MKV com faixa extra
    *Audiodescrição* (`por`), vídeo copiado sem recompressão. O relatório traz loudness integrada e
@@ -173,9 +189,14 @@ trilha a mais.
 **Verificado.** Testes unitários do núcleo (estimativa, verificações, curva, aparo); teste da
 renderização com ffmpeg real (atenuação medida dentro de ±2 dB do ducking pedido; voz na posição;
 faixa titulada no MKV); fluxo completo no Electron sob Xvfb: análise, blocos, duas gravações
-com microfone simulado, renderização, salvar e reabrir projeto.
+com microfone simulado, renderização, salvar e reabrir projeto; e o fluxo editora → locutor com
+duas janelas: atalhos de roteiro, aprovação e revogação, teleprompter, sequência de dois blocos
+com regravação comandada pela janela do locutor e parada automática no fim do vídeo.
 
-**Não verificado / limites.** Gravação com microfone e locutor reais. O medidor de nível ficou
+**Não verificado / limites.** Gravação com microfone e locutor reais. O posicionamento num
+segundo monitor físico não foi testado: o ambiente de teste tem uma tela só e exercitou o caso
+de janela separada. No macOS, `Ctrl+Espaço` e `⌘+Espaço` costumam estar tomados pelo sistema (troca de
+idioma, Spotlight), e os atalhos ainda não são configuráveis. O medidor de nível ficou
 mudo no ambiente de teste (sem dispositivo de áudio; a gravação em si funcionou), então precisa
 ser conferido numa máquina real. A latência de captura varia por máquina: há um campo de
 compensação, mas ainda sem calibração automática. A prévia pode divergir alguns milissegundos em

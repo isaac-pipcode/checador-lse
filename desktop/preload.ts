@@ -28,6 +28,20 @@ const ponte: PonteDesktop = {
   renderizar: (pedido, aoProgredir) => comProgresso('ad:renderizar', { pedido }, aoProgredir),
   salvarTexto: (nome, conteudo) => ipcRenderer.invoke('texto:salvar', { nome, conteudo }),
   mostrarNaPasta: (caminho) => ipcRenderer.invoke('pasta:mostrar', caminho),
+
+  prompterAbrir: () => ipcRenderer.invoke('prompter:abrir'),
+  prompterFechar: () => ipcRenderer.invoke('prompter:fechar'),
+  prompterEnviar: (estado) => ipcRenderer.send('prompter:estado', estado),
+  aoComandoDoPrompter: (cb) => ouvir('prompter:comando', cb),
+  aoFecharPrompter: (cb) => ouvir('prompter:fechado', () => cb()),
+  aoEstadoDoPrompter: (cb) => ouvir('prompter:estado', cb),
+  enviarComando: (c) => ipcRenderer.send('prompter:comando', c),
 };
+
+function ouvir<T>(canal: string, cb: (dado: T) => void): () => void {
+  const f = (_e: unknown, dado: T) => cb(dado);
+  ipcRenderer.on(canal, f);
+  return () => ipcRenderer.removeListener(canal, f);
+}
 
 contextBridge.exposeInMainWorld('estudio', ponte);

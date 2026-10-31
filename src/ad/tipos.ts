@@ -31,6 +31,12 @@ export interface BlocoAD {
   takeAtivoId: string | null;
   /** observação livre do roteirista para o locutor (não é lida) */
   nota: string;
+  /**
+   * Roteiro liberado para gravação. Só blocos aprovados aparecem no modo de
+   * gravação; qualquer mudança no texto revoga a aprovação. Ausente em
+   * projetos antigos = não aprovado.
+   */
+  aprovado?: boolean;
 }
 
 export interface ParametrosAD {
