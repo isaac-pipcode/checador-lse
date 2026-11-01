@@ -6,7 +6,7 @@ import type { PontoGanho } from '../ad/mixagem';
 import type { NivelAD } from '../ad/verificacoes';
 import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
-import { BotaoDica } from './comum';
+import { BotaoDica, tcSmpte } from './comum';
 import { useAjudaAberta } from './ajudas';
 
 /**
@@ -85,6 +85,8 @@ const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'pronto', aviso: 'com aviso'
 
 export interface PropsLinhaDoTempo {
   duracaoMs: number;
+  /** cadência da obra, para o timecode do cabeçalho */
+  fps: number;
   mapa: MapaTemporal | null;
   cues: Cue[];
   severidades: Map<number, Severity>;
@@ -279,53 +281,45 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   return (
     <section aria-labelledby={`${id}-t`} className="painel">
       <div className="painel-cabeca">
+        <span aria-hidden="true" className="w-28 font-mono text-[15px] font-medium tabular-nums text-terra-700">
+          {tcSmpte(p.tempoMs, p.fps)}
+        </span>
         <h2 id={`${id}-t`}>Linha do tempo</h2>
-        <BotaoDica
-          titulo="legenda da linha do tempo"
-          aberta={legenda}
-          alvo={`${id}-leg`}
-          aoAlternar={alternarLegenda}
-        />
-        <div className="flex items-center gap-0.5 normal-case tracking-normal" role="group" aria-label="Zoom">
-          <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
-            <span aria-hidden="true">−</span>
+        <BotaoDica titulo="legenda da linha do tempo" aberta={legenda} alvo={`${id}-leg`} aoAlternar={alternarLegenda} />
+        <div className="ml-auto flex items-center gap-1 font-normal">
+          <button type="button" className="segmento" aria-pressed={acompanhar} onClick={() => setAcompanhar(!acompanhar)} title="Rolar junto com a reprodução">
+            Acompanhar
           </button>
-          <span className="w-16 text-center font-mono text-2xs font-normal text-navy-500">{pxs} px/s</span>
-          <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
-            <span aria-hidden="true">+</span>
-          </button>
+          <div className="ml-2 flex items-center gap-1" role="group" aria-label="Zoom">
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
+              <span aria-hidden="true">−</span>
+            </button>
+            <input
+              type="range"
+              className="w-24"
+              aria-label="Zoom da linha do tempo"
+              aria-valuetext={`${pxs} pixels por segundo`}
+              min={0}
+              max={ZOOMS.length - 1}
+              step={1}
+              value={zoom}
+              onChange={(e) => mudarZoom(Number(e.target.value))}
+            />
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
+              <span aria-hidden="true">+</span>
+            </button>
+          </div>
         </div>
-        <label className="flex items-center gap-1.5 font-normal normal-case tracking-normal">
-          <input type="checkbox" checked={acompanhar} onChange={(e) => setAcompanhar(e.target.checked)} />
-          Acompanhar
-        </label>
-        <p className="ml-auto truncate font-normal normal-case tracking-normal text-navy-500">
-          Em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s) · <kbd>+</kbd>/<kbd>−</kbd> zoom
-        </p>
       </div>
 
       <div className="flex">
-        <div aria-hidden="true" className="w-28 shrink-0 border-r border-paper-400 bg-paper-200 text-2xs font-medium uppercase tracking-wide text-navy-500">
-          <div style={{ height: H_REGUA }} />
-          <div style={{ height: H_SOM }} className="flex items-center px-2">
-            Som
-          </div>
-          <div style={{ height: H_LEGENDAS }} className="flex items-center border-t border-paper-400 px-2">
-            Legendas
-          </div>
-          {p.trilhaAd ? (
-            <div style={{ height: H_AD }} className="flex items-center border-t border-paper-400 px-2 font-medium">
-              Audiodescrição
-            </div>
-          ) : null}
-          {hLib ? (
-            <div style={{ height: H_LIBRAS }} className="flex items-center border-t border-paper-400 px-2">
-              Libras
-            </div>
-          ) : null}
-          <div style={{ height: H_LACUNAS }} className="flex items-center border-t border-paper-400 px-2">
-            Lacunas (AD)
-          </div>
+        <div aria-hidden="true" className="w-36 shrink-0 border-r border-fundo bg-paper text-2xs">
+          <div style={{ height: H_REGUA }} className="border-b border-fundo bg-paper-200" />
+          <CabecaTrilha altura={H_SOM} codigo="A1" nome="Som da obra" cor="bg-navy-500" />
+          <CabecaTrilha altura={H_LEGENDAS} codigo="ST" nome="Legendas" cor="bg-warn" />
+          {p.trilhaAd ? <CabecaTrilha altura={H_AD} codigo="A2" nome="Audiodescrição" cor="bg-ok" /> : null}
+          {hLib ? <CabecaTrilha altura={H_LIBRAS} codigo="V2" nome="Libras" cor="bg-serie-1" /> : null}
+          <CabecaTrilha altura={H_LACUNAS} codigo="—" nome="Lacunas (AD)" cor="bg-paper-400" />
         </div>
 
         <div
@@ -335,7 +329,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           aria-label={`Linha do tempo, posição ${formatarTimecode(p.tempoMs)}`}
           onKeyDown={teclado}
           onScroll={(e) => setScroll(e.currentTarget.scrollLeft)}
-          className="relative min-w-0 flex-1 overflow-x-auto"
+          className="relative min-w-0 flex-1 overflow-x-auto bg-fundo"
         >
           <div className="relative" style={{ width: total, height: H_TOTAL }}>
             <canvas
@@ -356,7 +350,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               />
             ))}
 
-            <div className="absolute left-0 border-t border-paper-400" style={{ top: H_CANVAS, width: total, height: H_LEGENDAS }}>
+            <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS, width: total, height: H_LEGENDAS }}>
               {visiveis.map((c) => {
                 const sev = p.severidades.get(c.index);
                 const w = Math.max(3, x(c.endMs - c.startMs));
@@ -386,7 +380,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
             </div>
 
             {p.trilhaAd ? (
-              <div className="absolute left-0 border-t border-paper-400" style={{ top: H_CANVAS + H_LEGENDAS, width: total, height: H_AD }}>
+              <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS + H_LEGENDAS, width: total, height: H_AD }}>
                 {p.trilhaAd
                   .filter((b) => b.fimMs >= t0 && b.inicioMs <= t1)
                   .map((b) => {
@@ -401,7 +395,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                         }}
                         aria-label={`Bloco de audiodescrição de ${formatarTimecode(b.inicioMs)} a ${formatarTimecode(b.fimMs)}, ${ROTULO_NIVEL[b.nivel]}${b.take ? ', gravado' : ''}: ${b.texto || 'sem roteiro'}`}
                         title={b.texto}
-                        className={`absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-dashed text-left text-[11px] ${CLASSE_NIVEL[b.nivel]}`}
+                        className={`absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border text-left text-[11px] ${CLASSE_NIVEL[b.nivel]}`}
                         style={{ left: x(b.inicioMs), width: w, height: H_AD - 8 }}
                       >
                         {b.take ? (
@@ -423,13 +417,13 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
             ) : null}
 
             {hLib ? (
-              <div className="absolute left-0 border-t border-paper-400" style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LIBRAS }}>
+              <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LIBRAS }}>
                 {p.trilhaLibras ? (
                   <button
                     type="button"
                     onClick={() => p.aoBuscar(Math.max(0, p.trilhaLibras!.inicioMs))}
                     aria-label={`Clipe de Libras ${p.trilhaLibras.rotulo}, de ${formatarTimecode(Math.max(0, p.trilhaLibras.inicioMs))} a ${formatarTimecode(p.trilhaLibras.fimMs)}`}
-                    className="absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-terra bg-terra/20 px-1 text-left text-[11px] leading-[16px] text-terra-700"
+                    className="absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-serie-1 bg-serie-1/30 px-1 text-left text-[11px] leading-[16px] text-navy"
                     style={{ left: Math.max(0, x(p.trilhaLibras.inicioMs)), width: Math.max(3, x(p.trilhaLibras.fimMs - Math.max(0, p.trilhaLibras.inicioMs))), height: H_LIBRAS - 8 }}
                   >
                     <span aria-hidden="true">🤟 {p.trilhaLibras.rotulo}</span>
@@ -439,7 +433,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
             ) : null}
 
             <div
-              className="absolute left-0 border-t border-paper-400"
+              className="absolute left-0 border-t border-paper-200"
               style={{ top: H_CANVAS + H_LEGENDAS + hAd + hLib, width: total, height: H_LACUNAS }}
             >
               {lacunasVisiveis.map((l) => {
@@ -468,19 +462,36 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
 
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 w-0.5 bg-terra"
+              className="pointer-events-none absolute top-0 w-px bg-terra"
               style={{ left: x(p.tempoMs), height: H_TOTAL }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute top-0 h-3 w-[11px] bg-terra"
+              style={{ left: x(p.tempoMs) - 5, clipPath: 'polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%)' }}
             />
           </div>
         </div>
       </div>
       {legenda ? (
-        <p id={`${id}-leg`} className="border-t border-paper-400 px-3 py-1 text-2xs text-navy-700">
+        <p id={`${id}-leg`} className="border-t border-fundo px-3 py-1 text-2xs text-navy-700">
           Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
           detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
-          {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}.
+          {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}. Com a linha
+          em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s), <kbd>+</kbd>/<kbd>−</kbd> zoom.
         </p>
       ) : null}
     </section>
+  );
+}
+
+/** Cabeçalho de trilha, como no Resolve: faixa de cor, código e nome. */
+function CabecaTrilha({ altura, codigo, nome, cor }: { altura: number; codigo: string; nome: string; cor: string }) {
+  return (
+    <div style={{ height: altura }} className="flex items-center gap-2 border-b border-fundo pr-2">
+      <span className={`h-full w-[3px] shrink-0 ${cor}`} />
+      <span className="w-5 font-mono font-semibold text-navy">{codigo}</span>
+      <span className="truncate text-navy-700">{nome}</span>
+    </div>
   );
 }

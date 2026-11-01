@@ -212,21 +212,21 @@ export function Espaco() {
   return (
     <CtxVideo.Provider value={{ video: videoPronto, tempoMs, buscar, previa: motor, duracaoMs }}>
       <ProvedorPaginaAD>
-        <div className="grid h-screen grid-rows-[44px_minmax(0,1fr)_auto_40px] bg-fundo text-navy">
+        <div className="grid h-screen grid-rows-[36px_minmax(0,1fr)_auto_58px] bg-fundo text-navy">
           <BarraSuperior />
 
-          <main id="conteudo" className="grid min-h-0 gap-1.5 p-1.5 pb-0" style={{ gridTemplateColumns: COLUNAS[pagina] }}>
+          <main id="conteudo" className="grid min-h-0 gap-0.5 pt-0.5" style={{ gridTemplateColumns: COLUNAS[pagina] }}>
             {lados[pagina][0]}
 
             {/* ---- Monitor ---- */}
             <section className="painel" aria-label="Monitor">
               <header className="painel-cabeca">
                 <h2>Monitor</h2>
-                <span className="min-w-0 truncate font-normal normal-case tracking-normal text-navy-500">
+                <span className="min-w-0 flex-1 truncate text-center font-normal text-navy-700">
                   {video ? `${video.nome}${video.usarProxy ? ' (proxy)' : ''}` : 'sem vídeo'}
-                  {status ? ` · ${status}` : ''}
+                  {status ? <span className="text-navy-500"> · {status}</span> : null}
                 </span>
-                <span className="ml-auto flex min-w-0 items-center gap-1 normal-case tracking-normal">
+                <span className="flex min-w-0 items-center gap-1 font-normal">
                   <ControleProxy />
                   {video ? (
                     desktop ? (
@@ -240,6 +240,9 @@ export function Espaco() {
                       </label>
                     )
                   ) : null}
+                  <span className="ml-2 font-mono text-[15px] font-medium tabular-nums text-terra-700" aria-label="Posição">
+                    {tcSmpte(tempoMs, config.fps)}
+                  </span>
                 </span>
               </header>
               <div className="relative min-h-0 flex-1 bg-preto">
@@ -303,32 +306,54 @@ export function Espaco() {
                 )}
               </div>
 
-              {/* ---- Transporte ---- */}
-              <div className="flex h-10 shrink-0 items-center gap-1 border-t border-paper-400 bg-paper-200 px-2" role="toolbar" aria-label="Transporte">
-                <button type="button" className="btn-icone" aria-label="Ir ao início" onClick={() => buscar(0)} disabled={!video}>
-                  <span aria-hidden="true">⏮</span>
-                </button>
-                <button type="button" className="btn-icone" aria-label="Voltar 1 quadro" onClick={() => buscar(tempoMs - quadroMs)} disabled={!video}>
-                  <span aria-hidden="true">◂|</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-icone h-8 w-10 bg-paper text-navy"
-                  aria-label={tocando ? 'Pausar' : 'Reproduzir'}
-                  onClick={() => videoPronto && void (videoPronto.paused ? videoPronto.play() : videoPronto.pause())}
+              {/* ---- Barra de posição (como a do visualizador do Resolve) ---- */}
+              <div className="shrink-0 border-t border-fundo bg-paper px-2">
+                <input
+                  type="range"
+                  className="block w-full"
+                  style={{ height: 24 }}
+                  aria-label="Posição no vídeo"
+                  aria-valuetext={tcSmpte(tempoMs, config.fps)}
+                  min={0}
+                  max={Math.max(1, duracaoMs)}
+                  step={quadroMs}
+                  value={Math.min(tempoMs, duracaoMs)}
                   disabled={!video}
-                >
-                  <span aria-hidden="true">{tocando ? '❚❚' : '▶'}</span>
-                </button>
-                <button type="button" className="btn-icone" aria-label="Avançar 1 quadro" onClick={() => buscar(tempoMs + quadroMs)} disabled={!video}>
-                  <span aria-hidden="true">|▸</span>
-                </button>
-                <span className="ml-2 font-mono text-sm tabular-nums text-terra-700" aria-label="Posição">
-                  {tcSmpte(tempoMs, config.fps)}
-                </span>
-                <span className="font-mono text-xs tabular-nums text-navy-500"> / {tcSmpte(duracaoMs, config.fps)}</span>
+                  onChange={(e) => buscar(Number(e.target.value))}
+                />
+              </div>
 
-                <div className="ml-auto flex items-center gap-1" role="group" aria-label="Camadas do monitor">
+              {/* ---- Transporte ---- */}
+              <div className="grid h-9 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-paper px-2" role="toolbar" aria-label="Transporte">
+                <span className="truncate font-mono text-2xs tabular-nums text-navy-500">
+                  <span className="sr-only-focusable">Duração </span>
+                  {tcSmpte(duracaoMs, config.fps)}
+                </span>
+                <div className="flex items-center gap-0.5">
+                  <button type="button" className="btn-icone" aria-label="Ir ao início" onClick={() => buscar(0)} disabled={!video}>
+                    <span aria-hidden="true">⏮</span>
+                  </button>
+                  <button type="button" className="btn-icone" aria-label="Voltar 1 quadro" onClick={() => buscar(tempoMs - quadroMs)} disabled={!video}>
+                    <span aria-hidden="true">◂|</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icone h-7 w-9 text-navy"
+                    aria-label={tocando ? 'Pausar' : 'Reproduzir'}
+                    onClick={() => videoPronto && void (videoPronto.paused ? videoPronto.play() : videoPronto.pause())}
+                    disabled={!video}
+                  >
+                    <span aria-hidden="true">{tocando ? '❚❚' : '▶'}</span>
+                  </button>
+                  <button type="button" className="btn-icone" aria-label="Avançar 1 quadro" onClick={() => buscar(tempoMs + quadroMs)} disabled={!video}>
+                    <span aria-hidden="true">|▸</span>
+                  </button>
+                  <button type="button" className="btn-icone" aria-label="Ir ao fim" onClick={() => buscar(duracaoMs)} disabled={!video}>
+                    <span aria-hidden="true">⏭</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-end gap-0.5" role="group" aria-label="Camadas do monitor">
                   {pagina === 'lse' ? (
                     <button type="button" className="segmento" aria-pressed={legendaRevisada} onClick={() => setLegendaRevisada((v) => !v)}>
                       {legendaRevisada ? 'LSE revisada' : 'LSE original'}
@@ -350,10 +375,11 @@ export function Espaco() {
             {lados[pagina][1]}
           </main>
 
-          <div className="min-h-0 px-1.5 pt-1.5">
+          <div className="min-h-0 pt-0.5">
             {video ? (
               <LinhaDoTempo
                 duracaoMs={duracaoMs}
+                fps={config.fps}
                 mapa={mapa}
                 cues={cuesMonitor}
                 severidades={pagina === 'lse' ? severidades : new Map()}

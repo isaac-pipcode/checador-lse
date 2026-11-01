@@ -58,30 +58,32 @@ export function BarraPaginas() {
   const corTom = { ok: 'text-ok', warn: 'text-warn', bad: 'text-bad', neutro: 'text-navy-500' } as const;
 
   return (
-    <nav aria-label="Etapas do projeto" className="flex items-stretch justify-center border-t border-paper-400 bg-paper">
+    <nav aria-label="Etapas do projeto" className="relative flex items-stretch justify-center gap-1 border-t border-fundo bg-paper">
       <button
         type="button"
-        className="aba mr-auto"
+        className="aba absolute inset-y-0 left-0"
         onClick={() => despachar({ tipo: 'navegar', pagina: 'projetos' })}
       >
-        <span aria-hidden="true">▦</span> Projetos
+        <span aria-hidden="true" className="text-base leading-none">
+          ▦
+        </span>
+        <span>Projetos</span>
       </button>
       {paginas.map(([p, rotulo, icone]) => (
         <button
           key={p}
           type="button"
-          className="aba"
+          className="aba min-w-[112px]"
           aria-current={estado.pagina === p ? 'page' : undefined}
           onClick={() => despachar({ tipo: 'navegar', pagina: p })}
         >
-          <span aria-hidden="true" className="w-4 text-center">
+          <span aria-hidden="true" className="text-base leading-none">
             {icone}
           </span>
-          {rotulo}
-          <span className={`text-2xs font-normal ${corTom[ind[p].tom]}`}>{ind[p].texto}</span>
+          <span>{rotulo}</span>
+          <span className={`text-[10px] font-normal leading-none ${corTom[ind[p].tom]}`}>{ind[p].texto}</span>
         </button>
       ))}
-      <span className="ml-auto" />
     </nav>
   );
 }

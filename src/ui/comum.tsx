@@ -69,6 +69,19 @@ export function Painel({
 }
 
 /** Seção do inspetor. */
+const CHAVE_RECOLHIDAS = 'estudio:secoes-recolhidas';
+function lerRecolhidas(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(CHAVE_RECOLHIDAS) ?? '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Seção do inspetor: faixa de cabeçalho que recolhe o conteúdo (estado lembrado
+ * entre sessões, por título) e, opcionalmente, uma explicação atrás de "?".
+ */
 export function Secao({
   titulo,
   children,
@@ -84,20 +97,48 @@ export function Secao({
   const auto = useId();
   const idTitulo = id ?? `${auto}-t`;
   const [aberta, alternar] = useAjudaAberta();
+  const [recolhida, setRecolhida] = useState(() => lerRecolhidas().has(titulo));
+  function recolher() {
+    const novo = !recolhida;
+    setRecolhida(novo);
+    const r = lerRecolhidas();
+    if (novo) r.add(titulo);
+    else r.delete(titulo);
+    try {
+      localStorage.setItem(CHAVE_RECOLHIDAS, JSON.stringify([...r]));
+    } catch {
+      /* sem armazenamento */
+    }
+  }
   return (
-    <section className="secao" aria-labelledby={idTitulo}>
-      <div className="mb-2 flex items-center gap-1">
-        <h3 id={idTitulo} className="secao-titulo mb-0">
-          {titulo}
+    <section className="secao-r" aria-labelledby={idTitulo}>
+      <div className="secao-cabeca">
+        <h3 id={idTitulo} className="min-w-0 flex-1">
+          <button
+            type="button"
+            className="flex h-7 w-full items-center gap-1 text-left"
+            aria-expanded={!recolhida}
+            aria-controls={`${auto}-c`}
+            onClick={recolher}
+          >
+            <span aria-hidden="true" className="w-3.5 shrink-0 text-center text-[10px] text-navy-500">
+              {recolhida ? '▶' : '▼'}
+            </span>
+            <span className="truncate">{titulo}</span>
+          </button>
         </h3>
-        {dica ? <BotaoDica titulo={titulo} aberta={aberta} alvo={`${auto}-d`} aoAlternar={alternar} /> : null}
+        {dica && !recolhida ? (
+          <BotaoDica titulo={titulo} aberta={aberta} alvo={`${auto}-d`} aoAlternar={alternar} />
+        ) : null}
       </div>
-      {dica && aberta ? (
-        <p id={`${auto}-d`} className="dica">
-          {dica}
-        </p>
-      ) : null}
-      {children}
+      <div id={`${auto}-c`} className="secao-corpo" hidden={recolhida}>
+        {dica && aberta ? (
+          <p id={`${auto}-d`} className="dica">
+            {dica}
+          </p>
+        ) : null}
+        {children}
+      </div>
     </section>
   );
 }
@@ -184,13 +225,13 @@ export function Deslizante({
           step={passo}
           value={valor}
           onChange={(e) => aoMudar(Number(e.target.value))}
-          className="w-full accent-[rgb(var(--c-terra))]"
+          className="block w-full"
         />
         {marca ? (
           <span
             aria-hidden="true"
             title={marca.rotulo}
-            className="pointer-events-none absolute top-0 h-2 w-0.5 bg-warn"
+            className="pointer-events-none absolute top-0.5 h-2.5 w-0.5 bg-warn"
             style={{ left: `${((marca.valor - min) / (max - min)) * 100}%` }}
           />
         ) : null}
@@ -293,7 +334,7 @@ export function PainelAbas({
       <div
         role="tablist"
         aria-label={`Seções de ${rotulo}`}
-        className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-paper-400 px-1.5"
+        className="flex shrink-0 gap-0.5 overflow-x-auto [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto border-b border-fundo bg-paper px-1.5"
         onKeyDown={teclado}
       >
         {abas.map((a) => {
@@ -311,8 +352,8 @@ export function PainelAbas({
               aria-controls={`${idBase}-painel-${a.id}`}
               tabIndex={sel ? 0 : -1}
               onClick={() => setAtiva(a.id)}
-              className={`-mb-px inline-flex h-8 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium ${
-                sel ? 'border-terra text-navy' : 'border-transparent text-navy-500 hover:text-navy'
+              className={`-mb-px inline-flex h-7 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium ${
+                sel ? 'border-navy text-navy' : 'border-transparent text-navy-500 hover:text-navy'
               }`}
             >
               {a.rotulo}

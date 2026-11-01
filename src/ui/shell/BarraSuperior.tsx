@@ -37,7 +37,7 @@ export function BarraSuperior() {
   });
 
   return (
-    <header className="flex items-center gap-3 border-b border-paper-400 bg-paper px-3">
+    <header className="relative flex items-center gap-3 bg-paper px-3">
       <a href="#conteudo" className="sr-only-focusable absolute left-2 top-2 z-50 rounded bg-navy px-3 py-2 text-paper">
         Pular para o conteúdo
       </a>
@@ -50,10 +50,10 @@ export function BarraSuperior() {
         <Marca />
         <span className="sr-only-focusable"> — voltar aos projetos</span>
       </button>
-      <span className="text-paper-400" aria-hidden="true">
-        /
-      </span>
-      <h1 className="min-w-0 truncate text-sm font-semibold">
+      <h1
+        className="absolute left-1/2 max-w-[36%] -translate-x-1/2 truncate text-[13px] font-semibold"
+        title={estado.projeto.caminho ?? undefined}
+      >
         {nome}
         {estado.projeto.sujo ? (
           <span className="ml-1.5 text-terra" title="Alterações não salvas">
@@ -61,18 +61,15 @@ export function BarraSuperior() {
           </span>
         ) : null}
       </h1>
-      {estado.projeto.caminho ? (
-        <span className="hidden truncate text-2xs text-navy-500 xl:inline">{estado.projeto.caminho}</span>
-      ) : null}
 
       <div className="ml-auto flex items-center gap-1">
         {erro ? <span className="max-w-xs truncate text-xs text-bad">{erro}</span> : null}
         {acoes.disponivel ? (
           <>
-            <button type="button" className="btn-secundario h-7" onClick={() => void salvar(false)} title="Ctrl+S">
+            <button type="button" className="btn-secundario h-6" onClick={() => void salvar(false)} title="Ctrl+S">
               Salvar
             </button>
-            <button type="button" className="btn-fantasma h-7" onClick={() => void salvar(true)} title="Ctrl+Shift+S">
+            <button type="button" className="btn-fantasma h-6" onClick={() => void salvar(true)} title="Ctrl+Shift+S">
               Salvar como…
             </button>
           </>
@@ -81,7 +78,7 @@ export function BarraSuperior() {
         )}
         <BotaoAjudas />
         <SeletorTema />
-        <button type="button" className="btn-fantasma h-7" onClick={() => setSobre(true)}>
+        <button type="button" className="btn-fantasma h-6" onClick={() => setSobre(true)}>
           Metodologia
         </button>
       </div>
@@ -125,7 +122,7 @@ export function BotaoAjudas() {
   return (
     <button
       type="button"
-      className="btn-fantasma h-7 gap-1.5 aria-pressed:text-terra-700"
+      className="btn-fantasma h-6 gap-1.5 aria-pressed:text-terra-700"
       aria-pressed={ligado}
       title={ligado ? 'Esconder ajudas (F1)' : 'Mostrar todas as ajudas (F1)'}
       onClick={() => definirMostrarAjudas(!ligado)}
@@ -146,7 +143,7 @@ export function SeletorTema() {
   return (
     <button
       type="button"
-      className="btn-icone h-7 w-7"
+      className="btn-icone h-6 w-6"
       aria-label={tema === 'escuro' ? 'Usar tema claro' : 'Usar tema escuro'}
       title={tema === 'escuro' ? 'Tema claro' : 'Tema escuro'}
       onClick={() => {

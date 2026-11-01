@@ -43,7 +43,7 @@
 @layer components {
   /* ---- Botões -------------------------------------------------------- */
   .btn {
-    @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded border px-3 text-[13px] font-medium
+    @apply inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-[3px] border px-3 text-xs font-medium
            transition-colors disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primario {
@@ -59,7 +59,7 @@
     @apply btn border-transparent bg-transparent text-navy-700 hover:bg-paper-200 hover:text-navy;
   }
   .btn-icone {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-navy-700
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-[3px] border border-transparent text-navy-700
            hover:bg-paper-200 hover:text-navy disabled:opacity-40;
   }
 
@@ -80,12 +80,12 @@
 
   /* ---- Padrões de editor --------------------------------------------- */
   /* Painel: superfície com cabeçalho fino e corpo rolável. */
+  /* Painéis encostados, de canto reto, separados pelo sulco escuro (`fundo`), como no Resolve. */
   .painel {
-    @apply flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-paper-400 bg-paper;
+    @apply flex min-h-0 min-w-0 flex-col overflow-hidden bg-paper;
   }
   .painel-cabeca {
-    @apply flex h-8 shrink-0 items-center gap-2 border-b border-paper-400 bg-paper-200 px-3 text-xs font-semibold
-           uppercase tracking-wide text-navy-700;
+    @apply flex h-7 shrink-0 items-center gap-2 border-b border-fundo bg-paper px-3 text-xs font-semibold text-navy;
   }
   .painel-corpo {
     @apply min-h-0 flex-1 overflow-auto;
@@ -95,7 +95,17 @@
     @apply border-b border-paper-400 px-3 py-3;
   }
   .secao-titulo {
-    @apply mb-2 text-2xs font-semibold uppercase tracking-wider text-navy-500;
+    @apply mb-2 text-xs font-semibold text-navy;
+  }
+  /* Seção recolhível do inspetor: faixa de cabeçalho com seta, como no Resolve. */
+  .secao-r {
+    @apply border-b border-fundo;
+  }
+  .secao-cabeca {
+    @apply flex h-7 items-center gap-1.5 bg-paper-200 pl-1.5 pr-2 text-xs font-semibold text-navy;
+  }
+  .secao-corpo {
+    @apply px-3 pb-3 pt-2.5;
   }
   /* Ajuda sob demanda: explicação fica atrás de "?", não na superfície. */
   .botao-dica {
@@ -106,14 +116,44 @@
     @apply mb-2 block rounded bg-paper-200 px-2 py-1.5 text-2xs text-navy-700;
   }
   /* Aba de página (barra inferior) e abas internas. */
+  /* Página na barra inferior: ícone sobre o rótulo, como as páginas do Resolve. */
   .aba {
-    @apply inline-flex h-full items-center gap-2 border-t-2 border-transparent px-4 text-[13px] font-medium text-navy-500
-           hover:text-navy aria-[current=page]:border-terra aria-[current=page]:text-navy;
+    @apply inline-flex h-full flex-col items-center justify-center gap-[5px] border-t-2 border-transparent px-4 text-[11px]
+           font-medium leading-none text-navy-500 hover:text-navy aria-[current=page]:border-terra
+           aria-[current=page]:bg-paper-200 aria-[current=page]:text-navy;
   }
   .segmento {
-    @apply inline-flex h-7 items-center rounded px-3 text-xs font-medium text-navy-700 hover:text-navy
-           aria-pressed:bg-paper aria-pressed:text-navy aria-pressed:shadow;
+    @apply inline-flex h-6 items-center rounded-[3px] px-2.5 text-xs font-medium text-navy-500 hover:text-navy
+           aria-pressed:bg-paper-400 aria-pressed:text-navy;
   }
+}
+
+/* Deslizantes finos e neutros, como os do inspetor do Resolve: o acento fica para o cursor e o foco. */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  background: transparent;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(var(--c-paper-400));
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--c-fundo));
+  background: rgb(var(--c-navy));
+}
+input[type='range']:hover::-webkit-slider-thumb {
+  background: rgb(var(--c-terra-900));
+}
+input[type='range']:disabled {
+  opacity: 0.4;
 }
 
 @media (prefers-reduced-motion: reduce) {

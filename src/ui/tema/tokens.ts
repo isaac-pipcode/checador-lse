@@ -32,26 +32,27 @@ export type NomeToken =
 export type Tema = 'escuro' | 'claro';
 
 export const TEMAS: Record<Tema, Record<NomeToken, string>> = {
-  // Grafite levemente azulado (derivado do navy da marca), como em editores de vídeo:
-  // a imagem é a coisa mais clara da tela.
+  // Grafite neutro, como no DaVinci Resolve: sem matiz, para não tingir a leitura
+  // de cor da imagem; a imagem é a coisa mais clara da tela. `fundo` é o sulco
+  // escuro entre painéis encostados.
   escuro: {
-    fundo: '#101216',
-    paper: '#1A1D23',
-    'paper-200': '#23272F',
-    'paper-400': '#343945',
-    navy: '#E8EAF0',
-    'navy-700': '#C5CAD4',
-    'navy-500': '#9EA5B3',
-    'navy-300': '#8D94A3',
+    fundo: '#0C0C0D',
+    paper: '#1C1C1F',
+    'paper-200': '#27272B',
+    'paper-400': '#3A3A40',
+    navy: '#E6E6E9',
+    'navy-700': '#C4C4C9',
+    'navy-500': '#A0A0A8',
+    'navy-300': '#93939B',
     terra: '#E37B51',
     'terra-700': '#F2A383',
     'terra-900': '#FFD6C4',
     ok: '#62CC95',
-    'ok-100': '#14302A',
+    'ok-100': '#143024',
     warn: '#E8B54C',
-    'warn-100': '#322A13',
+    'warn-100': '#30290F',
     bad: '#F4797F',
-    'bad-100': '#3A1B20',
+    'bad-100': '#3A1B1F',
     'serie-1': '#3987E5',
     'serie-2': '#D95926',
   },

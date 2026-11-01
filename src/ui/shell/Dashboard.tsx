@@ -58,10 +58,10 @@ export function Dashboard() {
   const emAberto = estado.projeto.caminho || estado.video || estado.cues.length > 0;
 
   return (
-    <div className="flex h-screen flex-col bg-fundo text-navy">
+    <div className="flex h-screen flex-col bg-paper text-navy">
       {/* com o diálogo aberto, o fundo sai da ordem de foco e da árvore de acessibilidade */}
       <div ref={fundo} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-paper-400 bg-paper px-6">
+      <header className="flex h-12 shrink-0 items-center gap-4 border-b border-fundo bg-paper-200 px-6">
         <Marca grande />
         <span className="text-xs text-navy-500">LSE · Audiodescrição · Libras</span>
         <div className="ml-auto flex items-center gap-2">
@@ -179,7 +179,7 @@ function CartaoProjeto({ p, aoAbrir, aoEsquecer }: { p: ResumoProjeto; aoAbrir: 
     { rotulo: 'Libras', texto: p.libras.clipe ? (p.libras.sincronizado ? 'sincronizada' : 'sem sincronia') : '—', feito: p.libras.clipe ? p.libras.sincronizado : null },
   ];
   return (
-    <article className="group overflow-hidden rounded-md border border-paper-400 bg-paper transition-colors hover:border-navy-500">
+    <article className="group overflow-hidden rounded border border-paper-400 bg-paper-200 transition-colors hover:border-navy-500">
       <button type="button" className="block w-full text-left" onClick={aoAbrir} aria-label={`Abrir o projeto ${p.nome}`}>
         <div className="relative aspect-video bg-preto">
           {p.miniatura ? (

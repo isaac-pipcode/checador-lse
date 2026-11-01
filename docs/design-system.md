@@ -17,7 +17,7 @@ Situação antes da reformulação (tema único, claro, layout de página roláv
 | Cores usadas pelo nome da marca em papéis semânticos (`text-navy-700` como "texto secundário": 54 usos; `border-paper-400` como "borda": 40) | todos os componentes | Tokens por **papel**, via variáveis CSS geradas de uma fonte única (`src/ui/tema/tokens.ts`) |
 | 10 cores em hex soltas no código | linha do tempo (canvas), teleprompter | Canvas lê as variáveis CSS; teleprompter usa a paleta fixa `cabine` |
 | 25 valores arbitrários do Tailwind | diversos | Mantidos onde são medidas de layout de componente (alturas de trilha); tipografia ganhou `text-2xs` |
-| `navy-300` reprovava como texto (3,0:1 sobre paper) | rótulos sutis | Escurecido no tema claro (#5D6880); no escuro, #8D94A3 (≥ 4,5:1) |
+| `navy-300` reprovava como texto (3,0:1 sobre paper) | rótulos sutis | Escurecido no tema claro (#5D6880); no escuro, #93939B (≥ 4,5:1) |
 | Sem padrões de painel, inspetor, transporte | — | Criados (abaixo) |
 
 ## 2. Tokens
@@ -29,19 +29,19 @@ Fonte única: `src/ui/tema/tokens.ts` → variáveis `--c-*` → Tailwind (`tail
 
 | Token | Papel | Escuro (padrão) | Claro |
 |---|---|---|---|
-| `fundo` | fundo do app, atrás dos painéis; campos | #101216 | #EDE8DC |
-| `paper` | superfície de painel | #1A1D23 | #FAF8F3 |
-| `paper-200` | superfície elevada, cabeçalho de painel, hover | #23272F | #F2EEE4 |
-| `paper-400` | separadores (decorativos, < 3:1 de propósito) | #343945 | #E3DDCD |
-| `navy` | tinta principal | #E8EAF0 | #1B2230 |
-| `navy-700` | tinta secundária | #C5CAD4 | #2C3547 |
-| `navy-500` | tinta terciária; borda de controle (≥ 3:1) | #9EA5B3 | #4A566E |
+| `fundo` | sulco entre painéis encostados; fundo das trilhas; campos | #0C0C0D | #EDE8DC |
+| `paper` | superfície de painel | #1C1C1F | #FAF8F3 |
+| `paper-200` | superfície elevada, cabeçalho de painel, hover | #27272B | #F2EEE4 |
+| `paper-400` | separadores (decorativos, < 3:1 de propósito) | #3A3A40 | #E3DDCD |
+| `navy` | tinta principal | #E6E6E9 | #1B2230 |
+| `navy-700` | tinta secundária | #C4C4C9 | #2C3547 |
+| `navy-500` | tinta terciária; borda de controle (≥ 3:1) | #A0A0A8 | #4A566E |
 | `navy-300` | tinta sutil (≥ 4,5:1) | #8D94A3 | #5D6880 |
 | `terra` | acento: cursor de reprodução, foco, ação primária | #E37B51 | #B85F3E |
 | `terra-700` | acento como texto (timecode) | #F2A383 | #8E4227 |
-| `ok` / `ok-100` | sucesso: texto / fundo | #62CC95 / #14302A | #1F6B4A / #E4F1EA |
-| `warn` / `warn-100` | aviso | #E8B54C / #322A13 | #8A5B00 / #FBF0DA |
-| `bad` / `bad-100` | erro | #F4797F / #3A1B20 | #A3242B / #FBE6E7 |
+| `ok` / `ok-100` | sucesso: texto / fundo | #62CC95 / #143024 | #1F6B4A / #E4F1EA |
+| `warn` / `warn-100` | aviso | #E8B54C / #30290F | #8A5B00 / #FBF0DA |
+| `bad` / `bad-100` | erro | #F4797F / #3A1B1F | #A3242B / #FBE6E7 |
 
 Os nomes `navy` e `paper` foram herdados e são **papéis**: no tema escuro, `navy` é claro. Para
 código novo, leia `navy` como "tinta" e `paper` como "superfície".
@@ -55,13 +55,15 @@ outro monitor): `cabine`, `cabine-texto`, `cabine-suave`, `cabine-faixa`, `cabin
 
 Escala densa de editor: 11 px (`text-2xs`) para metadados, 12–13 px para painéis e controles,
 14 px ou mais para conteúdo editável (roteiro, legenda). Timecode e medidas em monoespaçada com
-`tabular-nums`. Cabeçalhos de painel em caixa-alta, 12 px, `tracking-wide`.
+`tabular-nums`. Cabeçalhos de painel e de seção em caixa normal, 12 px, semibold, como no Resolve.
 
 ### Espaço, raio, elevação
 
-Painéis com raio de 6 px e intervalo de 6 px entre painéis (`gap-1.5`). Controles com 28 a
-32 px de altura. Elevação só por superfície (`paper` → `paper-200`), sem sombras, exceto em
-diálogos modais.
+Como no DaVinci Resolve: painéis **encostados e de canto reto**, separados por um sulco de 2 px na
+cor `fundo`; o tema escuro é grafite **neutro** (sem matiz azul), para não tingir a leitura de cor
+da imagem. Controles de 24 a 28 px de altura, raio de 3 px. Elevação só por superfície (`paper` →
+`paper-200`), sem sombras, exceto em diálogos modais. O acento (`terra`) fica para o cursor de
+reprodução, o timecode, o foco e a ação primária; deslizantes são finos e neutros.
 
 ### Foco
 
@@ -76,7 +78,8 @@ Contorno de 2 px no acento (`terra`), com 2 px de folga, em todo elemento focáv
 | Aba de página | `.aba` | `aria-current="page"` = barra de acento no topo | dentro de `nav` rotulado |
 | Painel | `comum.tsx` (`Painel`) | cabeçalho fino + corpo rolável | `section` com `aria-label` |
 | Painel com abas | `comum.tsx` (`PainelAbas`) | abas com marca de contagem (neutra, aviso, erro); faixa fixa opcional entre as abas e o conteúdo; última aba lembrada por painel | padrão WAI-ARIA de abas: `tablist`/`tab`/`tabpanel`, setas ←/→, Home/End, só a aba ativa na ordem de Tab |
-| Seção de inspetor | `Secao` | título em caixa-alta; `dica` opcional atrás de "?" | `aria-labelledby`; o "?" tem `aria-expanded` e nome "Ajuda: <seção>" |
+| Seção de inspetor | `Secao` | faixa de cabeçalho que **recolhe** (▼/▶; estado lembrado por título); `dica` opcional atrás de "?" | `aria-labelledby`; o título é um botão com `aria-expanded`; o "?" tem `aria-expanded` e nome "Ajuda: <seção>" |
+| Cabeçalho de trilha | `LinhaDoTempo.tsx` (`CabecaTrilha`) | faixa de cor, código (A1, ST, A2, V2) e nome | decorativo (`aria-hidden`): cada item da trilha já tem nome próprio |
 | Deslizante | `Deslizante` | valor formatado; **marca de referência** (mínimo da norma) | `label` associado; a marca também vem em texto |
 | Chip de estado | `.chip` | ok, aviso, erro, pendente | **sempre ícone + texto**, nunca só cor |
 | Cartão de projeto | `Dashboard.tsx` | miniatura, data, estado por etapa | um botão por cartão, com nome acessível |
@@ -89,12 +92,20 @@ total e **barra de páginas** embaixo (Projetos · Legendas · Audiodescrição 
 O monitor e a linha do tempo são compartilhados: trocar de página não recarrega o vídeo. A
 largura das colunas varia por página: Libras privilegia o monitor; Legendas, a lista.
 
-**Monitor.** Vídeo sobre `preto`, com camadas alternáveis no transporte (LSE, Libras e AD
-audível) e timecode SMPTE (HH:MM:SS:QQ) no acento. Botões de quadro a quadro.
+**Barras.** Superior fina (36 px), com o nome do projeto centralizado (o caminho vai na dica do
+título). Barra de páginas embaixo com ícone sobre o rótulo e o estado da etapa em texto, centralizada;
+"Projetos" à esquerda.
 
-**Linha do tempo.** Trilhas: Som (forma de onda, limiar, atividade, curva de ducking), Legendas
-(pior severidade pendente), Audiodescrição (janela do bloco + take), Libras (trecho do clipe) e
-Lacunas. Cortes de plano em traço vertical. O trecho além do fim da obra fica sombreado. Ao
+**Monitor.** Vídeo sobre `preto`. Cabeçalho com o nome do clipe ao centro e o timecode SMPTE
+(HH:MM:SS:QQ) grande, no acento, à direita. Abaixo da imagem, uma barra de posição (alvo de 24 px) e
+o transporte centralizado (início, quadro a quadro, reproduzir, fim); duração à esquerda, camadas
+(LSE, Libras e AD audível) à direita.
+
+**Linha do tempo.** Cabeçalho com o timecode à esquerda, "Acompanhar" e zoom (−, deslizante, +)
+à direita; atalhos de teclado na ajuda "?". Cursor de reprodução com marcador na régua. Trilhas com
+cabeçalho de cor e código, sobre fundo escuro: A1 Som (forma de onda, limiar, atividade, curva de ducking), ST Legendas
+(pior severidade pendente), A2 Audiodescrição (janela do bloco + take), V2 Libras (clipe preenchido,
+como um clipe de vídeo) e Lacunas. Cortes de plano em traço vertical. O trecho além do fim da obra fica sombreado. Ao
 clicar num item de outra etapa, o app navega para a página dela.
 
 **Um assunto por aba.** Painel com mais de um assunto usa abas internas, e cada aba responde a uma
