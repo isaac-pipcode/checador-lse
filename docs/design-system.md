@@ -92,6 +92,15 @@ total e **barra de páginas** embaixo (Projetos · Legendas · Audiodescrição 
 O monitor e a linha do tempo são compartilhados: trocar de página não recarrega o vídeo. A
 largura das colunas varia por página: Libras privilegia o monitor; Legendas, a lista.
 
+**Painéis redimensionáveis.** Divisórias entre painel esquerdo, monitor e inspetor, e no topo da
+linha do tempo (`shell/divisorias.tsx`). O sulco visível tem 2 px e acende no acento ao passar o
+mouse ou receber foco; a área de pegar tem 10 px. Padrão WAI-ARIA *window splitter*: `separator`
+focável com valor, mínimo e máximo; setas movem 16 px (Shift: 64), Home/End vão aos limites, Enter
+ou duplo clique restauram o padrão. Mínimos: painel esquerdo 240 px, inspetor 260, monitor 360,
+linha do tempo 120 (abaixo da altura natural, as trilhas rolam). Larguras por página, altura da
+linha do tempo global, salvas no armazenamento local; se a janela encolher, os painéis laterais
+cedem antes do monitor.
+
 **Barras.** Superior fina (36 px), com o nome do projeto centralizado (o caminho vai na dica do
 título). Barra de páginas embaixo com ícone sobre o rótulo e o estado da etapa em texto, centralizada;
 "Projetos" à esquerda.
@@ -155,7 +164,7 @@ acessibilidade), Esc fecha, foco inicial no primeiro campo.
 
 ## 6. Questões em aberto
 
-- Painéis redimensionáveis (arrastar divisórias) e layouts salvos por usuário, como nos editores
-  de referência.
+- Layouts nomeados (salvar e trocar arranjos, como os *workspaces* do Resolve) e recolher um painel
+  inteiro.
 - Atalhos configuráveis: no macOS, `Ctrl/⌘+Espaço` colide com o sistema.
 - Alto contraste (`prefers-contrast: more`) como terceiro tema.

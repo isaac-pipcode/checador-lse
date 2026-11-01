@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Cue, Severity } from '../model/types';
 import type { Intervalo, MapaTemporal } from '../mapa/tipos';
 import type { Lacuna } from '../mapa/lacunas';
@@ -84,6 +84,8 @@ const ICONE_NIVEL: Record<NivelAD, string> = { ok: '✓', aviso: '!', erro: '✕
 const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'pronto', aviso: 'com aviso', erro: 'com erro', pendente: 'pendente' };
 
 export interface PropsLinhaDoTempo {
+  /** divisória de altura, desenhada no topo (dentro da região, para leitores de tela) */
+  divisoria?: ReactNode;
   duracaoMs: number;
   /** cadência da obra, para o timecode do cabeçalho */
   fps: number;
@@ -279,7 +281,8 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const atual = p.cues.find((c) => p.tempoMs >= c.startMs && p.tempoMs < c.endMs);
 
   return (
-    <section aria-labelledby={`${id}-t`} className="painel">
+    <section aria-labelledby={`${id}-t`} className="painel h-full">
+      {p.divisoria ? <div className="h-0.5 shrink-0 [&>*]:h-full">{p.divisoria}</div> : null}
       <div className="painel-cabeca">
         <span aria-hidden="true" className="w-28 font-mono text-[15px] font-medium tabular-nums text-terra-700">
           {tcSmpte(p.tempoMs, p.fps)}
@@ -312,7 +315,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex min-h-0 flex-1 overflow-y-auto bg-fundo">
         <div aria-hidden="true" className="w-36 shrink-0 border-r border-fundo bg-paper text-2xs">
           <div style={{ height: H_REGUA }} className="border-b border-fundo bg-paper-200" />
           <CabecaTrilha altura={H_SOM} codigo="A1" nome="Som da obra" cor="bg-navy-500" />

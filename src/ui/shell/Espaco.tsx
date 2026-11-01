@@ -23,16 +23,24 @@ import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
 import { EntregaEsquerda, EntregaDireita } from '../paginas/PaginaEntrega';
+import { Divisoria, useJanela, usePaineis } from './divisorias';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
-/** Colunas por página: painel esquerdo · monitor · inspetor. */
-const COLUNAS: Record<Exclude<Pagina, 'projetos'>, string> = {
-  lse: 'minmax(360px, 1.05fr) minmax(420px, 1.4fr) minmax(280px, 320px)',
-  ad: 'minmax(380px, 1.1fr) minmax(420px, 1.35fr) minmax(300px, 340px)',
-  libras: 'minmax(300px, 340px) minmax(480px, 1.8fr) minmax(300px, 340px)',
-  entrega: 'minmax(340px, 1fr) minmax(420px, 1.3fr) minmax(320px, 380px)',
+/** Colunas padrão por página (painel esquerdo · monitor · inspetor), até o usuário arrastar uma divisória. */
+const COLUNAS: Record<Exclude<Pagina, 'projetos'>, [string, string, string]> = {
+  lse: ['minmax(360px, 1.05fr)', 'minmax(420px, 1.4fr)', 'minmax(280px, 320px)'],
+  ad: ['minmax(380px, 1.1fr)', 'minmax(420px, 1.35fr)', 'minmax(300px, 340px)'],
+  libras: ['minmax(300px, 340px)', 'minmax(480px, 1.8fr)', 'minmax(300px, 340px)'],
+  entrega: ['minmax(340px, 1fr)', 'minmax(420px, 1.3fr)', 'minmax(320px, 380px)'],
 };
+const MIN_ESQ = 240;
+const MIN_DIR = 260;
+const MIN_MONITOR = 360;
+const MIN_LINHA = 120;
+/** altura mínima da área de cima (painéis e monitor) ao crescer a linha do tempo */
+const MIN_ACIMA = 220;
+const ALTURA_BARRAS = 36 + 58;
 
 /**
  * Espaço de trabalho do editor. Dono do vídeo (um só elemento, compartilhado
@@ -201,6 +209,26 @@ export function Espaco() {
     entrega: [<EntregaEsquerda key="e" />, <EntregaDireita key="d" />],
   };
 
+  // ---- painéis redimensionáveis ----------------------------------------------
+  const paineis = usePaineis(pagina);
+  const janela = useJanela();
+  const refMain = useRef<HTMLElement>(null);
+  const refLinha = useRef<HTMLDivElement>(null);
+  const largura = (i: number) => (refMain.current?.children[i] as HTMLElement | undefined)?.getBoundingClientRect().width ?? 0;
+  const { esq, dir } = paineis.medidas;
+  const dirEf = dir !== undefined ? Math.min(dir, janela.w - MIN_ESQ - MIN_MONITOR - 4) : undefined;
+  const esqEf = esq !== undefined ? Math.min(esq, janela.w - (dirEf ?? (largura(4) || MIN_DIR)) - MIN_MONITOR - 4) : undefined;
+  const padrao = COLUNAS[pagina];
+  const colunas = [
+    esqEf !== undefined ? `${esqEf}px` : padrao[0],
+    '2px',
+    esqEf !== undefined || dirEf !== undefined ? `minmax(${MIN_MONITOR}px, 1fr)` : padrao[1],
+    '2px',
+    dirEf !== undefined ? `${dirEf}px` : padrao[2],
+  ].join(' ');
+  const maxLinha = Math.max(MIN_LINHA, janela.h - ALTURA_BARRAS - MIN_ACIMA);
+  const linhaEf = paineis.linha !== undefined ? Math.min(paineis.linha, maxLinha) : undefined;
+
   const status = !video
     ? null
     : !mapa
@@ -212,11 +240,23 @@ export function Espaco() {
   return (
     <CtxVideo.Provider value={{ video: videoPronto, tempoMs, buscar, previa: motor, duracaoMs }}>
       <ProvedorPaginaAD>
-        <div className="grid h-screen grid-rows-[36px_minmax(0,1fr)_auto_58px] bg-fundo text-navy">
+        <div
+          className="grid h-screen bg-fundo text-navy"
+          style={{ gridTemplateRows: `36px minmax(0, 1fr) ${linhaEf !== undefined ? `${linhaEf}px` : 'auto'} 58px` }}
+        >
           <BarraSuperior />
 
-          <main id="conteudo" className="grid min-h-0 gap-0.5 pt-0.5" style={{ gridTemplateColumns: COLUNAS[pagina] }}>
+          <main ref={refMain} id="conteudo" className="grid min-h-0 pt-0.5" style={{ gridTemplateColumns: colunas }}>
             {lados[pagina][0]}
+            <Divisoria
+              orientacao="vertical"
+              rotulo="Largura do painel esquerdo"
+              medir={() => largura(0)}
+              min={MIN_ESQ}
+              max={janela.w - largura(4) - MIN_MONITOR - 4}
+              aoMudar={(v) => paineis.definir({ esq: v })}
+              aoRestaurar={() => paineis.definir({ esq: undefined })}
+            />
 
             {/* ---- Monitor ---- */}
             <section className="painel" aria-label="Monitor">
@@ -372,12 +412,34 @@ export function Espaco() {
               </div>
             </section>
 
+            <Divisoria
+              orientacao="vertical"
+              rotulo="Largura do inspetor"
+              medir={() => largura(4)}
+              min={MIN_DIR}
+              max={janela.w - largura(0) - MIN_MONITOR - 4}
+              sentido={-1}
+              aoMudar={(v) => paineis.definir({ dir: v })}
+              aoRestaurar={() => paineis.definir({ dir: undefined })}
+            />
             {lados[pagina][1]}
           </main>
 
-          <div className="min-h-0 pt-0.5">
+          <div ref={refLinha} className="min-h-0">
             {video ? (
               <LinhaDoTempo
+                divisoria={
+                  <Divisoria
+                    orientacao="horizontal"
+                    rotulo="Altura da linha do tempo"
+                    medir={() => refLinha.current?.getBoundingClientRect().height ?? 0}
+                    min={MIN_LINHA}
+                    max={maxLinha}
+                    sentido={-1}
+                    aoMudar={(v) => paineis.definirLinha(v)}
+                    aoRestaurar={() => paineis.definirLinha(undefined)}
+                  />
+                }
                 duracaoMs={duracaoMs}
                 fps={config.fps}
                 mapa={mapa}

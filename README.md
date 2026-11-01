@@ -407,6 +407,11 @@ Painéis com mais de um assunto usam **abas internas** (padrão WAI-ARIA), e o q
 sempre à vista fica numa faixa fixa: na página de Legendas, a lista revisável, os apontamentos da
 obra inteira e o lote com as métricas ficam em abas, com os contadores acima delas.
 
+Os **painéis são redimensionáveis**: arraste as divisórias entre painel esquerdo, monitor e inspetor,
+ou a do topo da linha do tempo (também pelo teclado, com foco na divisória: setas, Home/End; Enter
+ou duplo clique restauram). As larguras ficam salvas por página; a altura da linha do tempo, para
+todas.
+
 O **dashboard** lista os projetos recentes, com miniatura gerada pelo ffmpeg a 10% da obra e o
 estado de cada etapa, e permite filtrar, criar (o estúdio cria uma subpasta com o projeto e as
 gravações) e abrir. O processo desktop só grava projetos em caminhos escolhidos pelo usuário em
