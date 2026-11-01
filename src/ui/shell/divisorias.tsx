@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 /**
- * Painéis redimensionáveis, como nos editores de vídeo: divisórias arrastáveis
- * entre as colunas e acima da linha do tempo. As larguras são lembradas por
- * página; a altura da linha do tempo vale para todas. Preferência do usuário,
- * não do projeto: fica no armazenamento local, como o tema.
+ * Painéis redimensionáveis e recolhíveis, como nos editores de vídeo:
+ * divisórias arrastáveis entre as colunas e acima da linha do tempo; cada
+ * painel pode ser recolhido; o arranjo inteiro pode ser salvo com um nome
+ * (como os "workspaces" do Resolve). Larguras e recolhidos são lembrados por
+ * página; a linha do tempo vale para todas. Preferência do usuário, não do
+ * projeto: fica no armazenamento local, como o tema.
  *
  * Cada divisória segue o padrão WAI-ARIA "window splitter": `role=separator`
  * focável, com valor atual, mínimo e máximo; setas movem 16 px (Shift: 64 px),
@@ -14,11 +16,17 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 export interface MedidasPagina {
   esq?: number;
   dir?: number;
+  /** painel esquerdo recolhido */
+  semEsq?: boolean;
+  /** inspetor recolhido */
+  semDir?: boolean;
 }
 
-interface Layout {
+/** Arranjo dos painéis: larguras e recolhidos por página; altura da linha do tempo, global. */
+export interface Layout {
   paginas: Record<string, MedidasPagina>;
   linha?: number;
+  semLinha?: boolean;
 }
 
 const CHAVE = 'estudio:paineis';
@@ -26,11 +34,32 @@ const CHAVE = 'estudio:paineis';
 function ler(): Layout {
   try {
     const l = JSON.parse(localStorage.getItem(CHAVE) ?? '{}') as Partial<Layout>;
-    return { paginas: l.paginas ?? {}, linha: typeof l.linha === 'number' ? l.linha : undefined };
+    return {
+      paginas: l.paginas ?? {},
+      linha: typeof l.linha === 'number' ? l.linha : undefined,
+      semLinha: l.semLinha === true ? true : undefined,
+    };
   } catch {
     return { paginas: {} };
   }
 }
+
+/** Forma canônica (sem chaves vazias, em ordem), para comparar layouts. */
+export function canonico(l: Layout): string {
+  const paginas: Record<string, MedidasPagina> = {};
+  for (const k of Object.keys(l.paginas).sort()) {
+    const m = l.paginas[k];
+    const limpo: MedidasPagina = {};
+    if (m.esq !== undefined) limpo.esq = m.esq;
+    if (m.dir !== undefined) limpo.dir = m.dir;
+    if (m.semEsq) limpo.semEsq = true;
+    if (m.semDir) limpo.semDir = true;
+    if (Object.keys(limpo).length) paginas[k] = limpo;
+  }
+  return JSON.stringify({ paginas, linha: l.linha ?? null, semLinha: l.semLinha === true });
+}
+
+export type Painel = 'esq' | 'dir' | 'linha';
 
 export function usePaineis(pagina: string) {
   const [layout, setLayout] = useState<Layout>(ler);
@@ -41,12 +70,70 @@ export function usePaineis(pagina: string) {
       /* sem armazenamento: vale só para a sessão */
     }
   }, [layout]);
+  const medidas = layout.paginas[pagina] ?? {};
+  const recolhido: Record<Painel, boolean> = {
+    esq: !!medidas.semEsq,
+    dir: !!medidas.semDir,
+    linha: !!layout.semLinha,
+  };
+  const definir = (m: MedidasPagina) =>
+    setLayout((l) => ({ ...l, paginas: { ...l.paginas, [pagina]: { ...l.paginas[pagina], ...m } } }));
   return {
-    medidas: layout.paginas[pagina] ?? {},
+    layout,
+    medidas,
     linha: layout.linha,
-    definir: (m: MedidasPagina) =>
-      setLayout((l) => ({ ...l, paginas: { ...l.paginas, [pagina]: { ...l.paginas[pagina], ...m } } })),
+    recolhido,
+    definir,
     definirLinha: (h: number | undefined) => setLayout((l) => ({ ...l, linha: h })),
+    alternar: (p: Painel) => {
+      if (p === 'linha') setLayout((l) => ({ ...l, semLinha: l.semLinha ? undefined : true }));
+      else if (p === 'esq') definir({ semEsq: medidas.semEsq ? undefined : true });
+      else definir({ semDir: medidas.semDir ? undefined : true });
+    },
+    aplicar: (l: Layout) => setLayout(structuredClone(l)),
+  };
+}
+
+// ---- layouts nomeados ------------------------------------------------------
+
+const PAGINAS = ['lse', 'ad', 'libras', 'entrega'];
+
+/** Layouts prontos: não podem ser sobrescritos nem excluídos. */
+export const PRONTOS: Record<string, Layout> = {
+  Padrão: { paginas: {} },
+  'Foco no monitor': {
+    paginas: Object.fromEntries(PAGINAS.map((p) => [p, { semEsq: true, semDir: true }])),
+  },
+};
+
+const CHAVE_NOMEADOS = 'estudio:layouts';
+
+function lerNomeados(): Record<string, Layout> {
+  try {
+    const o = JSON.parse(localStorage.getItem(CHAVE_NOMEADOS) ?? '{}') as Record<string, Layout>;
+    return Object.fromEntries(Object.entries(o).filter(([, l]) => l && typeof l === 'object' && l.paginas));
+  } catch {
+    return {};
+  }
+}
+
+export function useLayoutsNomeados() {
+  const [salvos, setSalvos] = useState<Record<string, Layout>>(lerNomeados);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAVE_NOMEADOS, JSON.stringify(salvos));
+    } catch {
+      /* sem armazenamento */
+    }
+  }, [salvos]);
+  return {
+    salvos,
+    salvar: (nome: string, l: Layout) => setSalvos((s) => ({ ...s, [nome]: structuredClone(l) })),
+    excluir: (nome: string) =>
+      setSalvos((s) => {
+        const { [nome]: _fora, ...resto } = s;
+        return resto;
+      }),
   };
 }
 

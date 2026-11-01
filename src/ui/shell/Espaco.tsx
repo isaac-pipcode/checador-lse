@@ -23,8 +23,9 @@ import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
 import { EntregaEsquerda, EntregaDireita } from '../paginas/PaginaEntrega';
-import { Divisoria, useJanela, usePaineis } from './divisorias';
-import { Icone } from '../icones';
+import { Divisoria, useJanela, useLayoutsNomeados, usePaineis, type Painel } from './divisorias';
+import { MenuLayouts } from './MenuLayouts';
+import { Icone, type NomeIcone } from '../icones';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
@@ -220,13 +221,46 @@ export function Espaco() {
   const dirEf = dir !== undefined ? Math.min(dir, janela.w - MIN_ESQ - MIN_MONITOR - 4) : undefined;
   const esqEf = esq !== undefined ? Math.min(esq, janela.w - (dirEf ?? (largura(4) || MIN_DIR)) - MIN_MONITOR - 4) : undefined;
   const padrao = COLUNAS[pagina];
+  const { recolhido } = paineis;
   const colunas = [
-    esqEf !== undefined ? `${esqEf}px` : padrao[0],
-    '2px',
-    esqEf !== undefined || dirEf !== undefined ? `minmax(${MIN_MONITOR}px, 1fr)` : padrao[1],
-    '2px',
-    dirEf !== undefined ? `${dirEf}px` : padrao[2],
+    recolhido.esq ? '0px' : esqEf !== undefined ? `${esqEf}px` : padrao[0],
+    recolhido.esq ? '0px' : '2px',
+    esqEf !== undefined || dirEf !== undefined || recolhido.esq || recolhido.dir ? `minmax(${MIN_MONITOR}px, 1fr)` : padrao[1],
+    recolhido.dir ? '0px' : '2px',
+    recolhido.dir ? '0px' : dirEf !== undefined ? `${dirEf}px` : padrao[2],
   ].join(' ');
+  const nomeados = useLayoutsNomeados();
+  const BOTOES_PAINEIS: Array<[Painel, NomeIcone, string]> = [
+    ['esq', 'painelEsquerdo', 'Painel esquerdo'],
+    ['linha', 'painelInferior', 'Linha do tempo'],
+    ['dir', 'painelDireito', 'Inspetor'],
+  ];
+  const ferramentas = (
+    <div className="flex items-center gap-0.5">
+      <div role="group" aria-label="Mostrar painéis" className="flex items-center gap-0.5">
+        {BOTOES_PAINEIS.map(([p, icone, rotulo]) => (
+          <button
+            key={p}
+            type="button"
+            className="btn-icone h-6 w-6 aria-pressed:text-navy aria-[pressed=false]:text-navy-300"
+            aria-pressed={!recolhido[p]}
+            aria-label={rotulo}
+            title={`${recolhido[p] ? 'Mostrar' : 'Recolher'}: ${rotulo.toLowerCase()}`}
+            onClick={() => paineis.alternar(p)}
+          >
+            <Icone nome={icone} />
+          </button>
+        ))}
+      </div>
+      <MenuLayouts
+        atual={paineis.layout}
+        aoAplicar={paineis.aplicar}
+        salvos={nomeados.salvos}
+        aoSalvar={nomeados.salvar}
+        aoExcluir={nomeados.excluir}
+      />
+    </div>
+  );
   const maxLinha = Math.max(MIN_LINHA, janela.h - ALTURA_BARRAS - MIN_ACIMA);
   const linhaEf = paineis.linha !== undefined ? Math.min(paineis.linha, maxLinha) : undefined;
 
@@ -243,13 +277,18 @@ export function Espaco() {
       <ProvedorPaginaAD>
         <div
           className="grid h-screen bg-fundo text-navy"
-          style={{ gridTemplateRows: `36px minmax(0, 1fr) ${linhaEf !== undefined ? `${linhaEf}px` : 'auto'} 58px` }}
+          style={{
+            gridTemplateRows: `36px minmax(0, 1fr) ${recolhido.linha ? '0px' : linhaEf !== undefined ? `${linhaEf}px` : 'auto'} 58px`,
+          }}
         >
-          <BarraSuperior />
+          <BarraSuperior ferramentas={ferramentas} />
 
           <main ref={refMain} id="conteudo" className="grid min-h-0 pt-0.5" style={{ gridTemplateColumns: colunas }}>
-            {lados[pagina][0]}
-            <Divisoria
+            <div style={{ gridColumn: 1 }} className={recolhido.esq ? 'hidden' : 'grid min-h-0 min-w-0'}>
+              {lados[pagina][0]}
+            </div>
+            <div style={{ gridColumn: 2 }} className={recolhido.esq ? 'hidden' : 'grid'}>
+              <Divisoria
               orientacao="vertical"
               rotulo="Largura do painel esquerdo"
               medir={() => largura(0)}
@@ -258,9 +297,10 @@ export function Espaco() {
               aoMudar={(v) => paineis.definir({ esq: v })}
               aoRestaurar={() => paineis.definir({ esq: undefined })}
             />
+            </div>
 
             {/* ---- Monitor ---- */}
-            <section className="painel" aria-label="Monitor">
+            <section className="painel" style={{ gridColumn: 3 }} aria-label="Monitor">
               <header className="painel-cabeca">
                 <h2>Monitor</h2>
                 <span className="min-w-0 flex-1 truncate text-center font-normal text-navy-700">
@@ -413,6 +453,7 @@ export function Espaco() {
               </div>
             </section>
 
+            <div style={{ gridColumn: 4 }} className={recolhido.dir ? 'hidden' : 'grid'}>
             <Divisoria
               orientacao="vertical"
               rotulo="Largura do inspetor"
@@ -423,10 +464,13 @@ export function Espaco() {
               aoMudar={(v) => paineis.definir({ dir: v })}
               aoRestaurar={() => paineis.definir({ dir: undefined })}
             />
-            {lados[pagina][1]}
+            </div>
+            <div style={{ gridColumn: 5 }} className={recolhido.dir ? 'hidden' : 'grid min-h-0 min-w-0'}>
+              {lados[pagina][1]}
+            </div>
           </main>
 
-          <div ref={refLinha} className="min-h-0">
+          <div ref={refLinha} className={recolhido.linha ? 'hidden' : 'min-h-0'}>
             {video ? (
               <LinhaDoTempo
                 divisoria={

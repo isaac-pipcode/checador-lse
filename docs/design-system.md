@@ -119,6 +119,15 @@ linha do tempo 120 (abaixo da altura natural, as trilhas rolam). Larguras por p�
 linha do tempo global, salvas no armazenamento local; se a janela encolher, os painéis laterais
 cedem antes do monitor.
 
+**Recolher painéis e layouts nomeados.** Na barra superior, à esquerda, três botões de alternância
+(`aria-pressed`: pressionado = visível) recolhem o painel esquerdo, a linha do tempo e o inspetor;
+o monitor ocupa o espaço. Recolher esconde, não desmonta: o que estiver em curso no painel continua.
+O menu **Layout** (painel de divulgação, não `role=menu`, porque tem campo de texto) mostra o layout
+atual ou "personalizado", aplica os prontos ("Padrão", "Foco no monitor") e os salvos, salva o arranjo
+atual com um nome (nomes dos prontos são reservados; nome existente vira "Substituir") e exclui os
+salvos. Esc ou clique fora fecham e devolvem o foco ao botão. Um layout guarda larguras e recolhidos
+de cada página e a altura e o recolhido da linha do tempo; fica no armazenamento local.
+
 **Barras.** Superior fina (36 px), com o nome do projeto centralizado (o caminho vai na dica do
 título). Barra de páginas embaixo com ícone sobre o rótulo e o estado da etapa em texto, centralizada;
 "Projetos" à esquerda.
@@ -182,7 +191,5 @@ acessibilidade), Esc fecha, foco inicial no primeiro campo.
 
 ## 6. Questões em aberto
 
-- Layouts nomeados (salvar e trocar arranjos, como os *workspaces* do Resolve) e recolher um painel
-  inteiro.
 - Atalhos configuráveis: no macOS, `Ctrl/⌘+Espaço` colide com o sistema.
 - Alto contraste (`prefers-contrast: more`) como terceiro tema.

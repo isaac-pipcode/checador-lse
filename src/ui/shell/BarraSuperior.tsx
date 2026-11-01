@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useDespachar, useEstado } from '../../state/store';
 import { useAcoesProjeto } from '../Projeto';
 import { salvarTema, temaSalvo, type Tema } from '../tema/tokens';
@@ -8,7 +8,7 @@ import { definirMostrarAjudas, mostrarAjudas, useMostrarAjudas } from '../ajudas
 import { Icone } from '../icones';
 
 /** Barra superior: projeto, salvar, ajudas, tema, metodologia. */
-export function BarraSuperior() {
+export function BarraSuperior({ ferramentas }: { ferramentas?: ReactNode } = {}) {
   const { estado } = useEstado();
   const despachar = useDespachar();
   const acoes = useAcoesProjeto();
@@ -51,6 +51,7 @@ export function BarraSuperior() {
         <Marca />
         <span className="sr-only-focusable"> — voltar aos projetos</span>
       </button>
+      {ferramentas}
       <h1
         className="absolute left-1/2 max-w-[36%] -translate-x-1/2 truncate text-[13px] font-semibold"
         title={estado.projeto.caminho ?? undefined}

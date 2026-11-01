@@ -411,6 +411,9 @@ Os **painéis são redimensionáveis**: arraste as divisórias entre painel esqu
 ou a do topo da linha do tempo (também pelo teclado, com foco na divisória: setas, Home/End; Enter
 ou duplo clique restauram). As larguras ficam salvas por página; a altura da linha do tempo, para
 todas.
+Os botões à esquerda da barra superior **recolhem** o painel esquerdo, a linha do tempo e o
+inspetor, e o menu **Layout** salva o arranjo com um nome e alterna entre layouts (prontos: "Padrão"
+e "Foco no monitor").
 
 O **dashboard** lista os projetos recentes, com miniatura gerada pelo ffmpeg a 10% da obra e o
 estado de cada etapa, e permite filtrar, criar (o estúdio cria uma subpasta com o projeto e as
