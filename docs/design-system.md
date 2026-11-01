@@ -76,7 +76,7 @@ Contorno de 2 px no acento (`terra`), com 2 px de folga, em todo elemento focáv
 | Aba de página | `.aba` | `aria-current="page"` = barra de acento no topo | dentro de `nav` rotulado |
 | Painel | `comum.tsx` (`Painel`) | cabeçalho fino + corpo rolável | `section` com `aria-label` |
 | Painel com abas | `comum.tsx` (`PainelAbas`) | abas com marca de contagem (neutra, aviso, erro); faixa fixa opcional entre as abas e o conteúdo; última aba lembrada por painel | padrão WAI-ARIA de abas: `tablist`/`tab`/`tabpanel`, setas ←/→, Home/End, só a aba ativa na ordem de Tab |
-| Seção de inspetor | `Secao` | título em caixa-alta | `aria-labelledby` |
+| Seção de inspetor | `Secao` | título em caixa-alta; `dica` opcional atrás de "?" | `aria-labelledby`; o "?" tem `aria-expanded` e nome "Ajuda: <seção>" |
 | Deslizante | `Deslizante` | valor formatado; **marca de referência** (mínimo da norma) | `label` associado; a marca também vem em texto |
 | Chip de estado | `.chip` | ok, aviso, erro, pendente | **sempre ícone + texto**, nunca só cor |
 | Cartão de projeto | `Dashboard.tsx` | miniatura, data, estado por etapa | um botão por cartão, com nome acessível |
@@ -103,6 +103,12 @@ inspetor, "o que ajustar" (Vídeo · Regras · Assistente; Janela · Enquadramen
 precisa ficar sempre visível (os contadores da revisão) fica numa faixa fixa acima do conteúdo,
 não dentro de uma aba. Ações raras saem da superfície: os ajustes de janela de um bloco de AD
 ficam em "Janela e opções", recolhido.
+
+**Explicação sob demanda.** A superfície mostra controles, valores e estado; o porquê fica atrás de
+um "?" no cabeçalho da seção (`Secao dica`, `BotaoDica`), fechado por padrão. Fica visível só o que
+muda a decisão agora: medidas, avisos, o motivo de um botão estar desabilitado ("Falta o clipe do
+intérprete."). Formato técnico vai como etiqueta curta à direita da opção (XML, FCPXML), não em
+frase. A legenda da linha do tempo segue o mesmo padrão.
 
 **Proxy de edição.** O monitor mostra o que está tocando ("(proxy)" no nome), a descrição técnica
 do original e a escolha Proxy/Original. Quando o original não é reproduzível, um aviso sobre a

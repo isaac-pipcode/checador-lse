@@ -4,7 +4,7 @@ import { ponte, type RelatorioEntrega } from '../../desktop/ponte';
 import { Exportar } from '../Exportar';
 import { SaidasAD } from '../ad/SaidasAD';
 import { PainelAbas, Secao } from '../comum';
-import { ExportarEditores } from '../libras/ExportarEditores';
+import { DICA_EXPORTAR, ExportarEditores } from '../libras/ExportarEditores';
 import { clipesDosBlocos, curvaDeDucking } from '../../ad/mixagem';
 import { bytesDoTake } from '../../ad/audio';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
@@ -128,7 +128,7 @@ export function EntregaEsquerda() {
           id: 'editores',
           rotulo: 'Editores',
           conteudo: (
-            <Secao titulo="Libras para Premiere e Resolve">
+            <Secao titulo="Libras para Premiere e Resolve" dica={DICA_EXPORTAR}>
               <ExportarEditores />
             </Secao>
           ),
@@ -207,7 +207,7 @@ export function EntregaDireita() {
         <h2>Pacote acessível</h2>
       </header>
       <div className="painel-corpo">
-        <Secao titulo="Conteúdo">
+        <Secao titulo="Conteúdo" dica="A faixa “Original” é mantida. A LSE sai com as decisões aprovadas na revisão.">
           {opcoes.map(([k, rotulo, disp, motivo]) => (
             <label key={k} className={`flex items-start gap-2 py-1 text-xs ${disp ? '' : 'text-navy-500'}`}>
               <input
@@ -223,9 +223,7 @@ export function EntregaDireita() {
               </span>
             </label>
           ))}
-          <p className="mt-2 text-2xs text-navy-500">
-            Formato: {formato}. A faixa “Original” é mantida. A LSE sai com as decisões aprovadas na revisão.
-          </p>
+          <p className="mt-2 text-2xs text-navy-500">Formato: {formato}</p>
         </Secao>
         <Secao titulo="Renderizar">
           {!desktop ? (

@@ -96,7 +96,10 @@ export function LseEsquerda() {
           rotulo: 'Lote e métricas',
           conteudo: (
             <>
-              <Secao titulo="Aprovar em lote">
+              <Secao
+                titulo="Aprovar em lote"
+                dica="O lote só alcança auto-correções determinísticas ainda pendentes. Sugestões assistidas (NLP, LLM, sinal) e pendências manuais exigem decisão uma a uma."
+              >
                 <AcoesLote />
               </Secao>
               <Secao titulo="Métricas da obra">

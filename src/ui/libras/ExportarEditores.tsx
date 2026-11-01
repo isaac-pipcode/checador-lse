@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useEstado } from '../../state/store';
 import { ponte, type RelatorioIntercambio } from '../../desktop/ponte';
 import { useVideo } from '../contextoVideo';
@@ -13,12 +13,16 @@ export function ExportarEditores() {
   const desktop = ponte();
   const [formatos, setFormatos] = useState({ xmeml: true, fcpxml: true });
   const [incluirBruto, setIncluirBruto] = useState(true);
-  const [progresso, setProgresso] = useState<{ f: number; etapa: string } | null>(null);
+  const [progresso, setProgresso] = useState<{
+    f: number;
+    etapa: string;
+  } | null>(null);
   const [rel, setRel] = useState<RelatorioIntercambio | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const j = estado.libras;
   const pronto = !!desktop && !!estado.video?.caminho && !!j.clipe?.caminho;
   const comDeriva = Math.abs(j.velocidade - 1) > 1e-6;
+  const idFalta = useId();
 
   async function exportar() {
     if (!desktop || !estado.video?.caminho || !j.clipe?.caminho) return;
@@ -34,7 +38,7 @@ export function ExportarEditores() {
           duracaoMs,
           libras: { caminho: clipe!.caminho!, inicioNaObraMs, janela },
           formatos,
-          incluirBruto,
+          incluirBruto: incluirBruto && !comDeriva,
         },
         (f, etapa) => setProgresso({ f, etapa }),
       );
@@ -46,45 +50,60 @@ export function ExportarEditores() {
     }
   }
 
+  const falta = !desktop
+    ? 'Só no aplicativo desktop.'
+    : !estado.video?.caminho
+      ? 'Falta o vídeo da obra.'
+      : !j.clipe?.caminho
+        ? 'Falta o clipe do intérprete.'
+        : !(formatos.xmeml || formatos.fcpxml)
+          ? 'Escolha um formato.'
+          : null;
+  const nomeArq = (a: string) => a.split(/[\\/]/).pop() ?? a;
+
   return (
     <div className="text-xs">
-      <p className="text-navy-700">
-        Gera o intérprete já tratado e sincronizado, com fundo transparente (ProRes 4444 com alfa, quadro inteiro), e uma
-        sequência com a obra na V1 e a Libras na V2, para finalizar no editor.
-      </p>
-      <fieldset className="mt-2">
-        <legend className="rotulo">Sequência</legend>
-        <label className="mt-1 flex items-center gap-2">
-          <input type="checkbox" checked={formatos.xmeml} onChange={(e) => setFormatos({ ...formatos, xmeml: e.target.checked })} />
-          Premiere Pro (XML do Final Cut 7; o Resolve também importa)
-        </label>
-        <label className="mt-1 flex items-center gap-2">
-          <input type="checkbox" checked={formatos.fcpxml} onChange={(e) => setFormatos({ ...formatos, fcpxml: e.target.checked })} />
-          DaVinci Resolve (FCPXML 1.8; o Final Cut Pro também importa)
-        </label>
-        <label className="mt-1 flex items-start gap-2">
-          <input type="checkbox" className="mt-0.5" checked={incluirBruto} onChange={(e) => setIncluirBruto(e.target.checked)} />
-          <span>
-            Incluir o clipe bruto, sincronizado e desativado (V3)
-            {comDeriva ? (
-              <span className="block text-2xs text-warn">
-                Com deriva corrigida (×{j.velocidade.toFixed(5).replace('.', ',')}), o bruto fica de fora: a mudança de
-                velocidade não se transfere de forma confiável entre editores. A V2 já vem conformada.
-              </span>
-            ) : null}
-          </span>
-        </label>
+      <fieldset>
+        <legend className="sr-only">Formatos da sequência</legend>
+        <Opcao
+          marcado={formatos.xmeml}
+          aoMudar={(v) => setFormatos({ ...formatos, xmeml: v })}
+          rotulo="Premiere Pro"
+          formato="XML"
+        />
+        <Opcao
+          marcado={formatos.fcpxml}
+          aoMudar={(v) => setFormatos({ ...formatos, fcpxml: v })}
+          rotulo="DaVinci Resolve"
+          formato="FCPXML"
+        />
+        <Opcao
+          marcado={incluirBruto && !comDeriva}
+          desabilitado={comDeriva}
+          aoMudar={setIncluirBruto}
+          rotulo="Clipe bruto na V3"
+          formato={comDeriva ? 'fora: velocidade ≠ 1' : 'referência'}
+          titulo={
+            comDeriva
+              ? `Com velocidade corrigida (×${j.velocidade.toFixed(5).replace('.', ',')}) o bruto não vai: a mudança de velocidade não se transfere com segurança entre editores. A V2 já sai conformada.`
+              : 'Trilha desligada, no ponto sincronizado: referência para refazer o chroma no editor.'
+          }
+        />
       </fieldset>
       <button
         type="button"
         className="btn-secundario mt-2 w-full justify-center"
         disabled={!pronto || progresso !== null || !(formatos.xmeml || formatos.fcpxml)}
+        aria-describedby={falta ? `${idFalta}` : undefined}
         onClick={() => void exportar()}
       >
-        Exportar para editores…
+        Exportar…
       </button>
-      {!desktop ? <p className="mt-1 text-2xs text-navy-500">Disponível no aplicativo desktop.</p> : null}
-      {desktop && !pronto ? <p className="mt-1 text-2xs text-navy-500">Abra o vídeo da obra e importe o clipe do intérprete.</p> : null}
+      {falta && !rel ? (
+        <p id={idFalta} className="mt-1 text-2xs text-navy-500">
+          {falta}
+        </p>
+      ) : null}
       {progresso ? (
         <div className="mt-2 text-2xs" role="status">
           <progress max={1} value={progresso.f} className="w-full" aria-label="Progresso da exportação" />
@@ -93,27 +112,69 @@ export function ExportarEditores() {
       ) : null}
       {erro ? <p className="mt-2 text-bad">Erro: {erro}</p> : null}
       {rel ? (
-        <div className="mt-2 rounded border border-ok bg-ok-100 p-2 text-ok" role="status">
-          <p className="font-semibold">
-            <span aria-hidden="true">✓ </span>Exportado ({rel.cadencia.replace('/1', '')} qd/s)
-          </p>
-          <ul className="mt-1 space-y-0.5 text-navy">
-            {rel.arquivos.map((a) => (
-              <li key={a} className="truncate" title={a}>
-                {a.split(/[\\/]/).pop()}
-              </li>
-            ))}
-          </ul>
+        <div className="mt-2" role="status">
+          <div className="flex items-center gap-2">
+            <span className="chip border-ok bg-ok-100 text-ok">
+              <span aria-hidden="true">✓</span> {rel.arquivos.length} arquivos · {rel.cadencia.replace('/1', '')} qd/s
+            </span>
+            <button
+              type="button"
+              className="btn-fantasma ml-auto h-6 px-2 text-2xs"
+              onClick={() => void desktop?.mostrarNaPasta(rel.arquivos[0])}
+            >
+              Mostrar na pasta
+            </button>
+          </div>
           {rel.avisos.map((a) => (
-            <p key={a} className="mt-1 text-warn">
-              ! {a}
+            <p key={a} className="mt-1 text-2xs text-warn">
+              <span aria-hidden="true">! </span>
+              {a}
             </p>
           ))}
-          <button type="button" className="btn-fantasma mt-1 h-6 px-2 text-2xs" onClick={() => void desktop?.mostrarNaPasta(rel.arquivos[0])}>
-            Mostrar na pasta
-          </button>
+          <details className="mt-1 text-2xs">
+            <summary className="cursor-pointer text-navy-500">Arquivos</summary>
+            <ul className="mt-1 space-y-0.5 text-navy-700">
+              {rel.arquivos.map((a) => (
+                <li key={a} className="truncate" title={a}>
+                  {nomeArq(a)}
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       ) : null}
     </div>
   );
 }
+
+function Opcao({
+  marcado,
+  desabilitado,
+  aoMudar,
+  rotulo,
+  formato,
+  titulo,
+}: {
+  marcado: boolean;
+  desabilitado?: boolean;
+  aoMudar: (v: boolean) => void;
+  rotulo: string;
+  formato: string;
+  titulo?: string;
+}) {
+  return (
+    <label className={`flex h-7 items-center gap-2 ${desabilitado ? 'opacity-60' : ''}`} title={titulo}>
+      <input type="checkbox" checked={marcado} disabled={desabilitado} onChange={(e) => aoMudar(e.target.checked)} />
+      <span className="text-navy">{rotulo}</span>
+      <span className="ml-auto font-mono text-2xs text-navy-500">{formato}</span>
+    </label>
+  );
+}
+
+/** Explicação da seção, mostrada sob demanda no "?" do cabeçalho. */
+export const DICA_EXPORTAR = (
+  <>
+    Gera a Libras já tratada e sincronizada, com fundo transparente (ProRes 4444), e uma sequência com a obra na V1 e a
+    Libras na V2. XML: Premiere e Resolve. FCPXML: Resolve e Final Cut.
+  </>
+);

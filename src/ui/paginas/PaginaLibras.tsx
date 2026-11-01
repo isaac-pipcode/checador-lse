@@ -13,7 +13,7 @@ import { invasaoDosNeutros, toleranciaSugerida } from '../../libras/chroma';
 import { gerarProxyDe } from '../proxy';
 import { amostrarQuadros, corChaveDosQuadros, enquadramentoAutomatico, envelopesDoClipe } from '../libras/analiseClipe';
 import { ConferenciaOndas, ResiduoSincronia } from '../libras/GraficosSincronia';
-import { ExportarEditores } from '../libras/ExportarEditores';
+import { DICA_EXPORTAR, ExportarEditores } from '../libras/ExportarEditores';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const dec = (v: number, c = 2) => v.toFixed(c).replace('.', ',');
@@ -160,7 +160,10 @@ export function LibrasEsquerda() {
 
   const sincronia: ReactNode = (
     <>
-      <Secao titulo="Clipe do intérprete">
+      <Secao
+        titulo="Clipe do intérprete"
+        dica="Gravado com fundo verde e com a trilha do filme como som-guia: é por ela que o estúdio sincroniza."
+      >
         {j.clipe ? (
           <div className="text-xs">
             <p className="truncate font-medium text-navy" title={j.clipe.caminho ?? ''}>
@@ -208,9 +211,6 @@ export function LibrasEsquerda() {
             <button type="button" className="btn-primario w-full justify-center" onClick={() => void escolher()}>
               Importar vídeo do intérprete…
             </button>
-            <p className="mt-2 text-2xs text-navy-500">
-              Gravado com fundo verde e com a trilha do filme como som-guia: é por ela que o estúdio sincroniza.
-            </p>
           </>
         ) : (
           <p className="text-xs text-navy-500">A importação do clipe usa o aplicativo desktop.</p>
@@ -352,7 +352,10 @@ export function LibrasEsquerda() {
       ) : null}
 
       {j.clipe ? (
-        <Secao titulo="Conferir de ouvido">
+        <Secao
+          titulo="Conferir de ouvido"
+          dica="Em “Ambos”, com fones: filme à esquerda, som-guia à direita. Em sincronia, soam juntos; defasados, como eco."
+        >
           <Segmentos
             rotulo="O que ouvir"
             valor={ui.escuta}
@@ -363,14 +366,11 @@ export function LibrasEsquerda() {
               ['interprete', 'Som-guia'],
             ]}
           />
-          <p className="mt-1.5 text-2xs text-navy-500">
-            Em “Ambos”, com fones: filme à esquerda, som-guia à direita. Em sincronia, soam juntos; defasados, como eco.
-          </p>
         </Secao>
       ) : null}
 
       {j.clipe ? (
-        <Secao titulo="Exportar para editores">
+        <Secao titulo="Exportar para editores" dica={DICA_EXPORTAR}>
           <ExportarEditores />
         </Secao>
       ) : null}
@@ -507,7 +507,7 @@ export function LibrasDireita() {
           {r.w}×{r.h} px num quadro de {quadro.w}×{quadro.h}.
         </p>
       </Secao>
-      <Secao titulo="Tamanho">
+      <Secao titulo="Tamanho" dica="Com uma proporção escolhida, a altura arrasta a largura junto.">
         <Deslizante
           id={`${id}-h`}
           rotulo="Altura"
@@ -534,7 +534,6 @@ export function LibrasDireita() {
           aoMudar={(v) => mudar({ largura: v })}
           marca={{ valor: NBR_15290.larguraMin, rotulo: `mínimo ${pct(NBR_15290.larguraMin)} (NBR 15290)` }}
         />
-        <p className="text-2xs text-navy-500">Com uma proporção escolhida, a altura arrasta a largura junto.</p>
       </Secao>
       <Secao titulo="Posição e espaço">
         <div
@@ -614,7 +613,10 @@ export function LibrasDireita() {
             'Mede, em 16 quadros espalhados pelo clipe, o espaço que o intérprete ocupa com as mãos em movimento, e ajusta zoom e posição para caber na janela com folga.'}
         </p>
       </Secao>
-      <Secao titulo="Ajuste manual">
+      <Secao
+        titulo="Ajuste manual"
+        dica="O clipe preenche a janela; o excedente é cortado. Mãos e rosto precisam caber inteiros."
+      >
         <Deslizante
           id={`${id}-z`}
           rotulo="Zoom"
@@ -645,9 +647,6 @@ export function LibrasDireita() {
           formatar={(v) => (v < -0.02 ? 'acima' : v > 0.02 ? 'abaixo' : 'centro')}
           aoMudar={(v) => mudar({ deslocY: v })}
         />
-        <p className="text-2xs text-navy-500">
-          O clipe preenche a janela; o excedente é cortado. Mãos e rosto precisam caber inteiros.
-        </p>
       </Secao>
     </>
   );
@@ -752,7 +751,10 @@ export function LibrasDireita() {
         ) : null}
       </Secao>
       {ch.ativo ? (
-        <Secao titulo="Borda do recorte">
+        <Secao
+          titulo="Borda do recorte"
+          dica="Encolher tira a franja verde que sobra em volta do corpo; suavizar evita o contorno serrilhado."
+        >
           <Deslizante
             id={`${id}-enc`}
             rotulo="Encolher"
@@ -773,13 +775,13 @@ export function LibrasDireita() {
             formatar={(v) => `${dec(v, 1)} px`}
             aoMudar={(v) => mudarChroma({ suavizarBorda: v })}
           />
-          <p className="text-2xs text-navy-500">
-            Encolher tira a franja verde que sobra em volta do corpo; suavizar evita o contorno serrilhado.
-          </p>
         </Secao>
       ) : null}
       {ch.ativo ? (
-        <Secao titulo="Recortar bordas do quadro">
+        <Secao
+          titulo="Recortar bordas do quadro"
+          dica="Para cortar o que o verde não cobre: refletores, tripé, a borda do pano."
+        >
           <div className="grid grid-cols-2 gap-x-3">
             {(
               [
@@ -802,12 +804,12 @@ export function LibrasDireita() {
               />
             ))}
           </div>
-          <p className="text-2xs text-navy-500">
-            Para cortar o que o verde não cobre: refletores, tripé, a borda do pano.
-          </p>
         </Secao>
       ) : null}
-      <Secao titulo="Ver no monitor">
+      <Secao
+        titulo="Ver no monitor"
+        dica="Matte: branco = intérprete, preto = removido; buracos no corpo ou verde sobrando aparecem aqui. Sobre cinza: revela franjas."
+      >
         <Segmentos
           rotulo="Visualização da janela"
           valor={ui.visual}
@@ -818,10 +820,6 @@ export function LibrasDireita() {
             ['cinza', 'Sobre cinza'],
           ]}
         />
-        <p className="mt-1.5 text-2xs text-navy-500">
-          Matte: branco = intérprete, preto = removido; buracos no corpo ou verde sobrando aparecem aqui. Sobre cinza:
-          revela franjas.
-        </p>
       </Secao>
     </>
   );
@@ -863,7 +861,7 @@ export function LibrasDireita() {
           </div>
         ) : null}
       </Secao>
-      <Secao titulo="Correção do intérprete">
+      <Secao titulo="Correção do intérprete" dica="Aplicada depois do recorte: não muda a chave.">
         <Deslizante
           id={`${id}-br`}
           rotulo="Brilho"
@@ -901,9 +899,11 @@ export function LibrasDireita() {
         >
           Restaurar cor
         </button>
-        <p className="mt-1 text-2xs text-navy-500">Aplicada depois do recorte: não muda a chave.</p>
       </Secao>
-      <Secao titulo="Atrás do intérprete">
+      <Secao
+        titulo="Atrás do intérprete"
+        dica="A prévia aplica a mesma cadeia da entrega (ffmpeg). Medido: 99,99% do alfa idêntico, diferença média de cor de ~3 níveis em 255."
+      >
         <div className="flex items-center gap-3 text-xs">
           <label className="flex items-center gap-1.5">
             <input
@@ -934,10 +934,6 @@ export function LibrasDireita() {
           ) : null}
         </div>
       </Secao>
-      <p className="px-3 pb-3 text-2xs text-navy-500">
-        A prévia aplica a mesma cadeia da entrega (ffmpeg): recorte, encolher, suavizar, cor, despill, bordas. Medido:
-        99,99% do alfa idêntico, diferença média de cor de ~3 níveis em 255.
-      </p>
     </>
   );
 

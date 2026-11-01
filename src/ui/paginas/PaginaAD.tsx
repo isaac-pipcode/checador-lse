@@ -571,7 +571,7 @@ function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'micr
       </Secao>
     );
   return (
-    <Secao titulo="Microfone">
+    <Secao titulo="Microfone" dica="Fones para o locutor. Eco, ruído e ganho automáticos ficam desligados.">
       {sessao.micAberto ? (
         <>
           <label className="rotulo" htmlFor={`${id}-mic`}>
@@ -627,9 +627,6 @@ function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'micr
           aoMudar={(v) => despachar({ tipo: 'adParametros', mudanca: { latenciaMs: v } })}
         />
       </div>
-      <p className="mt-2 text-2xs text-navy-500">
-        Fones para o locutor. Eco, ruído e ganho automáticos ficam desligados.
-      </p>
     </Secao>
   );
 }

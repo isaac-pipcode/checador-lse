@@ -6,6 +6,7 @@ import type { PontoGanho } from '../ad/mixagem';
 import type { NivelAD } from '../ad/verificacoes';
 import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
+import { BotaoDica } from './comum';
 
 /**
  * Linha do tempo com quatro trilhas: régua, som (envelope + atividade + cortes),
@@ -105,6 +106,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const [zoom, setZoom] = useState(4); // índice em ZOOMS
   const pxs = ZOOMS[zoom];
   const [acompanhar, setAcompanhar] = useState(true);
+  const [legenda, setLegenda] = useState(false);
   const vp = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [scroll, setScroll] = useState(0);
@@ -277,6 +279,12 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
     <section aria-labelledby={`${id}-t`} className="painel">
       <div className="painel-cabeca">
         <h2 id={`${id}-t`}>Linha do tempo</h2>
+        <BotaoDica
+          titulo="legenda da linha do tempo"
+          aberta={legenda}
+          alvo={`${id}-leg`}
+          aoAlternar={() => setLegenda(!legenda)}
+        />
         <div className="flex items-center gap-0.5 normal-case tracking-normal" role="group" aria-label="Zoom">
           <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
             <span aria-hidden="true">−</span>
@@ -465,11 +473,13 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           </div>
         </div>
       </div>
-      <p className="border-t border-paper-400 px-3 py-1 text-2xs text-navy-500">
-        Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
-        detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
-        {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}.
-      </p>
+      {legenda ? (
+        <p id={`${id}-leg`} className="border-t border-paper-400 px-3 py-1 text-2xs text-navy-700">
+          Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
+          detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
+          {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}.
+        </p>
+      ) : null}
     </section>
   );
 }

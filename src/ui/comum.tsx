@@ -68,14 +68,80 @@ export function Painel({
 }
 
 /** Seção do inspetor. */
-export function Secao({ titulo, children, id }: { titulo: string; children: ReactNode; id?: string }) {
+export function Secao({
+  titulo,
+  children,
+  id,
+  dica,
+}: {
+  titulo: string;
+  children: ReactNode;
+  id?: string;
+  /** explicação sob demanda: fica atrás de um botão "?" no cabeçalho */
+  dica?: ReactNode;
+}) {
+  const auto = useId();
+  const idTitulo = id ?? `${auto}-t`;
+  const [aberta, setAberta] = useState(false);
   return (
-    <section className="secao" aria-labelledby={id}>
-      <h3 id={id} className="secao-titulo">
-        {titulo}
-      </h3>
+    <section className="secao" aria-labelledby={idTitulo}>
+      <div className="mb-2 flex items-center gap-1">
+        <h3 id={idTitulo} className="secao-titulo mb-0">
+          {titulo}
+        </h3>
+        {dica ? (
+          <BotaoDica titulo={titulo} aberta={aberta} alvo={`${auto}-d`} aoAlternar={() => setAberta(!aberta)} />
+        ) : null}
+      </div>
+      {dica && aberta ? (
+        <p id={`${auto}-d`} className="dica">
+          {dica}
+        </p>
+      ) : null}
       {children}
     </section>
+  );
+}
+
+export function BotaoDica({
+  titulo,
+  aberta,
+  alvo,
+  aoAlternar,
+}: {
+  titulo: string;
+  aberta: boolean;
+  alvo: string;
+  aoAlternar: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="botao-dica"
+      aria-expanded={aberta}
+      aria-controls={aberta ? alvo : undefined}
+      aria-label={`Ajuda: ${titulo}`}
+      title={aberta ? 'Fechar ajuda' : 'Ajuda'}
+      onClick={aoAlternar}
+    >
+      ?
+    </button>
+  );
+}
+
+/** Ajuda sob demanda fora de uma Secao: botão "?" seguido do texto quando aberto. */
+export function Dica({ titulo, children }: { titulo: string; children: ReactNode }) {
+  const id = useId();
+  const [aberta, setAberta] = useState(false);
+  return (
+    <>
+      <BotaoDica titulo={titulo} aberta={aberta} alvo={id} aoAlternar={() => setAberta(!aberta)} />
+      {aberta ? (
+        <span id={id} className="dica basis-full">
+          {children}
+        </span>
+      ) : null}
+    </>
   );
 }
 

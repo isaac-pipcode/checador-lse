@@ -166,10 +166,6 @@ export function AcoesLote() {
           <span aria-hidden="true">↶</span> Desfazer último lote
         </button>
       ) : null}
-      <p className="mt-2 text-2xs text-navy-500">
-        O lote só alcança auto-correções determinísticas ainda pendentes. Sugestões assistidas (NLP, LLM, sinal) e
-        pendências manuais exigem decisão uma a uma.
-      </p>
     </div>
   );
 }
