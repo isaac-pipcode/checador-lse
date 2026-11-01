@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p desktop",
     "build:desktop": "tsc -p desktop/tsconfig.json && node desktop/build.mjs",
     "desktop": "npm run build && npm run build:desktop && electron .",
     "desktop:dev": "npm run build:desktop && electron . --dev-server=http://localhost:5173"

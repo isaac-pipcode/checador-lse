@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, t
 import { useEstado, useResultadoFinal } from '../state/store';
 import { lacunasParaAd, lacunasPorSilencio, type Lacuna } from '../mapa/lacunas';
 import { ponte } from '../desktop/ponte';
+import { useAjudaAberta } from './ajudas';
 
 /** Salva texto: diálogo do sistema no desktop; download no navegador. */
 export function baixar(nome: string, conteudo: string, mime: string) {
@@ -82,16 +83,14 @@ export function Secao({
 }) {
   const auto = useId();
   const idTitulo = id ?? `${auto}-t`;
-  const [aberta, setAberta] = useState(false);
+  const [aberta, alternar] = useAjudaAberta();
   return (
     <section className="secao" aria-labelledby={idTitulo}>
       <div className="mb-2 flex items-center gap-1">
         <h3 id={idTitulo} className="secao-titulo mb-0">
           {titulo}
         </h3>
-        {dica ? (
-          <BotaoDica titulo={titulo} aberta={aberta} alvo={`${auto}-d`} aoAlternar={() => setAberta(!aberta)} />
-        ) : null}
+        {dica ? <BotaoDica titulo={titulo} aberta={aberta} alvo={`${auto}-d`} aoAlternar={alternar} /> : null}
       </div>
       {dica && aberta ? (
         <p id={`${auto}-d`} className="dica">
@@ -132,10 +131,10 @@ export function BotaoDica({
 /** Ajuda sob demanda fora de uma Secao: botão "?" seguido do texto quando aberto. */
 export function Dica({ titulo, children }: { titulo: string; children: ReactNode }) {
   const id = useId();
-  const [aberta, setAberta] = useState(false);
+  const [aberta, alternar] = useAjudaAberta();
   return (
     <>
-      <BotaoDica titulo={titulo} aberta={aberta} alvo={id} aoAlternar={() => setAberta(!aberta)} />
+      <BotaoDica titulo={titulo} aberta={aberta} alvo={id} aoAlternar={alternar} />
       {aberta ? (
         <span id={id} className="dica basis-full">
           {children}

@@ -7,6 +7,7 @@ import type { NivelAD } from '../ad/verificacoes';
 import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
 import { BotaoDica } from './comum';
+import { useAjudaAberta } from './ajudas';
 
 /**
  * Linha do tempo com quatro trilhas: régua, som (envelope + atividade + cortes),
@@ -106,7 +107,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const [zoom, setZoom] = useState(4); // índice em ZOOMS
   const pxs = ZOOMS[zoom];
   const [acompanhar, setAcompanhar] = useState(true);
-  const [legenda, setLegenda] = useState(false);
+  const [legenda, alternarLegenda] = useAjudaAberta();
   const vp = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [scroll, setScroll] = useState(0);
@@ -283,7 +284,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           titulo="legenda da linha do tempo"
           aberta={legenda}
           alvo={`${id}-leg`}
-          aoAlternar={() => setLegenda(!legenda)}
+          aoAlternar={alternarLegenda}
         />
         <div className="flex items-center gap-0.5 normal-case tracking-normal" role="group" aria-label="Zoom">
           <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>

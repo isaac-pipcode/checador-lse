@@ -4,8 +4,9 @@ import { useAcoesProjeto } from '../Projeto';
 import { salvarTema, temaSalvo, type Tema } from '../tema/tokens';
 import { Sobre } from '../Sobre';
 import { Marca } from './Marca';
+import { definirMostrarAjudas, mostrarAjudas, useMostrarAjudas } from '../ajudas';
 
-/** Barra superior: projeto, salvar, tema, metodologia. */
+/** Barra superior: projeto, salvar, ajudas, tema, metodologia. */
 export function BarraSuperior() {
   const { estado } = useEstado();
   const despachar = useDespachar();
@@ -78,6 +79,7 @@ export function BarraSuperior() {
         ) : (
           <span className="text-2xs text-navy-500">Modo navegador: o projeto não é salvo em disco</span>
         )}
+        <BotaoAjudas />
         <SeletorTema />
         <button type="button" className="btn-fantasma h-7" onClick={() => setSobre(true)}>
           Metodologia
@@ -106,6 +108,37 @@ function FecharComEsc({ aoFechar }: { aoFechar: () => void }) {
     return () => window.removeEventListener('keydown', t);
   }, [aoFechar]);
   return null;
+}
+
+/** Liga o modo "mostrar ajudas" (todas as explicações abertas). Atalho: F1. */
+export function BotaoAjudas() {
+  const ligado = useMostrarAjudas();
+  useEffect(() => {
+    const t = (e: KeyboardEvent) => {
+      if (e.key !== 'F1') return;
+      e.preventDefault();
+      definirMostrarAjudas(!mostrarAjudas());
+    };
+    window.addEventListener('keydown', t);
+    return () => window.removeEventListener('keydown', t);
+  }, []);
+  return (
+    <button
+      type="button"
+      className="btn-fantasma h-7 gap-1.5 aria-pressed:text-terra-700"
+      aria-pressed={ligado}
+      title={ligado ? 'Esconder ajudas (F1)' : 'Mostrar todas as ajudas (F1)'}
+      onClick={() => definirMostrarAjudas(!ligado)}
+    >
+      <span
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-semibold leading-none"
+        aria-hidden="true"
+      >
+        ?
+      </span>
+      Ajudas
+    </button>
+  );
 }
 
 export function SeletorTema() {

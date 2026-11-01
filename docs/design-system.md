@@ -110,6 +110,11 @@ muda a decisão agora: medidas, avisos, o motivo de um botão estar desabilitado
 intérprete."). Formato técnico vai como etiqueta curta à direita da opção (XML, FCPXML), não em
 frase. A legenda da linha do tempo segue o mesmo padrão.
 
+**Mostrar ajudas.** Para quem está começando: o botão "Ajudas" da barra superior (atalho F1) abre
+todas as explicações de uma vez (`src/ui/ajudas.ts`). É preferência do usuário, não do projeto, e
+fica salva como o tema. Cada "?" continua abrindo e fechando à mão; a escolha manual vale até o
+modo mudar de novo. O botão usa `aria-pressed`.
+
 **Proxy de edição.** O monitor mostra o que está tocando ("(proxy)" no nome), a descrição técnica
 do original e a escolha Proxy/Original. Quando o original não é reproduzível, um aviso sobre a
 imagem diz por que e oferece a saída. A entrega nunca usa o proxy.
