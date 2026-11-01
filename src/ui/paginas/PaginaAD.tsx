@@ -12,6 +12,7 @@ import { useSessaoGravacao, type SessaoGravacao } from '../ad/useSessaoGravacao'
 import { Teleprompter } from '../ad/Teleprompter';
 import { AjustesLegenda, CartaoBloco, CLASSE_NIVEL, ICONE, Numero, ROTULO_NIVEL, seg } from '../ad/componentes';
 import { PainelAbas, Secao, useLacunas } from '../comum';
+import { Icone } from '../icones';
 
 type Modo = 'roteiro' | 'gravacao';
 
@@ -247,7 +248,7 @@ function GravacaoLista() {
                 disabled={!video || fila.length === 0}
                 onClick={() => sessao.gravarSequencia(fila.map((b) => b.id))}
               >
-                <span aria-hidden="true">●</span> Gravar em sequência ({fila.length})
+                <Icone nome="gravar" tamanho={14} /> Gravar em sequência ({fila.length})
               </button>
               {!desktop ? (
                 <button type="button" className="btn-secundario" onClick={() => setTelaCheia(true)}>
@@ -262,7 +263,7 @@ function GravacaoLista() {
             ) : null}
             {naoAprovados > 0 ? (
               <p className="mt-2 text-2xs text-warn">
-                <span aria-hidden="true">! </span>
+                <Icone nome="aviso" tamanho={14} />
                 {naoAprovados} bloco(s) em rascunho não entram na gravação. Aprove-os no modo Roteiro.
               </p>
             ) : null}
@@ -295,7 +296,7 @@ function GravacaoLista() {
                   </span>
                   <span className="mt-0.5 flex items-center gap-1.5 text-2xs text-navy-500">
                     <span className={`chip ${CLASSE_NIVEL[nivel]}`}>
-                      <span aria-hidden="true">{ICONE[nivel]}</span>
+                      <Icone nome={ICONE[nivel]} tamanho={12} />
                       {ROTULO_NIVEL[nivel]}
                     </span>
                     {t ? `${b.takes.length} take(s) · ${seg(duracaoUtil(t))}` : 'sem gravação'}
@@ -308,7 +309,7 @@ function GravacaoLista() {
                     aria-label={`Ir ao bloco ${i + 1}`}
                     onClick={() => buscar(Math.max(0, b.inicioMs - 2000))}
                   >
-                    <span aria-hidden="true">↦</span>
+                    <Icone nome="ir" tamanho={14} />
                   </button>
                   <button
                     type="button"
@@ -316,7 +317,7 @@ function GravacaoLista() {
                     disabled={!video || sessao.ativa}
                     onClick={() => sessao.gravarAvulso(b.id)}
                   >
-                    <span aria-hidden="true">●</span> Gravar
+                    <Icone nome="gravar" tamanho={14} /> Gravar
                   </button>
                 </span>
               </li>
@@ -419,7 +420,7 @@ function RoteiroInspetor({ secao }: { secao: 'blocos' | 'leitura' | 'atalhos' })
         <ul className="mt-1.5 flex flex-wrap gap-1">
           {(['ok', 'aviso', 'erro', 'pendente'] as NivelAD[]).map((n) => (
             <li key={n} className={`chip ${CLASSE_NIVEL[n]}`}>
-              <span aria-hidden="true">{ICONE[n]}</span>
+              <Icone nome={ICONE[n]} tamanho={12} />
               {resumo[n]} {ROTULO_NIVEL[n].toLowerCase()}
             </li>
           ))}
@@ -546,7 +547,7 @@ function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'micr
           sessao.prompterAberto ? (
             <div className="mt-2 flex items-center gap-2 text-2xs">
               <span className="chip border-ok bg-ok-100 text-ok">
-                <span aria-hidden="true">✓</span> {sessao.prompterAberto}
+                <Icone nome="ok" tamanho={14} /> {sessao.prompterAberto}
               </span>
               <button type="button" className="btn-fantasma h-6 px-2 text-2xs" onClick={sessao.fecharPrompter}>
                 Fechar

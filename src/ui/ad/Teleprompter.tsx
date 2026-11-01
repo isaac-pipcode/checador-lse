@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ComandoGravacao, EstadoPrompter } from '../../ad/prompter';
 import { comandoDaTecla } from '../../ad/prompter';
+import { Icone } from '../icones';
 
 /** A redução automática não passa disto: abaixo, a leitura a distância piora mais do que ajuda. */
 const REDUCAO_MINIMA = 0.6;
@@ -58,11 +59,11 @@ export function Teleprompter({
   const restanteCaptura = b ? b.fimCapturaMs - e.tempoMs : 0;
   const fracaoRestante = b ? Math.max(0, Math.min(1, restante / Math.max(1, b.fimMs - b.inicioMs))) : 0;
 
-  const faixa: Record<EstadoPrompter['fase'], { rotulo: string; classe: string }> = {
+  const faixa: Record<EstadoPrompter['fase'], { rotulo: string; classe: string; gravando?: boolean }> = {
     ocioso: { rotulo: 'Aguardando', classe: 'bg-cabine-faixa text-cabine-texto' },
     preroll: { rotulo: `Prepare-se · entra em ${seg(faltaParaEntrar)}`, classe: 'bg-cabine-preparo text-cabine-preparo-texto' },
-    agora: { rotulo: `● GRAVANDO — LEIA · restam ${seg(restante)}`, classe: 'bg-cabine-gravando text-cabine-texto' },
-    posroll: { rotulo: `● Gravando a pós-rolagem · encerra em ${seg(restanteCaptura)}`, classe: 'bg-cabine-faixa text-cabine-texto' },
+    agora: { rotulo: `GRAVANDO — LEIA · restam ${seg(restante)}`, classe: 'bg-cabine-gravando text-cabine-texto', gravando: true },
+    posroll: { rotulo: `Gravando a pós-rolagem · encerra em ${seg(restanteCaptura)}`, classe: 'bg-cabine-faixa text-cabine-texto', gravando: true },
     processando: { rotulo: 'Processando a gravação…', classe: 'bg-cabine-faixa text-cabine-texto' },
     revisao: { rotulo: 'Take gravado', classe: 'bg-cabine-texto text-cabine' },
   };
@@ -119,6 +120,7 @@ export function Teleprompter({
     >
       {/* Faixa de fase */}
       <div role="status" aria-live="assertive" className={`flex items-center px-4 py-1.5 font-semibold ${tamFaixa} ${f.classe}`}>
+        {f.gravando ? <Icone nome="gravar" tamanho={compacto ? 10 : 18} className="mr-2" /> : null}
         <span>{f.rotulo}</span>
         {b ? (
           <span className="ml-auto font-normal opacity-90">{e.sequencia ? `Bloco ${b.n} de ${b.total}` : 'Bloco avulso'}</span>
@@ -158,7 +160,7 @@ export function Teleprompter({
             <>
               {naoCabe ? (
                 <p className={`rounded bg-cabine-gravando px-2 font-semibold text-cabine-texto ${compacto ? 'text-[10px]' : 'text-base'}`}>
-                  <span aria-hidden="true">✂ </span>O texto não cabe na caixa nem com a letra reduzida
+                  <Icone nome="cortado" tamanho={14} /> O texto não cabe na caixa nem com a letra reduzida
                 </p>
               ) : null}
               <p
@@ -187,7 +189,15 @@ export function Teleprompter({
         {e.fase === 'revisao' && e.take ? (
           <p className="text-cabine-texto">
             Duração útil {seg(e.take.duracaoMs)} ·{' '}
-            {e.take.cabe ? <span className="text-cabine-ok">✓ cabe na janela</span> : <strong className="text-cabine-erro">✕ sai da janela</strong>}
+            {e.take.cabe ? (
+              <span className="text-cabine-ok">
+                <Icone nome="ok" tamanho={14} /> cabe na janela
+              </span>
+            ) : (
+              <strong className="text-cabine-erro">
+                <Icone nome="erro" tamanho={14} /> sai da janela
+              </strong>
+            )}
             {' — '}
             <Kbd>Enter</Kbd> manter{e.sequencia ? ' e seguir' : ''} · <Kbd>R</Kbd> regravar · <Kbd>Espaço</Kbd> ouvir ·{' '}
             <Kbd>Backspace</Kbd> descartar · <Kbd>Esc</Kbd> encerrar

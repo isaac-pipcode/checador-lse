@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { CATALOGO } from '../rules';
 import { useAcoes, useEstado } from '../state/store';
 import type { Severity } from '../model/types';
+import { Icone } from './icones';
 
 const REGRAS_LOTE = ['C8', 'C2', 'C1', 'C5', 'T6', 'T7'];
 
@@ -163,7 +164,7 @@ export function AcoesLote() {
       </ul>
       {estado.historicoLote.length > 0 ? (
         <button type="button" className="btn-fantasma mt-2 h-7 px-2 text-2xs" onClick={() => acoes.desfazerLote()}>
-          <span aria-hidden="true">↶</span> Desfazer último lote
+          <Icone nome="desfazer" tamanho={14} /> Desfazer último lote
         </button>
       ) : null}
     </div>

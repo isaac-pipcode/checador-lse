@@ -3,6 +3,7 @@ import { useDespachar, useEstado, useResultadoFinal, type Pagina } from '../../s
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
 import { verificarJanela } from '../../libras/geometria';
 import { NBR_15290 } from '../../libras/tipos';
+import { Icone, type NomeIcone } from '../icones';
 
 interface Indicador {
   texto: string;
@@ -49,11 +50,11 @@ export function BarraPaginas() {
     };
   }, [estado, final]);
 
-  const paginas: Array<[Exclude<Pagina, 'projetos'>, string, string]> = [
-    ['lse', 'Legendas', 'Aa'],
-    ['ad', 'Audiodescrição', '◉'],
-    ['libras', 'Libras', '🤟'],
-    ['entrega', 'Entrega', '⇪'],
+  const paginas: Array<[Exclude<Pagina, 'projetos'>, string, NomeIcone]> = [
+    ['lse', 'Legendas', 'legendas'],
+    ['ad', 'Audiodescrição', 'audiodescricao'],
+    ['libras', 'Libras', 'libras'],
+    ['entrega', 'Entrega', 'entrega'],
   ];
   const corTom = { ok: 'text-ok', warn: 'text-warn', bad: 'text-bad', neutro: 'text-navy-500' } as const;
 
@@ -64,9 +65,7 @@ export function BarraPaginas() {
         className="aba absolute inset-y-0 left-0"
         onClick={() => despachar({ tipo: 'navegar', pagina: 'projetos' })}
       >
-        <span aria-hidden="true" className="text-base leading-none">
-          ▦
-        </span>
+        <Icone nome="projetos" tamanho={18} />
         <span>Projetos</span>
       </button>
       {paginas.map(([p, rotulo, icone]) => (
@@ -77,9 +76,7 @@ export function BarraPaginas() {
           aria-current={estado.pagina === p ? 'page' : undefined}
           onClick={() => despachar({ tipo: 'navegar', pagina: p })}
         >
-          <span aria-hidden="true" className="text-base leading-none">
-            {icone}
-          </span>
+          <Icone nome={icone} tamanho={18} />
           <span>{rotulo}</span>
           <span className={`text-[10px] font-normal leading-none ${corTom[ind[p].tom]}`}>{ind[p].texto}</span>
         </button>

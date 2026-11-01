@@ -14,6 +14,7 @@ import { gerarProxyDe } from '../proxy';
 import { amostrarQuadros, corChaveDosQuadros, enquadramentoAutomatico, envelopesDoClipe } from '../libras/analiseClipe';
 import { ConferenciaOndas, ResiduoSincronia } from '../libras/GraficosSincronia';
 import { DICA_EXPORTAR, ExportarEditores } from '../libras/ExportarEditores';
+import { Icone } from '../icones';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const dec = (v: number, c = 2) => v.toFixed(c).replace('.', ',');
@@ -180,7 +181,7 @@ export function LibrasEsquerda() {
                 </span>
               ) : j.clipe.proxy ? (
                 <span className="text-ok">
-                  <span aria-hidden="true">✓ </span>Prévia no proxy; a entrega usa o original.
+                  <Icone nome="ok" tamanho={14} /> Prévia no proxy; a entrega usa o original.
                 </span>
               ) : avalClipe && avalClipe.necessidade !== 'dispensavel' ? (
                 <button
@@ -393,7 +394,7 @@ export function LibrasEsquerda() {
             <Secao titulo="Verificações">
               {ap.length === 0 ? (
                 <p className="text-xs text-ok">
-                  <span aria-hidden="true">✓ </span>Sem apontamentos.
+                  <Icone nome="ok" tamanho={14} /> Sem apontamentos.
                 </p>
               ) : (
                 <ul className="space-y-1.5 text-xs">
@@ -402,7 +403,10 @@ export function LibrasEsquerda() {
                       key={a.codigo}
                       className={a.nivel === 'erro' ? 'text-bad' : a.nivel === 'aviso' ? 'text-warn' : 'text-navy-700'}
                     >
-                      <span aria-hidden="true">{a.nivel === 'erro' ? '✕ ' : a.nivel === 'aviso' ? '! ' : '… '}</span>
+                      <Icone
+                        nome={a.nivel === 'erro' ? 'erro' : a.nivel === 'aviso' ? 'aviso' : 'pendente'}
+                        tamanho={14}
+                      />{' '}
                       <span className="font-mono text-2xs">{a.codigo}</span> {a.mensagem}
                     </li>
                   ))}
@@ -572,7 +576,7 @@ export function LibrasDireita() {
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className={seguro ? 'text-ok' : 'text-warn'}>
-            <span aria-hidden="true">{seguro ? '✓ ' : '! '}</span>
+            <Icone nome={seguro ? 'ok' : 'aviso'} tamanho={14} />{' '}
             {seguro ? 'Dentro da área segura' : 'Fora da área segura de 5%'}
           </span>
           {!seguro ? (
@@ -733,7 +737,7 @@ export function LibrasDireita() {
               const inv = invasaoDosNeutros(ch.cor, ch.similaridade, ch.suavidade);
               return (
                 <p className={`text-2xs ${inv > 1 ? 'text-bad' : inv > 0.9 ? 'text-warn' : 'text-navy-500'}`}>
-                  <span aria-hidden="true">{inv > 1 ? '✕ ' : inv > 0.9 ? '! ' : '✓ '}</span>
+                  <Icone nome={inv > 1 ? 'erro' : inv > 0.9 ? 'aviso' : 'ok'} tamanho={14} />{' '}
                   {inv > 1
                     ? 'Tons neutros (roupa preta, cabelo) ficam translúcidos com esta tolerância.'
                     : inv > 0.9

@@ -7,6 +7,7 @@ import { contarPalavras, duracaoEstimadaMs, palavrasQueCabem } from '../../ad/es
 import { nivelDoBloco, type ApontamentoAD, type NivelAD } from '../../ad/verificacoes';
 import { descartarTake } from '../../ad/audio';
 import { COR_LEGENDA } from './Teleprompter';
+import { Icone, type NomeIcone } from '../icones';
 
 /** Peças da interface de AD reutilizadas pelas páginas (cartão de bloco, take, ajustes). */
 
@@ -18,7 +19,7 @@ export const CLASSE_NIVEL: Record<NivelAD, string> = {
   erro: 'border-bad bg-bad-100 text-bad',
   pendente: 'border-navy-300 bg-paper-200 text-navy-700',
 };
-export const ICONE: Record<NivelAD, string> = { ok: '✓', aviso: '!', erro: '✕', pendente: '…' };
+export const ICONE: Record<NivelAD, NomeIcone> = { ok: 'ok', aviso: 'aviso', erro: 'erro', pendente: 'pendente' };
 export const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'Pronto', aviso: 'Aviso', erro: 'Erro', pendente: 'Pendente' };
 
 
@@ -185,11 +186,11 @@ export function CartaoBloco({
         </span>
         <span className="text-xs text-navy-700">janela de {seg(janela)}</span>
         <span className={`chip ${CLASSE_NIVEL[nivel]}`}>
-          <span aria-hidden="true">{ICONE[nivel]}</span>
+          <Icone nome={ICONE[nivel]} tamanho={12} />
           {ROTULO_NIVEL[nivel]}
         </span>
         <span className={`chip ${b.aprovado ? 'border-ok bg-ok-100 text-ok' : 'border-navy-300 bg-paper-200 text-navy-700'}`}>
-          <span aria-hidden="true">{b.aprovado ? '✓' : '✎'}</span>
+          <Icone nome={b.aprovado ? 'ok' : 'rascunho'} tamanho={12} />
           {b.aprovado ? 'Aprovado para gravação' : 'Rascunho'}
         </span>
       </header>
@@ -239,7 +240,7 @@ export function CartaoBloco({
             {b.aprovado ? 'Retirar aprovação' : 'Aprovar para gravação'}
           </button>
           <button type="button" className="btn-secundario" disabled={!podeGravar} onClick={aoOuvir}>
-            <span aria-hidden="true">▶</span> Ouvir o trecho
+            <Icone nome="reproduzir" tamanho={14} /> Ouvir o trecho
           </button>
           <button
             type="button"
@@ -248,7 +249,7 @@ export function CartaoBloco({
             title={b.aprovado ? undefined : 'Aprove o roteiro para gravar'}
             onClick={aoGravar}
           >
-            <span aria-hidden="true">●</span> {b.takes.length ? 'Gravar outro take' : 'Gravar este bloco'}
+            <Icone nome="gravar" tamanho={14} /> {b.takes.length ? 'Gravar outro take' : 'Gravar este bloco'}
           </button>
           {b.takes.length > 0 ? (
             <ul className="w-full space-y-1 text-xs" aria-label={`Gravações do bloco ${n}`}>
@@ -296,7 +297,7 @@ export function CartaoBloco({
             .filter((a) => a.nivel !== 'pendente')
             .map((a) => (
               <li key={a.codigo} className={a.nivel === 'erro' ? 'text-bad' : 'text-warn'}>
-                <span aria-hidden="true">{a.nivel === 'erro' ? '✕ ' : '! '}</span>
+                <Icone nome={a.nivel === 'erro' ? 'erro' : 'aviso'} tamanho={14} />{' '}
                 <span className="font-mono text-xs">{a.codigo}</span> {a.mensagem}
               </li>
             ))}

@@ -5,12 +5,13 @@ import { useAcoes } from '../state/store';
 import { ChipConfianca, ChipSeveridade, ChipVerificabilidade } from './primitivos';
 import { formatarTimecode } from '../core/texto';
 import { PainelLlm } from './PainelLlm';
+import { Icone, type NomeIcone } from './icones';
 
 const ROTULO_DECISAO = {
-  pendente: { texto: 'Pendente', icone: '○', classe: 'border-navy-500 bg-paper text-navy-700' },
-  aprovada: { texto: 'Aprovada', icone: '✓', classe: 'border-ok bg-ok-100 text-ok' },
-  rejeitada: { texto: 'Rejeitada', icone: '✕', classe: 'border-bad bg-bad-100 text-bad' },
-  editada: { texto: 'Editada', icone: '✎', classe: 'border-ok bg-ok-100 text-ok' },
+  pendente: { texto: 'Pendente', icone: 'etapaVazia' as NomeIcone, classe: 'border-navy-500 bg-paper text-navy-700' },
+  aprovada: { texto: 'Aprovada', icone: 'ok' as NomeIcone, classe: 'border-ok bg-ok-100 text-ok' },
+  rejeitada: { texto: 'Rejeitada', icone: 'erro' as NomeIcone, classe: 'border-bad bg-bad-100 text-bad' },
+  editada: { texto: 'Editada', icone: 'rascunho' as NomeIcone, classe: 'border-ok bg-ok-100 text-ok' },
 } as const;
 
 export function CardSugestao({ item }: { item: ReviewItem }) {
@@ -84,7 +85,7 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
           <ChipConfianca valor={s.confidence} />
         ) : null}
         <span className={`chip ml-auto ${estado.classe}`}>
-          <span aria-hidden="true">{estado.icone}</span>
+          <Icone nome={estado.icone} tamanho={12} />
           {estado.texto}
         </span>
       </header>
@@ -173,7 +174,7 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
                 onClick={() => acoes.decidir(s.id, 'aprovada')}
                 aria-pressed={item.decision === 'aprovada'}
               >
-                <span aria-hidden="true">✓</span> Confirmar que revisei
+                <Icone nome="ok" tamanho={14} /> Confirmar que revisei
               </button>
               <button
                 type="button"
@@ -192,7 +193,7 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
                 onClick={() => acoes.decidir(s.id, 'aprovada')}
                 aria-pressed={item.decision === 'aprovada'}
               >
-                <span aria-hidden="true">✓</span> Aprovar
+                <Icone nome="ok" tamanho={14} /> Aprovar
                 <span className="sr-only"> (tecla A)</span>
               </button>
               <button
@@ -201,7 +202,7 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
                 onClick={() => acoes.decidir(s.id, 'rejeitada')}
                 aria-pressed={item.decision === 'rejeitada'}
               >
-                <span aria-hidden="true">✕</span> Rejeitar
+                <Icone nome="erro" tamanho={14} /> Rejeitar
                 <span className="sr-only"> (tecla R)</span>
               </button>
               {s.after ? (
@@ -213,7 +214,7 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
                     setEditando(true);
                   }}
                 >
-                  <span aria-hidden="true">✎</span> Editar
+                  <Icone nome="rascunho" tamanho={14} /> Editar
                   <span className="sr-only"> (tecla E)</span>
                 </button>
               ) : null}

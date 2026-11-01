@@ -6,6 +6,7 @@ import { bytesDoTake } from '../../ad/audio';
 import { roteiroCsv, roteiroTexto, roteiroVtt } from '../../ad/roteiro';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
 import { baixar } from '../comum';
+import { Icone } from '../icones';
 
 /**
  * Saídas da AD: roteiro (texto para o locutor, VTT de descrições, CSV) e, no
@@ -140,7 +141,7 @@ export function SaidasAD() {
           {relatorio ? (
             <div className="mt-3 rounded border border-ok bg-ok-100 p-2 text-sm text-ok" role="status">
               <p className="font-medium">
-                <span aria-hidden="true">✓ </span>Renderizado em {relatorio.pasta}
+                <Icone nome="ok" tamanho={14} /> Renderizado em {relatorio.pasta}
               </p>
               <ul className="mt-1 list-disc pl-5 text-xs text-navy">
                 {relatorio.arquivos.map((a) => (

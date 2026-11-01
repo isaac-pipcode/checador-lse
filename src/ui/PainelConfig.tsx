@@ -4,6 +4,7 @@ import { configDoPerfil } from '../model/perfis';
 import { useAcoes, useEstado } from '../state/store';
 import { Campo } from './primitivos';
 import { msParaFrames } from '../core/texto';
+import { Icone } from './icones';
 
 export function PainelConfig({ embutido = false }: { embutido?: boolean }) {
   const { estado } = useEstado();
@@ -31,14 +32,14 @@ export function PainelConfig({ embutido = false }: { embutido?: boolean }) {
           aria-controls={`${idBase}-corpo`}
           onClick={() => setAberto((v) => !v)}
         >
-          <span aria-hidden="true">{aberto ? '▾' : '▸'}</span>
+          <Icone nome={aberto ? 'aberto' : 'recolhido'} tamanho={14} />
           Parâmetros: {c.perfilNome} · {c.maxCaracteresPorLinha} CPL · alvo {c.cpsAlvo} cps
         </button>
 
         <div id={`${idBase}-corpo`} hidden={!aberto} className={embutido ? '' : 'pb-4 pt-2'}>
           {perfil && !perfil.aderenteAoGuia ? (
             <p role="status" className="mb-3 rounded border border-warn bg-warn-100 px-3 py-2 text-sm text-warn">
-              <span aria-hidden="true">! </span>
+              <Icone nome="aviso" tamanho={14} /> 
               Este perfil <strong>não</strong> reproduz os parâmetros do Guia MinC/SAv; serve apenas
               para comparação com práticas de mercado.
             </p>

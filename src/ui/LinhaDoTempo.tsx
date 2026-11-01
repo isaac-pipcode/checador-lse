@@ -8,6 +8,7 @@ import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
 import { BotaoDica, tcSmpte } from './comum';
 import { useAjudaAberta } from './ajudas';
+import { Icone, type NomeIcone } from './icones';
 
 /**
  * Linha do tempo com quatro trilhas: régua, som (envelope + atividade + cortes),
@@ -80,7 +81,7 @@ const CLASSE_NIVEL: Record<NivelAD, string> = {
   erro: 'border-bad bg-bad-100 text-bad',
   pendente: 'border-navy-300 bg-paper text-navy-700',
 };
-const ICONE_NIVEL: Record<NivelAD, string> = { ok: '✓', aviso: '!', erro: '✕', pendente: '…' };
+const ICONE_NIVEL: Record<NivelAD, NomeIcone> = { ok: 'ok', aviso: 'aviso', erro: 'erro', pendente: 'pendente' };
 const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'pronto', aviso: 'com aviso', erro: 'com erro', pendente: 'pendente' };
 
 export interface PropsLinhaDoTempo {
@@ -295,7 +296,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           </button>
           <div className="ml-2 flex items-center gap-1" role="group" aria-label="Zoom">
             <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
-              <span aria-hidden="true">−</span>
+              <Icone nome="afastar" />
             </button>
             <input
               type="range"
@@ -309,7 +310,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               onChange={(e) => mudarZoom(Number(e.target.value))}
             />
             <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
-              <span aria-hidden="true">+</span>
+              <Icone nome="aproximar" />
             </button>
           </div>
         </div>
@@ -373,7 +374,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                   >
                     {w > 14 ? (
                       <span aria-hidden="true" className="font-semibold">
-                        {sev ? `${ICONE_SEVERIDADE[sev]} ` : ''}
+                        {sev ? <><Icone nome={ICONE_SEVERIDADE[sev]} tamanho={12} /> </> : null}
                         {w > 28 ? texto : ''}
                       </span>
                     ) : null}
@@ -410,7 +411,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                         ) : null}
                         {w > 14 ? (
                           <span aria-hidden="true" className="relative px-1 font-semibold leading-[30px]">
-                            {ICONE_NIVEL[b.nivel]} {w > 40 ? b.texto : ''}
+                            <Icone nome={ICONE_NIVEL[b.nivel]} tamanho={12} /> {w > 40 ? b.texto : ''}
                           </span>
                         ) : null}
                       </button>
@@ -429,7 +430,9 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                     className="absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border border-serie-1 bg-serie-1/30 px-1 text-left text-[11px] leading-[16px] text-navy"
                     style={{ left: Math.max(0, x(p.trilhaLibras.inicioMs)), width: Math.max(3, x(p.trilhaLibras.fimMs - Math.max(0, p.trilhaLibras.inicioMs))), height: H_LIBRAS - 8 }}
                   >
-                    <span aria-hidden="true">🤟 {p.trilhaLibras.rotulo}</span>
+                    <span aria-hidden="true">
+                      <Icone nome="libras" tamanho={12} /> {p.trilhaLibras.rotulo}
+                    </span>
                   </button>
                 ) : null}
               </div>
@@ -454,7 +457,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                   >
                     {w > 36 ? (
                       <span aria-hidden="true">
-                        {som ? '♪ ' : ''}
+                        {som ? <><Icone nome="som" tamanho={12} /> </> : null}
                         {dur} s
                       </span>
                     ) : null}

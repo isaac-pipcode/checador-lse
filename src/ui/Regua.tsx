@@ -1,5 +1,6 @@
 import type { RuleConfig } from '../model/types';
 import { contarCaracteres, semMarcacao } from '../core/texto';
+import { Icone } from './icones';
 
 /**
  * Régua de caracteres: mostra a linha como apareceria na tela e marca o
@@ -47,7 +48,7 @@ export function Regua({ linha, config }: { linha: string; config: RuleConfig }) 
       <span
         className={`ml-2 align-middle text-xs ${excede ? 'font-semibold text-bad' : 'text-navy-500'}`}
       >
-        {excede ? <span aria-hidden="true">✕ </span> : null}
+        {excede ? <Icone nome="erro" tamanho={14} /> : null}
         {n} de {limite}
       </span>
     </div>

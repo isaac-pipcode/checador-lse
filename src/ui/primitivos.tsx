@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
 import type { Severity, Verifiability } from '../model/types';
+import { Icone, type NomeIcone } from './icones';
 
 /**
  * Severidade e status nunca são sinalizados só por cor (WCAG 2.2, 1.4.1):
- * cada chip traz ícone textual + rótulo escrito.
+ * cada chip traz ícone + rótulo escrito.
  */
 
-export const ICONE_SEVERIDADE: Record<Severity, string> = {
-  erro: '✕',
-  aviso: '!',
-  revisao_manual: '?',
+export const ICONE_SEVERIDADE: Record<Severity, NomeIcone> = {
+  erro: 'erro',
+  aviso: 'aviso',
+  revisao_manual: 'revisao',
 };
 
 export const ROTULO_SEVERIDADE: Record<Severity, string> = {
@@ -27,7 +28,7 @@ const CLASSE_SEVERIDADE: Record<Severity, string> = {
 export function ChipSeveridade({ severidade }: { severidade: Severity }) {
   return (
     <span className={`chip ${CLASSE_SEVERIDADE[severidade]}`}>
-      <span aria-hidden="true">{ICONE_SEVERIDADE[severidade]}</span>
+      <Icone nome={ICONE_SEVERIDADE[severidade]} tamanho={12} />
       {ROTULO_SEVERIDADE[severidade]}
     </span>
   );

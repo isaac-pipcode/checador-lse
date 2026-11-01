@@ -2,6 +2,7 @@ import type { Cue, ReviewState, RuleConfig, Suggestion } from '../model/types';
 import { cpsDaLegenda, duracaoMs, faixaCps, formatarDuracao, formatarTimecode, ROTULO_FAIXA } from '../core/texto';
 import { Regua } from './Regua';
 import { CardSugestao } from './CardSugestao';
+import { Icone, type NomeIcone } from './icones';
 
 const CLASSE_FAIXA = {
   verde: 'border-ok bg-ok-100 text-ok',
@@ -9,7 +10,7 @@ const CLASSE_FAIXA = {
   vermelho: 'border-bad bg-bad-100 text-bad',
 } as const;
 
-const ICONE_FAIXA = { verde: '✓', ambar: '!', vermelho: '✕' } as const;
+const ICONE_FAIXA: Record<'verde' | 'ambar' | 'vermelho', NomeIcone> = { verde: 'ok', ambar: 'aviso', vermelho: 'erro' };
 
 export function BadgeCps({ cue, config }: { cue: Cue; config: RuleConfig }) {
   const cps = cpsDaLegenda(cue, config);
@@ -17,7 +18,7 @@ export function BadgeCps({ cue, config }: { cue: Cue; config: RuleConfig }) {
   const texto = Number.isFinite(cps) ? cps.toFixed(1).replace('.', ',') : '∞';
   return (
     <span className={`chip ${CLASSE_FAIXA[faixa]}`}>
-      <span aria-hidden="true">{ICONE_FAIXA[faixa]}</span>
+      <Icone nome={ICONE_FAIXA[faixa]} tamanho={12} />
       {texto} cps — {ROTULO_FAIXA[faixa]}
     </span>
   );
@@ -63,17 +64,17 @@ export function ItemLegenda({
         <BadgeCps cue={cue} config={config} />
         {alterada ? (
           <span className="chip border-ok bg-ok-100 text-ok">
-            <span aria-hidden="true">✎</span> alterada na prévia
+            <Icone nome="rascunho" tamanho={14} /> alterada na prévia
           </span>
         ) : null}
         {mostrarPrevia && remanescentes > 0 ? (
           <span className="chip border-bad bg-bad-100 text-bad">
-            <span aria-hidden="true">✕</span> {remanescentes} violação(ões) permanecem
+            <Icone nome="erro" tamanho={14} /> {remanescentes} violação(ões) permanecem
           </span>
         ) : null}
         {aoVerNoVideo ? (
           <button type="button" className="btn-fantasma py-0.5 text-xs" onClick={aoVerNoVideo}>
-            <span aria-hidden="true">▶</span> Ver no vídeo
+            <Icone nome="reproduzir" tamanho={14} /> Ver no vídeo
           </button>
         ) : null}
         {sugestoes.length > 0 ? (

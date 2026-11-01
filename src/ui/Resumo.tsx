@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useEstado, useResultadoFinal } from '../state/store';
 import { calcularMetricas, contarPorSeveridade } from '../core/metricas';
 import { Metrica } from './primitivos';
+import { Icone } from './icones';
 
 const n1 = (x: number) => x.toFixed(1).replace('.', ',');
 const n2 = (x: number) => x.toFixed(2).replace('.', ',');
@@ -25,16 +26,16 @@ export function Resumo({ variante }: { variante: 'chips' | 'metricas' }) {
         className="flex shrink-0 flex-wrap gap-1 border-b border-paper-400 px-3 py-1.5"
       >
         <li className="chip border-bad bg-bad-100 text-bad">
-          <span aria-hidden="true">✕</span> {contagem.erro} erro{contagem.erro === 1 ? '' : 's'}
+          <Icone nome="erro" tamanho={14} /> {contagem.erro} erro{contagem.erro === 1 ? '' : 's'}
         </li>
         <li className="chip border-warn bg-warn-100 text-warn">
-          <span aria-hidden="true">!</span> {contagem.aviso} aviso{contagem.aviso === 1 ? '' : 's'}
+          <Icone nome="aviso" tamanho={14} /> {contagem.aviso} aviso{contagem.aviso === 1 ? '' : 's'}
         </li>
         <li className="chip border-navy-500 bg-paper-200 text-navy-700">
           <span aria-hidden="true">?</span> {contagem.revisao_manual} manuais
         </li>
         <li className="chip border-ok bg-ok-100 text-ok">
-          <span aria-hidden="true">✓</span> {decisoes.aprovada + decisoes.editada} decididas
+          <Icone nome="ok" tamanho={14} /> {decisoes.aprovada + decisoes.editada} decididas
         </li>
         <li className="chip border-navy-500 bg-paper text-navy-700">{decisoes.pendente} pendentes</li>
       </ul>

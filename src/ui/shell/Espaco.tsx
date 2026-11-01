@@ -24,6 +24,7 @@ import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
 import { EntregaEsquerda, EntregaDireita } from '../paginas/PaginaEntrega';
 import { Divisoria, useJanela, usePaineis } from './divisorias';
+import { Icone } from '../icones';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
@@ -371,10 +372,10 @@ export function Espaco() {
                 </span>
                 <div className="flex items-center gap-0.5">
                   <button type="button" className="btn-icone" aria-label="Ir ao início" onClick={() => buscar(0)} disabled={!video}>
-                    <span aria-hidden="true">⏮</span>
+                    <Icone nome="inicio" />
                   </button>
                   <button type="button" className="btn-icone" aria-label="Voltar 1 quadro" onClick={() => buscar(tempoMs - quadroMs)} disabled={!video}>
-                    <span aria-hidden="true">◂|</span>
+                    <Icone nome="quadroAnterior" />
                   </button>
                   <button
                     type="button"
@@ -383,13 +384,13 @@ export function Espaco() {
                     onClick={() => videoPronto && void (videoPronto.paused ? videoPronto.play() : videoPronto.pause())}
                     disabled={!video}
                   >
-                    <span aria-hidden="true">{tocando ? '❚❚' : '▶'}</span>
+                    <Icone nome={tocando ? 'pausar' : 'reproduzir'} tamanho={18} />
                   </button>
                   <button type="button" className="btn-icone" aria-label="Avançar 1 quadro" onClick={() => buscar(tempoMs + quadroMs)} disabled={!video}>
-                    <span aria-hidden="true">|▸</span>
+                    <Icone nome="quadroSeguinte" />
                   </button>
                   <button type="button" className="btn-icone" aria-label="Ir ao fim" onClick={() => buscar(duracaoMs)} disabled={!video}>
-                    <span aria-hidden="true">⏭</span>
+                    <Icone nome="fim" />
                   </button>
                 </div>
 

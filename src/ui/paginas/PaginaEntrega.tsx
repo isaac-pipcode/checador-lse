@@ -12,6 +12,7 @@ import { verificarJanela } from '../../libras/geometria';
 import { NBR_15290 } from '../../libras/tipos';
 import { serializarSrt } from '../../export/serializar';
 import { useVideo } from '../contextoVideo';
+import { Icone } from '../icones';
 
 interface Item {
   ok: boolean | null; // null = não se aplica / não iniciado
@@ -105,14 +106,13 @@ export function EntregaEsquerda() {
                         className="btn-fantasma ml-auto h-6 px-2 text-2xs"
                         onClick={() => despachar({ tipo: 'navegar', pagina: m.pagina })}
                       >
-                        Abrir etapa ↦
+                        Abrir etapa <Icone nome="ir" tamanho={12} />
                       </button>
                     </div>
                     <ul className="mt-1 space-y-0.5 text-xs">
                       {m.itens.map((i, k) => (
                         <li key={k} className={i.ok === null ? 'text-navy-500' : i.ok ? 'text-ok' : 'text-warn'}>
-                          <span aria-hidden="true">{i.ok === null ? '○ ' : i.ok ? '✓ ' : '! '}</span>
-                          {i.texto}
+                          <Icone nome={i.ok === null ? 'etapaVazia' : i.ok ? 'ok' : 'aviso'} tamanho={14} /> {i.texto}
                         </li>
                       ))}
                     </ul>
@@ -250,7 +250,7 @@ export function EntregaDireita() {
           {rel ? (
             <div className="mt-3 rounded border border-ok bg-ok-100 p-2 text-xs text-ok" role="status">
               <p className="font-semibold">
-                <span aria-hidden="true">✓ </span>
+                <Icone nome="ok" tamanho={14} />
                 {rel.arquivo.split(/[\\/]/).pop()}
               </p>
               <ul className="mt-1 space-y-0.5 text-navy">

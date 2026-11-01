@@ -65,6 +65,17 @@ da imagem. Controles de 24 a 28 px de altura, raio de 3 px. Elevação só por s
 `paper-200`), sem sombras, exceto em diálogos modais. O acento (`terra`) fica para o cursor de
 reprodução, o timecode, o foco e a ação primária; deslizantes são finos e neutros.
 
+### Ícones
+
+Vetoriais, de traço único, desenhados num quadro de 24 com traço 1,75 e exibidos a 16 px (12–14 px ao
+lado de texto pequeno, 18 px na barra de páginas e no botão de reproduzir). Fonte: Lucide (licença
+ISC), importada ícone a ícone. O código não usa os nomes da biblioteca: `src/ui/icones.tsx` dá a
+cada ícone um nome por **função** (`reproduzir`, `libras`, `aviso`), e trocar um desenho é mudar
+uma linha ali. Cor sempre `currentColor`, para seguir o tema e o estado. Todo ícone é decorativo
+(`aria-hidden`): o nome vem do rótulo do controle ou do texto ao lado, e estado nunca é só ícone ou
+só cor. Gravar, reproduzir e pausar são preenchidos; o resto é contorno. Símbolos que fazem parte do
+texto (→ entre timecodes, −¼ s, ≥) continuam texto.
+
 ### Foco
 
 Contorno de 2 px no acento (`terra`), com 2 px de folga, em todo elemento focável.

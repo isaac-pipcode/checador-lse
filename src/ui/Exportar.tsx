@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useEstado, useResultadoFinal } from '../state/store';
 import { serializarSrt, serializarVtt } from '../export/serializar';
 import { montarRelatorio, relatorioMarkdown, nomeArquivoSaida } from '../export/relatorio';
+import { Icone } from './icones';
 
 function baixar(nome: string, conteudo: string, mime: string) {
   const blob = new Blob([conteudo], { type: `${mime};charset=utf-8` });
@@ -78,7 +79,7 @@ export function Exportar() {
 
       <ul className="mt-3 space-y-1 text-sm">
         <li className={errosRemanescentes > 0 ? 'text-bad' : 'text-ok'}>
-          <span aria-hidden="true">{errosRemanescentes > 0 ? '✕ ' : '✓ '}</span>
+          <Icone nome={errosRemanescentes > 0 ? 'erro' : 'ok'} tamanho={14} />{' '}
           {errosRemanescentes} erro(s) permanecem no arquivo gerado
           {remanescentes.length - errosRemanescentes > 0
             ? `, além de ${remanescentes.length - errosRemanescentes} aviso(s)`
@@ -86,12 +87,12 @@ export function Exportar() {
           .
         </li>
         <li className={pendenciasManuais > 0 ? 'text-warn' : 'text-ok'}>
-          <span aria-hidden="true">{pendenciasManuais > 0 ? '! ' : '✓ '}</span>
+          <Icone nome={pendenciasManuais > 0 ? 'aviso' : 'ok'} tamanho={14} />{' '}
           {pendenciasManuais} pendência(s) de revisão manual não confirmada(s).
         </li>
         {final.conflitos.length > 0 ? (
           <li className="text-warn">
-            <span aria-hidden="true">! </span>
+            <Icone nome="aviso" tamanho={14} /> 
             {final.conflitos.length} sugestão(ões) aprovadas incidiram sobre a mesma legenda; o
             relatório registra qual prevaleceu.
           </li>
@@ -129,7 +130,7 @@ export function Exportar() {
 
       {feito ? (
         <p role="status" className="mt-2 text-sm text-ok">
-          <span aria-hidden="true">✓ </span>
+          <Icone nome="ok" tamanho={14} /> 
           Arquivos gerados às {feito}.
         </p>
       ) : null}

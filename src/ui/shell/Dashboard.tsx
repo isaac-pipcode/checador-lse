@@ -4,6 +4,7 @@ import { ponte, type ResumoProjeto } from '../../desktop/ponte';
 import { useAcoesProjeto } from '../Projeto';
 import { Marca } from './Marca';
 import { SeletorTema } from './BarraSuperior';
+import { Icone } from '../icones';
 
 const quando = (iso: string) => {
   const d = new Date(iso);
@@ -195,9 +196,11 @@ function CartaoProjeto({ p, aoAbrir, aoEsquecer }: { p: ResumoProjeto; aoAbrir: 
           <ul className="mt-2 space-y-0.5 text-2xs">
             {etapas.map((e) => (
               <li key={e.rotulo} className="flex items-center gap-1.5">
-                <span aria-hidden="true" className={e.feito === null ? 'text-navy-500' : e.feito ? 'text-ok' : 'text-warn'}>
-                  {e.feito === null ? '○' : e.feito ? '●' : '◐'}
-                </span>
+                <Icone
+                  nome={e.feito === null ? 'etapaVazia' : e.feito ? 'etapaFeita' : 'etapaParcial'}
+                  tamanho={12}
+                  className={e.feito === null ? 'text-navy-500' : e.feito ? 'text-ok' : 'text-warn'}
+                />
                 <span className="w-10 font-medium text-navy-700">{e.rotulo}</span>
                 <span className="text-navy-500">{e.texto}</span>
               </li>

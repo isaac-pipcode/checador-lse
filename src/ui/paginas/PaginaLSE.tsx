@@ -12,6 +12,7 @@ import { useVideo } from '../contextoVideo';
 import { detectarCortes } from '../../mapa/midia';
 import { lacunasCsv } from '../../mapa/lacunas';
 import { formatarTimecode } from '../../core/texto';
+import { Icone } from '../icones';
 
 /**
  * Painel esquerdo da página de Legendas. Abas: a lista revisável (com filtros
@@ -127,7 +128,7 @@ function ErrosParse() {
       className="m-3 rounded border border-warn bg-warn-100 px-3 py-2"
     >
       <h3 className="text-sm font-semibold text-warn">
-        <span aria-hidden="true">! </span>Problemas na leitura do arquivo
+        <Icone nome="aviso" tamanho={14} /> Problemas na leitura do arquivo
       </h3>
       <ul className="mt-1 space-y-1 text-sm text-warn">
         {estado.errosParse.map((e, i) => (

@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useEstado } from '../../state/store';
 import { ponte, type RelatorioIntercambio } from '../../desktop/ponte';
 import { useVideo } from '../contextoVideo';
+import { Icone } from '../icones';
 
 /**
  * Exportação da sincronia para Premiere e Resolve: a Libras tratada com alfa
@@ -115,7 +116,7 @@ export function ExportarEditores() {
         <div className="mt-2" role="status">
           <div className="flex items-center gap-2">
             <span className="chip border-ok bg-ok-100 text-ok">
-              <span aria-hidden="true">✓</span> {rel.arquivos.length} arquivos · {rel.cadencia.replace('/1', '')} qd/s
+              <Icone nome="ok" tamanho={14} /> {rel.arquivos.length} arquivos · {rel.cadencia.replace('/1', '')} qd/s
             </span>
             <button
               type="button"
@@ -127,7 +128,7 @@ export function ExportarEditores() {
           </div>
           {rel.avisos.map((a) => (
             <p key={a} className="mt-1 text-2xs text-warn">
-              <span aria-hidden="true">! </span>
+              <Icone nome="aviso" tamanho={14} />
               {a}
             </p>
           ))}

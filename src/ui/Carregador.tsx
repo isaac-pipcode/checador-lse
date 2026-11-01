@@ -2,6 +2,7 @@ import { useCallback, useId, useRef, useState } from 'react';
 import { decodeBuffer } from '../parser/encoding';
 import { parseSubtitle } from '../parser/srt';
 import { useDespachar } from '../state/store';
+import { Icone } from './icones';
 
 /** Tela inicial: carregamento do arquivo. Nada sai do navegador. */
 export function Carregador() {
@@ -60,9 +61,7 @@ export function Carregador() {
           if (f) void processar(f);
         }}
       >
-        <span aria-hidden="true" className="text-3xl leading-none text-navy-500">
-          Aa
-        </span>
+        <Icone nome="legendas" tamanho={36} className="text-navy-500" />
         <p className="text-xs text-navy-700">Arraste a legenda (.srt ou .vtt) para cá</p>
         <input
           ref={input}
@@ -87,7 +86,7 @@ export function Carregador() {
 
       {erro ? (
         <p role="alert" className="mt-3 rounded border border-bad bg-bad-100 px-3 py-2 text-xs text-bad">
-          <span aria-hidden="true">✕ </span>
+          <Icone nome="erro" tamanho={14} /> 
           {erro}
         </p>
       ) : null}

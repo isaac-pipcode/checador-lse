@@ -3,6 +3,7 @@ import { useEstado, useResultadoFinal } from '../state/store';
 import { lacunasParaAd, lacunasPorSilencio, type Lacuna } from '../mapa/lacunas';
 import { ponte } from '../desktop/ponte';
 import { useAjudaAberta } from './ajudas';
+import { Icone } from './icones';
 
 /** Salva texto: diálogo do sistema no desktop; download no navegador. */
 export function baixar(nome: string, conteudo: string, mime: string) {
@@ -121,9 +122,7 @@ export function Secao({
             aria-controls={`${auto}-c`}
             onClick={recolher}
           >
-            <span aria-hidden="true" className="w-3.5 shrink-0 text-center text-[10px] text-navy-500">
-              {recolhida ? '▶' : '▼'}
-            </span>
+            <Icone nome={recolhida ? 'recolhido' : 'aberto'} tamanho={14} className="text-navy-500" />
             <span className="truncate">{titulo}</span>
           </button>
         </h3>
@@ -164,7 +163,7 @@ export function BotaoDica({
       title={aberta ? 'Fechar ajuda' : 'Ajuda'}
       onClick={aoAlternar}
     >
-      ?
+      <Icone nome="ajuda" tamanho={15} />
     </button>
   );
 }

@@ -5,6 +5,7 @@ import { salvarTema, temaSalvo, type Tema } from '../tema/tokens';
 import { Sobre } from '../Sobre';
 import { Marca } from './Marca';
 import { definirMostrarAjudas, mostrarAjudas, useMostrarAjudas } from '../ajudas';
+import { Icone } from '../icones';
 
 /** Barra superior: projeto, salvar, ajudas, tema, metodologia. */
 export function BarraSuperior() {
@@ -56,8 +57,8 @@ export function BarraSuperior() {
       >
         {nome}
         {estado.projeto.sujo ? (
-          <span className="ml-1.5 text-terra" title="Alterações não salvas">
-            ●<span className="sr-only-focusable"> alterações não salvas</span>
+          <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-terra align-middle" title="Alterações não salvas">
+            <span className="sr-only-focusable"> alterações não salvas</span>
           </span>
         ) : null}
       </h1>
@@ -127,12 +128,7 @@ export function BotaoAjudas() {
       title={ligado ? 'Esconder ajudas (F1)' : 'Mostrar todas as ajudas (F1)'}
       onClick={() => definirMostrarAjudas(!ligado)}
     >
-      <span
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-semibold leading-none"
-        aria-hidden="true"
-      >
-        ?
-      </span>
+      <Icone nome="ajuda" />
       Ajudas
     </button>
   );
@@ -152,7 +148,7 @@ export function SeletorTema() {
         setTema(novo);
       }}
     >
-      <span aria-hidden="true">{tema === 'escuro' ? '☀' : '☾'}</span>
+      <Icone nome={tema === 'escuro' ? 'temaClaro' : 'temaEscuro'} />
     </button>
   );
 }
