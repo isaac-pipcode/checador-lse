@@ -1,6 +1,7 @@
 # Instaladores do Ouver Estúdio para Windows, macOS e Linux.
 #
-# - Em pull requests e no branch: só testa (rápido, sem publicar).
+# - Em pull requests: testa e gera os instaladores como artefatos (sem publicar),
+#   para uma falha de empacotamento aparecer antes da release.
 # - Numa tag v* (ex.: v0.1.0): testa, gera os instaladores nas três plataformas
 #   e publica uma release no GitHub com eles anexados.
 # - "Run workflow" manual: gera os instaladores como artefatos, sem publicar.
@@ -38,7 +39,6 @@ jobs:
 
   instaladores:
     needs: testes
-    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
