@@ -7,7 +7,7 @@
 # - "Run workflow" manual: gera os instaladores como artefatos, sem publicar.
 #
 # Os instaladores NÃO são assinados (ainda): o macOS e o Windows avisam na
-# primeira abertura. O ffmpeg não vem embutido: precisa estar instalado.
+# primeira abertura. O ffmpeg (GPL) vai embutido; seu código-fonte é anexado à release.
 name: Instaladores
 
 on:
@@ -51,11 +51,27 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: vendor/cache
+          key: ffmpeg-${{ runner.os }}-${{ hashFiles('desktop/ffmpeg-embutido.json') }}
+      - name: Baixar e conferir o ffmpeg embutido (SHA-256 fixo)
+        run: npm run ffmpeg:baixar
       - name: Gerar instaladores
         shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run dist
+      - name: Executar o ffmpeg embutido no app empacotado
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   npm run ffmpeg:verificar -- release/linux-unpacked/resources/ffmpeg ;;
+            Windows) npm run ffmpeg:verificar -- release/win-unpacked/resources/ffmpeg ;;
+            macOS)
+              npm run ffmpeg:verificar -- "release/mac-arm64/Ouver Estúdio.app/Contents/Resources/ffmpeg"
+              npm run ffmpeg:verificar -- "release/mac/Ouver Estúdio.app/Contents/Resources/ffmpeg" --opcional ;;
+          esac
       - uses: actions/upload-artifact@v4
         with:
           name: instaladores-${{ matrix.os }}
@@ -78,6 +94,10 @@ jobs:
         with:
           path: instaladores
           merge-multiple: true
+      - name: Código-fonte do FFmpeg embutido (obrigação da GPL)
+        run: |
+          versao=$(node -p "require('./desktop/ffmpeg-embutido.json').versao")
+          curl -fsSL --retry 4 -o "instaladores/ffmpeg-$versao.tar.xz" "$(node -p "require('./desktop/ffmpeg-embutido.json').codigoFonte")"
       - name: Publicar a release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

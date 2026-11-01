@@ -118,7 +118,13 @@ export interface ResumoProjeto {
 
 export interface PonteDesktop {
   plataforma: string;
-  ffmpeg(): Promise<{ disponivel: boolean; versao: string | null; caminho: string }>;
+  ffmpeg(): Promise<{
+    disponivel: boolean;
+    versao: string | null;
+    caminho: string;
+    /** de onde veio: variável de ambiente, embutido no instalador, instalação do sistema ou PATH */
+    origem: 'variavel' | 'embutido' | 'sistema' | 'path';
+  }>;
   escolherVideo(): Promise<MidiaEscolhida | null>;
   urlDeMidia(caminho: string): Promise<string>;
   analisarAudio(

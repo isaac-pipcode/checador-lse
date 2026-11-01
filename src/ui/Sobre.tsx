@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { CATALOGO } from '../rules';
+import { ponte } from '../desktop/ponte';
 import { ROTULO_VERIFICABILIDADE } from './primitivos';
 
 export function Sobre() {
@@ -116,10 +118,59 @@ export function Sobre() {
         </li>
       </ul>
 
+      <ComponentesTerceiros />
+
       <p className="mt-6 text-xs text-navy-500">
         Este checador não é produto oficial do Ministério da Cultura, da ANCINE ou do grupo
         LEAD/UECE; é uma implementação independente dos parâmetros publicados por eles.
       </p>
     </section>
+  );
+}
+
+const ORIGEM: Record<string, string> = {
+  embutido: 'embutido no instalador',
+  variavel: 'indicado pela variável OUVER_FFMPEG',
+  sistema: 'instalado no sistema',
+  path: 'encontrado no PATH',
+};
+
+/**
+ * Componentes de terceiros. O FFmpeg vai embutido nos instaladores e é
+ * distribuído sob a GPL: o aviso, a licença e o caminho do código-fonte ficam
+ * aqui e na pasta resources/ffmpeg do aplicativo.
+ */
+function ComponentesTerceiros() {
+  const [ff, setFf] = useState<Awaited<ReturnType<NonNullable<ReturnType<typeof ponte>>['ffmpeg']>> | null>(null);
+  useEffect(() => {
+    void ponte()
+      ?.ffmpeg()
+      .then(setFf)
+      .catch(() => setFf(null));
+  }, []);
+  return (
+    <>
+      <h3 className="mt-8 text-lg font-semibold">Componentes de terceiros</h3>
+      <p className="mt-2 text-sm text-navy-700">
+        <strong>FFmpeg</strong> lê, analisa e gera o áudio e o vídeo. Ele é executado como programa separado e não faz
+        parte do código do Ouver Estúdio. Nos instaladores, vai embutido (versão 9.0.2) e é distribuído sob a{' '}
+        <strong>GNU GPL versão 3</strong>; o texto da licença, a origem da compilação e as somas de verificação estão na
+        pasta <code>resources/ffmpeg</code> do aplicativo, e o código-fonte em{' '}
+        <a className="underline" href="https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz" target="_blank" rel="noreferrer">
+          ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+        </a>{' '}
+        (também anexado à release no GitHub).
+      </p>
+      {ff ? (
+        <p className="mt-2 text-xs text-navy-500">
+          Em uso: {ff.disponivel ? (ff.versao ?? 'ffmpeg') : 'nenhum ffmpeg encontrado'} — {ORIGEM[ff.origem] ?? ff.origem}
+          {ff.disponivel ? <span className="block break-all font-mono">{ff.caminho}</span> : null}
+        </p>
+      ) : null}
+      <p className="mt-2 text-sm text-navy-700">
+        Ícones: <strong>Lucide</strong> (licença ISC). Mãos de Libras: desenho próprio, derivado do traçado “hand” do
+        Lucide.
+      </p>
+    </>
   );
 }

@@ -1,5 +1,7 @@
-Primeira versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE),
-audiodescrição e janela de Libras numa mesma linha do tempo.
+Versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE), audiodescrição e
+janela de Libras numa mesma linha do tempo.
+
+**Novo na 0.1.1:** o ffmpeg vem embutido. Não é mais preciso instalar nada além do Ouver Estúdio.
 
 ## Instaladores
 
@@ -12,9 +14,8 @@ audiodescrição e janela de Libras numa mesma linha do tempo.
 
 ## Antes de instalar
 
-- **ffmpeg é necessário** e não vem no instalador. macOS: `brew install ffmpeg`. Windows:
-  `winget install Gyan.FFmpeg`. Linux: `sudo apt install ffmpeg`. O app procura nos locais usuais e
-  no PATH; para outro lugar, defina `OUVER_FFMPEG` com o caminho do executável.
+- **O ffmpeg vai embutido** (versão 9.0.2). Para usar outro, defina `OUVER_FFMPEG` com o caminho do
+  executável. Qual ffmpeg está em uso aparece em *Metodologia → Componentes de terceiros*.
 - **Os instaladores ainda não são assinados.** No macOS, abra pela primeira vez com clique direito →
   Abrir. No Windows, em "O Windows protegeu o computador", clique em "Mais informações" → "Executar
   assim mesmo".
@@ -25,3 +26,10 @@ Revisão de LSE com regras do Guia para Produções Audiovisuais Acessíveis; ro
 gravação de audiodescrição com mixagem e medição de loudness; janela de Libras com chroma key,
 enquadramento e sincronização pelo som-guia; pacote acessível e exportação da sincronia para
 Premiere e DaVinci Resolve. Detalhes no README.
+
+## Componentes de terceiros
+
+O FFmpeg embutido é distribuído sob a **GNU GPL v3** (compilações de Martin Riedl para macOS e Linux e
+de Gyan Doshi para Windows, com SHA-256 conferido no build). O código-fonte do FFmpeg está anexado a
+esta release (`ffmpeg-9.0.2.tar.xz`); a licença, a origem e as somas ficam em `resources/ffmpeg` do
+aplicativo instalado.

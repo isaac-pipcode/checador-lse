@@ -131,7 +131,7 @@ passou** pela verificação com axe-core nem por leitor de tela.
 ## Aplicativo desktop
 
 O projeto roda também como aplicativo desktop (Electron), que é o alvo a partir do passo 2. Requer o
-**ffmpeg** instalado (no `PATH`, ou indicado em `OUVER_FFMPEG`; no macOS e no Windows, os locais usuais de instalação também são procurados).
+**ffmpeg** instalado para desenvolver (no `PATH`, ou indicado em `OUVER_FFMPEG`; os locais usuais de instalação também são procurados). Os instaladores já trazem o ffmpeg embutido.
 
 ```bash
 npm install
@@ -148,8 +148,22 @@ no Windows, `.dmg` (Apple Silicon e Intel) no macOS, AppImage e `.deb` no Linux.
 tag `v*`, gera os instaladores nas três plataformas e publica uma release com eles. Para lançar uma
 versão: atualizar `version` no `package.json`, criar a tag (`git tag v0.2.0`) e enviá-la.
 
-Limites atuais: instaladores **sem assinatura** (o macOS e o Windows avisam na primeira abertura) e
-**ffmpeg não embutido** (embuti-lo exige decidir a distribuição sob a GPL/LGPL). As notas de
+**ffmpeg embutido.** Cada instalador leva o ffmpeg e o ffprobe 9.0.2 da sua plataforma e arquitetura
+(compilações estáticas GPL: Martin Riedl para macOS — assinadas pela Apple — e Linux; Gyan Doshi para
+Windows). `npm run ffmpeg:baixar` baixa as compilações fixadas em
+[`desktop/ffmpeg-embutido.json`](desktop/ffmpeg-embutido.json), confere o SHA-256 (aborta se não bater)
+e as deixa em `vendor/ffmpeg/`, de onde o electron-builder as copia para `resources/ffmpeg` com a
+licença e um LEIA-ME de procedência. No CI, depois de empacotar, `npm run ffmpeg:verificar` executa o
+ffmpeg **de dentro do app empacotado** nos três sistemas e codifica cada formato que o app usa (H.264 +
+AAC + mov_text, ProRes 4444 com alfa, WAV 24 bits, VP8 + Opus, filtros da cadeia de Libras). A release
+anexa o código-fonte do FFmpeg. Ordem de busca no app: `OUVER_FFMPEG` → embutido → locais usuais do
+sistema → PATH. Para trocar de versão, atualizar o manifesto com URLs e somas novas.
+
+Licença: o ffmpeg é executado como programa separado, e a leitura usual é que isso constitui
+agregação, não obra derivada; o código do Ouver Estúdio não passa a ser GPL. É interpretação jurídica:
+para distribuição comercial, vale um parecer. Patentes de H.264/AAC: não avaliadas.
+
+Limite atual: instaladores **sem assinatura** (o macOS e o Windows avisam na primeira abertura). As notas de
 instalação para o usuário final estão em [`docs/release-notas.md`](docs/release-notas.md). Testado
 empacotado no Linux (fluxo completo, incluindo a exportação para editores); Windows e macOS são
 gerados e verificados no CI, sem teste manual.

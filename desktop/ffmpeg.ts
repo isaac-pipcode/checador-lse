@@ -4,23 +4,33 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fpsDeFracao, type InfoVideo } from '../src/midia/avaliacao';
 
+/** Pasta do ffmpeg que vem dentro do instalador (recursos do app empacotado). */
+function pastaEmbutida(): string | null {
+  const recursos = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+  return recursos ? join(recursos, 'ffmpeg') : null;
+}
+
 /**
- * Onde procurar o ffmpeg: variável de ambiente (OUVER_FFMPEG; CHECADOR_FFMPEG,
- * nome antigo, ainda vale), depois os locais usuais de instalação e, por fim,
- * o PATH. Os locais usuais importam no app instalado: no macOS, um app aberto
- * pelo Finder não herda o PATH do terminal, e o ffmpeg do Homebrew ficaria
- * invisível.
+ * Onde procurar o ffmpeg, em ordem:
+ * 1. variável de ambiente (OUVER_FFMPEG; CHECADOR_FFMPEG, nome antigo, ainda vale);
+ * 2. o ffmpeg embutido no instalador (resources/ffmpeg; ver desktop/ffmpeg-embutido.json);
+ * 3. os locais usuais de instalação (no macOS, um app aberto pelo Finder não
+ *    herda o PATH do terminal, e o ffmpeg do Homebrew ficaria invisível);
+ * 4. o PATH.
  */
 export function resolverFfmpeg(
   env: NodeJS.ProcessEnv = process.env,
   plataforma: NodeJS.Platform = process.platform,
   existe: (c: string) => boolean = existsSync,
-): { ffmpeg: string; ffprobe: string } {
+  embutido: string | null = pastaEmbutida(),
+): { ffmpeg: string; ffprobe: string; origem: 'variavel' | 'embutido' | 'sistema' | 'path' } {
   const exe = plataforma === 'win32' ? '.exe' : '';
   const indicado = env.OUVER_FFMPEG || env.CHECADOR_FFMPEG;
   const probeIndicado = env.OUVER_FFPROBE || env.CHECADOR_FFPROBE;
   const vizinho = (f: string) => join(dirname(f), `ffprobe${exe}`);
-  if (indicado) return { ffmpeg: indicado, ffprobe: probeIndicado || vizinho(indicado) };
+  if (indicado) return { ffmpeg: indicado, ffprobe: probeIndicado || vizinho(indicado), origem: 'variavel' };
+  if (embutido && existe(join(embutido, `ffmpeg${exe}`)))
+    return { ffmpeg: join(embutido, `ffmpeg${exe}`), ffprobe: probeIndicado || join(embutido, `ffprobe${exe}`), origem: 'embutido' };
   const pastas =
     plataforma === 'darwin'
       ? ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin']
@@ -33,14 +43,15 @@ export function resolverFfmpeg(
         : ['/usr/bin', '/usr/local/bin', '/snap/bin'];
   for (const p of pastas) {
     const f = join(p, `ffmpeg${exe}`);
-    if (existe(f)) return { ffmpeg: f, ffprobe: probeIndicado || vizinho(f) };
+    if (existe(f)) return { ffmpeg: f, ffprobe: probeIndicado || vizinho(f), origem: 'sistema' };
   }
-  return { ffmpeg: `ffmpeg${exe}`, ffprobe: probeIndicado || `ffprobe${exe}` };
+  return { ffmpeg: `ffmpeg${exe}`, ffprobe: probeIndicado || `ffprobe${exe}`, origem: 'path' };
 }
 
 const resolvido = resolverFfmpeg();
 export const FFMPEG = resolvido.ffmpeg;
 export const FFPROBE = resolvido.ffprobe;
+export const ORIGEM_FFMPEG = resolvido.origem;
 
 export function versaoFfmpeg(): Promise<string | null> {
   return new Promise((ok) => {

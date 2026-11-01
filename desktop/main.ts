@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell }
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { FFMPEG, decodificarStream, executar, sondar, sondarVideo, versaoFfmpeg } from './ffmpeg';
+import { FFMPEG, ORIGEM_FFMPEG, decodificarStream, executar, sondar, sondarVideo, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
 import { renderizarEntrega } from './entrega';
 import { exportarSincronia } from './intercambio';
@@ -78,11 +78,13 @@ let principal: BrowserWindow | null = null;
 let prompter: BrowserWindow | null = null;
 let ultimoEstadoPrompter: EstadoPrompter | null = null;
 
+// `--dev-server=URL` (ou VITE_DEV_SERVER_URL): carrega o Vite em modo dev, com recarga
+const SERVIDOR_DEV =
+  process.argv.find((a) => a.startsWith('--dev-server='))?.slice('--dev-server='.length) ??
+  process.env.VITE_DEV_SERVER_URL;
+
 function carregar(w: BrowserWindow, hash?: string) {
-  // `--dev-server=URL` (ou VITE_DEV_SERVER_URL): carrega o Vite em modo dev, com recarga
-  const dev =
-    process.argv.find((a) => a.startsWith('--dev-server='))?.slice('--dev-server='.length) ??
-    process.env.VITE_DEV_SERVER_URL;
+  const dev = SERVIDOR_DEV;
   if (dev) void w.loadURL(hash ? `${dev}#${hash}` : dev);
   else void w.loadFile(join(__dirname, '..', 'dist', 'index.html'), hash ? { hash } : undefined);
 }
@@ -149,6 +151,12 @@ function janela(): BrowserWindow {
   w.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
+  });
+  // a janela nunca sai do app: um link sem target abriria o site no lugar da interface
+  w.webContents.on('will-navigate', (e, url) => {
+    if (url.startsWith('file:') || (SERVIDOR_DEV && url.startsWith(SERVIDOR_DEV))) return;
+    e.preventDefault();
+    if (/^https?:/.test(url)) void shell.openExternal(url);
   });
   return w;
 }
@@ -232,7 +240,7 @@ function lerProjeto(caminho: string) {
 function registrarIpc() {
   ipcMain.handle('ffmpeg', async () => {
     const versao = await versaoFfmpeg();
-    return { disponivel: versao !== null, versao, caminho: FFMPEG };
+    return { disponivel: versao !== null, versao, caminho: FFMPEG, origem: ORIGEM_FFMPEG };
   });
 
   ipcMain.handle('video:escolher', async (e) => {

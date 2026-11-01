@@ -13,3 +13,6 @@ test/**/*.js
 
 # instaladores (electron-builder)
 release
+
+# ffmpeg embutido (baixado por scripts/baixar-ffmpeg.mjs)
+vendor

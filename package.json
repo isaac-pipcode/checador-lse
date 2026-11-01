@@ -2,7 +2,7 @@
   "name": "ouver-estudio",
   "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
   "author": {
@@ -19,7 +19,9 @@
     "build:desktop": "tsc -p desktop/tsconfig.json && node desktop/build.mjs",
     "desktop": "npm run build && npm run build:desktop && electron .",
     "desktop:dev": "npm run build:desktop && electron . --dev-server=http://localhost:5173",
-    "dist": "npm run build && npm run build:desktop && electron-builder --publish never"
+    "dist": "npm run build && npm run build:desktop && electron-builder --publish never",
+    "ffmpeg:baixar": "node scripts/baixar-ffmpeg.mjs",
+    "ffmpeg:verificar": "node scripts/verificar-ffmpeg.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
@@ -100,7 +102,16 @@
       "maintainer": "Ouver",
       "synopsis": "LSE, audiodescrição e Libras numa mesma linha do tempo",
       "syncDesktopName": true
-    }
+    },
+    "extraResources": [
+      {
+        "from": "vendor/ffmpeg/${platform}-${arch}",
+        "to": "ffmpeg",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   },
   "desktopName": "ouver-estudio.desktop"
 }
