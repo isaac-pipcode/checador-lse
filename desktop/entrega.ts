@@ -34,6 +34,8 @@ export function filtroLibras(args: {
   janela: NonNullable<PedidoEntrega['libras']>['janela'];
   inicioNaObraMs: number;
   entrada: number;
+  /** base transparente (exportação com alfa): o overlay preserva o canal alfa */
+  alfa?: boolean;
 }): { filtro: string; rotuloSaida: string } {
   const { quadro, fonte, janela: j, inicioNaObraMs, entrada } = args;
   const v = j.velocidade && j.velocidade > 0 ? j.velocidade : 1;
@@ -84,7 +86,11 @@ export function filtroLibras(args: {
   } else {
     partes.push(`${cadeia}[lib]`);
   }
-  partes.push(`[0:v][lib]overlay=${r.x}:${r.y}:eof_action=pass[vout]`);
+  partes.push(
+    args.alfa
+      ? `[0:v][lib]overlay=${r.x}:${r.y}:eof_action=pass:format=auto,format=yuva444p10le[vout]`
+      : `[0:v][lib]overlay=${r.x}:${r.y}:eof_action=pass[vout]`,
+  );
   return { filtro: partes.join(';'), rotuloSaida: '[vout]' };
 }
 

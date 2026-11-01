@@ -87,6 +87,24 @@ export interface RelatorioEntrega {
   avisos: string[];
 }
 
+export interface PedidoIntercambio {
+  videoCaminho: string;
+  nomeBase: string;
+  duracaoMs: number;
+  libras: NonNullable<PedidoEntrega['libras']>;
+  formatos: { xmeml: boolean; fcpxml: boolean };
+  /** incluir o clipe bruto do intérprete, sincronizado e desativado, na V3 */
+  incluirBruto: boolean;
+}
+
+export interface RelatorioIntercambio {
+  pasta: string;
+  arquivos: string[];
+  /** cadência da sequência, como fração (ex.: 24000/1001) */
+  cadencia: string;
+  avisos: string[];
+}
+
 export interface ResumoProjeto {
   caminho: string;
   nome: string;
@@ -121,6 +139,11 @@ export interface PonteDesktop {
   // ---- Libras e entrega -------------------------------------------------
   escolherClipeLibras(): Promise<(MidiaEscolhida & { duracaoMs: number; largura: number; altura: number }) | null>;
   renderizarEntrega(pedido: PedidoEntrega, aoProgredir: (fracao: number, etapa: string) => void): Promise<RelatorioEntrega | null>;
+  /** Libras tratada com alfa + sequência para Premiere (xmeml) e Resolve (FCPXML) */
+  exportarParaEditores(
+    pedido: PedidoIntercambio,
+    aoProgredir: (fracao: number, etapa: string) => void,
+  ): Promise<RelatorioIntercambio | null>;
 
   // ---- Mídia e proxy ------------------------------------------------------
   sondarMidia(caminho: string): Promise<InfoVideo>;

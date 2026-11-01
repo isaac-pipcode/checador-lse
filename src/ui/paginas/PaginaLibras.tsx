@@ -13,6 +13,7 @@ import { invasaoDosNeutros, toleranciaSugerida } from '../../libras/chroma';
 import { gerarProxyDe } from '../proxy';
 import { amostrarQuadros, corChaveDosQuadros, enquadramentoAutomatico, envelopesDoClipe } from '../libras/analiseClipe';
 import { ConferenciaOndas, ResiduoSincronia } from '../libras/GraficosSincronia';
+import { ExportarEditores } from '../libras/ExportarEditores';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const dec = (v: number, c = 2) => v.toFixed(c).replace('.', ',');
@@ -365,6 +366,12 @@ export function LibrasEsquerda() {
           <p className="mt-1.5 text-2xs text-navy-500">
             Em “Ambos”, com fones: filme à esquerda, som-guia à direita. Em sincronia, soam juntos; defasados, como eco.
           </p>
+        </Secao>
+      ) : null}
+
+      {j.clipe ? (
+        <Secao titulo="Exportar para editores">
+          <ExportarEditores />
         </Secao>
       ) : null}
     </>

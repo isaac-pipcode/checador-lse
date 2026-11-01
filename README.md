@@ -330,6 +330,41 @@ Página **Entrega**: prontidão por etapa (em texto, com atalho para a página),
 Testado com ffmpeg real: as faixas e os nomes são conferidos, e os pixels na região da janela
 também, antes, durante e depois do clipe.
 
+## Exportação para editores (Premiere e Resolve)
+
+Quando a finalização acontece no editor do cliente, a sincronia da Libras sai como projeto de
+intercâmbio, não queimada no vídeo. Página **Libras** (seção "Exportar para editores") ou
+**Entrega** (aba "Editores"). A pasta escolhida recebe:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `<nome>-libras-alfa.mov` | janela de Libras já tratada (chroma, recorte, posição, escala), ProRes 4444 com alfa, quadro inteiro da obra, alinhada ao quadro 0 |
+| `<nome>-premiere.xml` | FCP7 XML (xmeml v5): Premiere Pro e DaVinci Resolve |
+| `<nome>-resolve.fcpxml` | FCPXML 1.8: DaVinci Resolve e Final Cut Pro |
+| `LEIA-ME.txt` | como importar, cadência, avisos |
+
+Sequência nos dois formatos: **V1** obra (com A1/A2), **V2** Libras com alfa, **V3** clipe bruto
+do intérprete no ponto sincronizado, **desativado** (referência para quem quiser refazer o chroma
+com as ferramentas do editor). O efeito não é traduzido para o keyer de cada programa: os
+parâmetros não têm equivalência e o resultado divergiria da prévia; o pré-render garante
+identidade com a entrega.
+
+Limites conhecidos:
+
+- **Velocidade ≠ 1** (deriva corrigida): o clipe bruto fica fora da sequência, com aviso. O
+  arquivo com alfa já sai na velocidade certa.
+- O som-guia do intérprete não entra na sequência.
+- Obras com mais de dois canais: só A1/A2 são mapeados; o app avisa.
+- Tamanho: ProRes 4444 de quadro inteiro, quase todo transparente, ocupa ~11 Mbit/s em 1080p
+  (~10 GB para 2 h).
+
+**Validação:** os dois XMLs são lidos pelo OpenTimelineIO (`otio-fcp-adapter` e
+`otio-fcpx-xml-adapter`, via `desktop/validar_otio.py`) em `desktop/intercambio.test.ts`, que
+confere trilhas, início, entrada e duração de cada clipe; o `.mov` é conferido por pixel (alfa
+transparente antes do clipe e fora da janela, opaco no corpo). Os adaptadores não leem
+`<enabled>` nem a cadência NTSC exata (truncam 23,976 para 23): esses pontos são conferidos no
+texto do XML. **Não testado no Premiere nem no Resolve**: é a próxima verificação necessária.
+
 ## Proxy de edição
 
 Masters de finalização chegam em formatos que o motor de vídeo do app não toca (ProRes, DNxHD/HR,

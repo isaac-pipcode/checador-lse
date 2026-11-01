@@ -5,10 +5,11 @@ import { Readable } from 'node:stream';
 import { FFMPEG, decodificarStream, executar, sondar, sondarVideo, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
 import { renderizarEntrega } from './entrega';
+import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
-import type { ArquivoTake, PedidoEntrega, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
+import type { ArquivoTake, PedidoEntrega, PedidoIntercambio, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
 import type { EstadoPrompter } from '../src/ad/prompter';
 
 /**
@@ -416,6 +417,20 @@ function registrarIpc() {
     },
   );
   ipcMain.handle('proxy:cancelar', (_e, caminho: string) => trabalhosProxy.get(resolve(caminho))?.abort());
+
+  ipcMain.handle('libras:exportarNle', async (e, { id, pedido }: { id: string; pedido: PedidoIntercambio }) => {
+    const permitidos = [...autorizados.values()];
+    if (!permitidos.includes(resolve(pedido.videoCaminho))) throw new Error('Caminho não autorizado.');
+    if (!permitidos.includes(resolve(pedido.libras.caminho))) throw new Error('Clipe de Libras não autorizado.');
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const r = await dialog.showOpenDialog(w!, {
+      title: 'Pasta para a exportação aos editores',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: dirname(pedido.videoCaminho),
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    return exportarSincronia(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
+  });
 
   ipcMain.handle('entrega:renderizar', async (e, { id, pedido }: { id: string; pedido: PedidoEntrega }) => {
     const permitidos = [...autorizados.values()];

@@ -4,6 +4,7 @@ import { ponte, type RelatorioEntrega } from '../../desktop/ponte';
 import { Exportar } from '../Exportar';
 import { SaidasAD } from '../ad/SaidasAD';
 import { PainelAbas, Secao } from '../comum';
+import { ExportarEditores } from '../libras/ExportarEditores';
 import { clipesDosBlocos, curvaDeDucking } from '../../ad/mixagem';
 import { bytesDoTake } from '../../ad/audio';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
@@ -123,6 +124,15 @@ export function EntregaEsquerda() {
         },
         { id: 'lse', rotulo: 'Legendas', conteudo: <Exportar /> },
         { id: 'ad', rotulo: 'Audiodescrição', conteudo: <SaidasAD /> },
+        {
+          id: 'editores',
+          rotulo: 'Editores',
+          conteudo: (
+            <Secao titulo="Libras para Premiere e Resolve">
+              <ExportarEditores />
+            </Secao>
+          ),
+        },
       ]}
     />
   );

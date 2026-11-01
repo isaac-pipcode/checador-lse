@@ -34,6 +34,7 @@ const ponte: PonteDesktop = {
   gerarProxy: (caminho, projetoCaminho, aoProgredir) => comProgresso('proxy:gerar', { caminho, projetoCaminho }, (f) => aoProgredir(f)),
   cancelarProxy: (caminho) => ipcRenderer.invoke('proxy:cancelar', caminho),
   renderizarEntrega: (pedido, aoProgredir) => comProgresso('entrega:renderizar', { pedido }, aoProgredir),
+  exportarParaEditores: (pedido, aoProgredir) => comProgresso('libras:exportarNle', { pedido }, aoProgredir),
   projetosRecentes: () => ipcRenderer.invoke('projetos:recentes'),
   novoProjeto: (nome) => ipcRenderer.invoke('projetos:novo', nome),
   abrirProjetoEm: (caminho) => ipcRenderer.invoke('projetos:abrirEm', caminho),
