@@ -83,6 +83,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ls -la instaladores
-          gh release create "$GITHUB_REF_NAME" instaladores/* \
-            --title "Ouver Estúdio $GITHUB_REF_NAME" \
-            --notes-file docs/release-notas.md
+          # A release pode já existir (criada pela interface do GitHub, que também cria a
+          # tag): nesse caso só anexa os instaladores.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" instaladores/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" instaladores/* \
+              --title "Ouver Estúdio $GITHUB_REF_NAME" \
+              --notes-file docs/release-notas.md
+          fi
