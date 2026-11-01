@@ -10,3 +10,6 @@ dist-desktop
 src/**/*.js
 test/**/*.js
 /vite.config.js
+
+# instaladores (electron-builder)
+release

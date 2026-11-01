@@ -182,7 +182,7 @@ const ROTULO_DECISAO: Record<Decision, string> = {
 
 export function relatorioMarkdown(r: RelatorioQa): string {
   const l: string[] = [];
-  l.push('# Relatório de QA — Checador de LSE');
+  l.push('# Relatório de QA da LSE — Ouver Estúdio');
   l.push('');
   l.push(`**Arquivo:** ${r.arquivo}  `);
   l.push(`**Gerado em:** ${new Date(r.geradoEm).toLocaleString('pt-BR')}  `);

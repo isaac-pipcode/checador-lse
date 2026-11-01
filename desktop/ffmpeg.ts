@@ -1,14 +1,46 @@
 import { spawn } from 'node:child_process';
 
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fpsDeFracao, type InfoVideo } from '../src/midia/avaliacao';
 
-/** Ordem de busca: variável de ambiente, depois o PATH. */
-export const FFMPEG = process.env.CHECADOR_FFMPEG || 'ffmpeg';
-/** ffprobe: variável própria, ou ao lado do ffmpeg indicado, ou o PATH. */
-export const FFPROBE =
-  process.env.CHECADOR_FFPROBE ||
-  (process.env.CHECADOR_FFMPEG ? join(dirname(process.env.CHECADOR_FFMPEG), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe') : 'ffprobe');
+/**
+ * Onde procurar o ffmpeg: variável de ambiente (OUVER_FFMPEG; CHECADOR_FFMPEG,
+ * nome antigo, ainda vale), depois os locais usuais de instalação e, por fim,
+ * o PATH. Os locais usuais importam no app instalado: no macOS, um app aberto
+ * pelo Finder não herda o PATH do terminal, e o ffmpeg do Homebrew ficaria
+ * invisível.
+ */
+export function resolverFfmpeg(
+  env: NodeJS.ProcessEnv = process.env,
+  plataforma: NodeJS.Platform = process.platform,
+  existe: (c: string) => boolean = existsSync,
+): { ffmpeg: string; ffprobe: string } {
+  const exe = plataforma === 'win32' ? '.exe' : '';
+  const indicado = env.OUVER_FFMPEG || env.CHECADOR_FFMPEG;
+  const probeIndicado = env.OUVER_FFPROBE || env.CHECADOR_FFPROBE;
+  const vizinho = (f: string) => join(dirname(f), `ffprobe${exe}`);
+  if (indicado) return { ffmpeg: indicado, ffprobe: probeIndicado || vizinho(indicado) };
+  const pastas =
+    plataforma === 'darwin'
+      ? ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin']
+      : plataforma === 'win32'
+        ? [
+            'C:\\ffmpeg\\bin',
+            join(env.ProgramFiles ?? 'C:\\Program Files', 'ffmpeg', 'bin'),
+            join(env.LOCALAPPDATA ?? '', 'Microsoft', 'WinGet', 'Links'),
+          ]
+        : ['/usr/bin', '/usr/local/bin', '/snap/bin'];
+  for (const p of pastas) {
+    const f = join(p, `ffmpeg${exe}`);
+    if (existe(f)) return { ffmpeg: f, ffprobe: probeIndicado || vizinho(f) };
+  }
+  return { ffmpeg: `ffmpeg${exe}`, ffprobe: probeIndicado || `ffprobe${exe}` };
+}
+
+const resolvido = resolverFfmpeg();
+export const FFMPEG = resolvido.ffmpeg;
+export const FFPROBE = resolvido.ffprobe;
 
 export function versaoFfmpeg(): Promise<string | null> {
   return new Promise((ok) => {

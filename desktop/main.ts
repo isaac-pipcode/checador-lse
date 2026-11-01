@@ -134,7 +134,7 @@ function janela(): BrowserWindow {
   const w = new BrowserWindow({
     width: 1440,
     height: 960,
-    title: 'Estúdio de Acessibilidade',
+    title: 'Ouver Estúdio',
     backgroundColor: '#FAF8F3',
     webPreferences: PREFERENCIAS,
   });

@@ -1,4 +1,4 @@
-# Design system — Estúdio de Acessibilidade
+# Design system — Ouver Estúdio
 
 Sistema visual do aplicativo desktop (Electron + React + Tailwind). Referências de interação:
 editores de vídeo profissionais. O DaVinci Resolve inspirou as páginas por etapa, com barra

@@ -1,4 +1,8 @@
-# Estúdio de Acessibilidade (antigo Checador de LSE)
+<img src="docs/marca/logotipo.svg" alt="Ouver Estúdio" width="260">
+
+# Ouver Estúdio
+
+*Ouver* junta **ouvir** e **ver**. Antes chamado Estúdio de Acessibilidade e, na origem, Checador de LSE. Marca e uso em [docs/marca](docs/marca/README.md).
 
 Programa unificado para as três camadas de acessibilidade audiovisual — **legendagem para surdos
 e ensurdecidos (LSE)**, **audiodescrição (AD)** e **janela de Libras** — sobre uma mesma linha do
@@ -127,7 +131,7 @@ passou** pela verificação com axe-core nem por leitor de tela.
 ## Aplicativo desktop
 
 O projeto roda também como aplicativo desktop (Electron), que é o alvo a partir do passo 2. Requer o
-**ffmpeg** instalado (no `PATH`, ou indicado em `CHECADOR_FFMPEG`).
+**ffmpeg** instalado (no `PATH`, ou indicado em `OUVER_FFMPEG`; no macOS e no Windows, os locais usuais de instalação também são procurados).
 
 ```bash
 npm install
@@ -135,6 +139,20 @@ npm run desktop        # build da interface + processo desktop, e abre o app
 ```
 
 Para desenvolver com recarga: `npm run dev` num terminal e `npm run desktop:dev` em outro.
+
+### Instaladores
+
+`npm run dist` gera o instalador da plataforma atual em `release/` (electron-builder): `.exe` (NSIS)
+no Windows, `.dmg` (Apple Silicon e Intel) no macOS, AppImage e `.deb` no Linux. O fluxo
+[`.github/workflows/release.yml`](.github/workflows/release.yml) testa em todo pull request e, numa
+tag `v*`, gera os instaladores nas três plataformas e publica uma release com eles. Para lançar uma
+versão: atualizar `version` no `package.json`, criar a tag (`git tag v0.2.0`) e enviá-la.
+
+Limites atuais: instaladores **sem assinatura** (o macOS e o Windows avisam na primeira abertura) e
+**ffmpeg não embutido** (embuti-lo exige decidir a distribuição sob a GPL/LGPL). As notas de
+instalação para o usuário final estão em [`docs/release-notas.md`](docs/release-notas.md). Testado
+empacotado no Linux (fluxo completo, incluindo a exportação para editores); Windows e macOS são
+gerados e verificados no CI, sem teste manual.
 
 O que o desktop acrescenta ao navegador:
 

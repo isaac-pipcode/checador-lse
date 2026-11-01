@@ -203,7 +203,7 @@ export function gerarFcpxml(s: SequenciaXml): string {
     ativo('r2', s.obra) +
     ativo('r3', s.libras) +
     (tb && s.bruto ? ativo('r4', s.bruto) : '') +
-    `</resources>\n<library><event name="Estúdio de Acessibilidade"><project name="${esc(s.nome)}">` +
+    `</resources>\n<library><event name="Ouver Estúdio"><project name="${esc(s.nome)}">` +
     `<sequence format="r1" duration="${t(total)}" tcStart="0s" tcFormat="${c.ntsc ? 'DF' : 'NDF'}" audioLayout="stereo" audioRate="48k"><spine>` +
     `<asset-clip ref="r2" offset="0s" name="${esc(s.obra.nome)}" start="0s" duration="${t(durObra)}" tcFormat="NDF">` +
     `<asset-clip ref="r3" lane="1" offset="0s" name="${esc(`Libras — ${s.libras.nome}`)}" start="0s" duration="${t(Math.min(total, quadros(s.libras.duracaoMs, c)))}"/>` +
@@ -238,7 +238,7 @@ function leiaMe(nome: string, arquivos: { alfa: string; xml?: string; fcpxml?: s
     'Os arquivos são referenciados pelo caminho absoluto: se mudarem de lugar, reconecte a mídia.',
     '',
     ...(avisos.length ? ['Avisos:', ...avisos.map((a) => `  - ${a}`), ''] : []),
-    'Gerado pelo Estúdio de Acessibilidade. Validado com o OpenTimelineIO; a importação em cada',
+    'Gerado pelo Ouver Estúdio. Validado com o OpenTimelineIO; a importação em cada',
     'versão de Premiere e Resolve deve ser conferida na primeira vez.',
     '',
   ].join('\r\n');
