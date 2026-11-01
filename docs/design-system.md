@@ -76,6 +76,13 @@ uma linha ali. Cor sempre `currentColor`, para seguir o tema e o estado. Todo í
 só cor. Gravar, reproduzir e pausar são preenchidos; o resto é contorno. Símbolos que fazem parte do
 texto (→ entre timecodes, −¼ s, ≥) continuam texto.
 
+**Libras** tem desenho próprio (`MaosLibras`, em `icones.tsx`): duas mãos em profundidade, a da
+frente aberta e a de trás espelhada e encoberta por máscara, mais uma marca de movimento. Uma mão
+só (o "hand" genérico) lê como "pare"; duas mãos em movimento leem como sinalização. Derivado do
+traçado "hand" do Lucide, no mesmo quadro e com o traço compensado pela escala de cada mão. Testado
+em 12, 16 e 18 px em densidade 1× (o caso pior), nos dois temas. **Pendente:** validar com
+intérpretes e usuários surdos.
+
 ### Foco
 
 Contorno de 2 px no acento (`terra`), com 2 px de folga, em todo elemento focável.
