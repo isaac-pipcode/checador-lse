@@ -13,6 +13,11 @@ const base = {
   desequilibrioMaximo: 0.4,
   maxExclamacoesPorObra: 10,
   janelaSemRotulo: 20,
+  toleranciaSincroniaMs: 300,
+  // ≈12 quadros a 24 fps: convenção de mercado (guias de estilo de streaming), não do Guia MinC.
+  margemCorteMs: 500,
+  somSemLegendaMs: 1500,
+  lacunaMinimaAdMs: 3000,
   contarEspacos: true,
   contarColchetes: true,
   checarTracoDialogo: true,

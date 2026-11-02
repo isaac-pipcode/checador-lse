@@ -2,6 +2,7 @@ import type { Cue, ReviewState, RuleConfig, Suggestion } from '../model/types';
 import { cpsDaLegenda, duracaoMs, faixaCps, formatarDuracao, formatarTimecode, ROTULO_FAIXA } from '../core/texto';
 import { Regua } from './Regua';
 import { CardSugestao } from './CardSugestao';
+import { Icone, type NomeIcone } from './icones';
 
 const CLASSE_FAIXA = {
   verde: 'border-ok bg-ok-100 text-ok',
@@ -9,7 +10,7 @@ const CLASSE_FAIXA = {
   vermelho: 'border-bad bg-bad-100 text-bad',
 } as const;
 
-const ICONE_FAIXA = { verde: '✓', ambar: '!', vermelho: '✕' } as const;
+const ICONE_FAIXA: Record<'verde' | 'ambar' | 'vermelho', NomeIcone> = { verde: 'ok', ambar: 'aviso', vermelho: 'erro' };
 
 export function BadgeCps({ cue, config }: { cue: Cue; config: RuleConfig }) {
   const cps = cpsDaLegenda(cue, config);
@@ -17,7 +18,7 @@ export function BadgeCps({ cue, config }: { cue: Cue; config: RuleConfig }) {
   const texto = Number.isFinite(cps) ? cps.toFixed(1).replace('.', ',') : '∞';
   return (
     <span className={`chip ${CLASSE_FAIXA[faixa]}`}>
-      <span aria-hidden="true">{ICONE_FAIXA[faixa]}</span>
+      <Icone nome={ICONE_FAIXA[faixa]} tamanho={12} />
       {texto} cps — {ROTULO_FAIXA[faixa]}
     </span>
   );
@@ -31,6 +32,7 @@ export function ItemLegenda({
   linhasFinais,
   remanescentes,
   mostrarPrevia,
+  aoVerNoVideo,
 }: {
   cue: Cue;
   sugestoes: Suggestion[];
@@ -39,6 +41,7 @@ export function ItemLegenda({
   linhasFinais?: string[];
   remanescentes: number;
   mostrarPrevia: boolean;
+  aoVerNoVideo?: () => void;
 }) {
   const alterada =
     mostrarPrevia && linhasFinais && linhasFinais.join('\n') !== cue.lines.join('\n');
@@ -47,7 +50,7 @@ export function ItemLegenda({
   return (
     <article
       aria-labelledby={`legenda-${cue.index}`}
-      className="border-b border-paper-400 px-4 py-4"
+      className="border-b border-paper-400 px-3 py-3"
       id={`cue-${cue.index}`}
     >
       <header className="flex flex-wrap items-center gap-2">
@@ -61,13 +64,18 @@ export function ItemLegenda({
         <BadgeCps cue={cue} config={config} />
         {alterada ? (
           <span className="chip border-ok bg-ok-100 text-ok">
-            <span aria-hidden="true">✎</span> alterada na prévia
+            <Icone nome="rascunho" tamanho={14} /> alterada na prévia
           </span>
         ) : null}
         {mostrarPrevia && remanescentes > 0 ? (
           <span className="chip border-bad bg-bad-100 text-bad">
-            <span aria-hidden="true">✕</span> {remanescentes} violação(ões) permanecem
+            <Icone nome="erro" tamanho={14} /> {remanescentes} violação(ões) permanecem
           </span>
+        ) : null}
+        {aoVerNoVideo ? (
+          <button type="button" className="btn-fantasma py-0.5 text-xs" onClick={aoVerNoVideo}>
+            <Icone nome="reproduzir" tamanho={14} /> Ver no vídeo
+          </button>
         ) : null}
         {sugestoes.length > 0 ? (
           <span className="ml-auto text-xs text-navy-700">
@@ -77,8 +85,8 @@ export function ItemLegenda({
       </header>
 
       {/* Renderização aproximada de como a legenda aparece em tela. */}
-      <div className="mt-2 rounded border border-paper-400 bg-navy px-3 py-2">
-        <div className="mx-auto max-w-[38ch] text-center font-mono text-sm text-paper">
+      <div className="mt-2 rounded border border-paper-400 bg-preto px-3 py-2">
+        <div className="mx-auto max-w-[38ch] text-center font-mono text-sm text-cabine-texto">
           {linhas.map((l, i) => (
             <div key={i} className="whitespace-pre-wrap">
               {l.replace(/<\/?[^>]+>/g, '') || ' '}

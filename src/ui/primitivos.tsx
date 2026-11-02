@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
 import type { Severity, Verifiability } from '../model/types';
+import { Icone, type NomeIcone } from './icones';
 
 /**
  * Severidade e status nunca são sinalizados só por cor (WCAG 2.2, 1.4.1):
- * cada chip traz ícone textual + rótulo escrito.
+ * cada chip traz ícone + rótulo escrito.
  */
 
-export const ICONE_SEVERIDADE: Record<Severity, string> = {
-  erro: '✕',
-  aviso: '!',
-  revisao_manual: '?',
+export const ICONE_SEVERIDADE: Record<Severity, NomeIcone> = {
+  erro: 'erro',
+  aviso: 'aviso',
+  revisao_manual: 'revisao',
 };
 
 export const ROTULO_SEVERIDADE: Record<Severity, string> = {
@@ -27,7 +28,7 @@ const CLASSE_SEVERIDADE: Record<Severity, string> = {
 export function ChipSeveridade({ severidade }: { severidade: Severity }) {
   return (
     <span className={`chip ${CLASSE_SEVERIDADE[severidade]}`}>
-      <span aria-hidden="true">{ICONE_SEVERIDADE[severidade]}</span>
+      <Icone nome={ICONE_SEVERIDADE[severidade]} tamanho={12} />
       {ROTULO_SEVERIDADE[severidade]}
     </span>
   );
@@ -37,6 +38,7 @@ export const ROTULO_VERIFICABILIDADE: Record<Verifiability, string> = {
   deterministica: 'Determinística',
   nlp: 'Assistida (NLP)',
   llm: 'Assistida (LLM)',
+  sinal: 'Assistida (sinal)',
   manual: 'Manual',
 };
 
@@ -44,6 +46,7 @@ export const EXPLICACAO_VERIFICABILIDADE: Record<Verifiability, string> = {
   deterministica: 'Verificação objetiva a partir do próprio arquivo.',
   nlp: 'Inferência do módulo de segmentação; vem com grau de confiança.',
   llm: 'Proposta gerada por modelo de linguagem; vem com grau de confiança.',
+  sinal: 'Inferência sobre o áudio e a imagem do vídeo (energia, diferença entre quadros); vem com grau de confiança.',
   manual: 'Não verificável a partir do texto isolado: exige o vídeo ou o áudio.',
 };
 

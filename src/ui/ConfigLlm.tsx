@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { MODELOS } from '../llm/cliente';
 import { useAcoes, useDespachar, useEstado } from '../state/store';
 import { Campo } from './primitivos';
+import { Icone } from './icones';
 
 /**
  * Configuração do módulo opcional de LLM. Desligado por padrão, com aviso
@@ -24,7 +25,7 @@ export function ConfigLlm() {
         aria-controls={`${idBase}-corpo`}
         onClick={() => setAberto((v) => !v)}
       >
-        <span aria-hidden="true">{aberto ? '▾' : '▸'}</span>
+        <Icone nome={aberto ? 'aberto' : 'recolhido'} tamanho={14} />
         Módulo assistido (LLM): {ativo ? 'ativo' : 'desligado'}
       </button>
 

@@ -1,33 +1,117 @@
 {
-  "name": "checador-lse",
+  "name": "ouver-estudio",
+  "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Checador de Legendagem para Surdos e Ensurdecidos (LSE) — validador, revisor assistido e exportador, client-side.",
+  "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
+  "author": {
+    "name": "Ouver"
+  },
+  "homepage": "https://github.com/isaac-pipcode/checador-lse",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
-    "@tanstack/react-virtual": "^3.14.11",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p desktop",
+    "build:desktop": "tsc -p desktop/tsconfig.json && node desktop/build.mjs",
+    "desktop": "npm run build && npm run build:desktop && electron .",
+    "desktop:dev": "npm run build:desktop && electron . --dev-server=http://localhost:5173",
+    "dist": "npm run build && npm run build:desktop && electron-builder --publish never",
+    "ffmpeg:baixar": "node scripts/baixar-ffmpeg.mjs",
+    "ffmpeg:verificar": "node scripts/verificar-ffmpeg.mjs"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "@tanstack/react-virtual": "^3.14.11",
+    "@types/node": "^26.6.6",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.5.5",
+    "axe-core": "^4.14.0",
+    "electron": "^45.2.1",
+    "electron-builder": "26.18.0",
+    "esbuild": "^0.28.2",
     "jsdom": "^30.0.1",
+    "lucide-react": "1.66.0",
     "postcss": "^8.5.28",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vitest": "^2.1.9"
-  }
+  },
+  "main": "dist-desktop/main.cjs",
+  "build": {
+    "appId": "br.com.ouver.estudio",
+    "productName": "Ouver Estúdio",
+    "copyright": "© Ouver",
+    "artifactName": "Ouver-Estudio-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-desktop/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.video",
+      "icon": "build/icon.png",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Ouver Estúdio"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo",
+      "icon": "build/icon.png",
+      "maintainer": "Ouver",
+      "synopsis": "LSE, audiodescrição e Libras numa mesma linha do tempo",
+      "syncDesktopName": true
+    },
+    "extraResources": [
+      {
+        "from": "vendor/ffmpeg/${platform}-${arch}",
+        "to": "ffmpeg",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "desktopName": "ouver-estudio.desktop"
 }

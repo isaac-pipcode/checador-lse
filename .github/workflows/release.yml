@@ -1,0 +1,114 @@
+# Instaladores do Ouver Estúdio para Windows, macOS e Linux.
+#
+# - Em pull requests: testa e gera os instaladores como artefatos (sem publicar),
+#   para uma falha de empacotamento aparecer antes da release.
+# - Numa tag v* (ex.: v0.1.0): testa, gera os instaladores nas três plataformas
+#   e publica uma release no GitHub com eles anexados.
+# - "Run workflow" manual: gera os instaladores como artefatos, sem publicar.
+#
+# Os instaladores NÃO são assinados (ainda): o macOS e o Windows avisam na
+# primeira abertura. O ffmpeg (GPL) vai embutido; seu código-fonte é anexado à release.
+name: Instaladores
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: ffmpeg e OpenTimelineIO (para os testes de mídia e de exportação)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install opentimelineio otio-fcp-adapter otio-fcpx-xml-adapter
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  instaladores:
+    needs: testes
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: vendor/cache
+          key: ffmpeg-${{ runner.os }}-${{ hashFiles('desktop/ffmpeg-embutido.json') }}
+      - name: Baixar e conferir o ffmpeg embutido (SHA-256 fixo)
+        run: npm run ffmpeg:baixar
+      - name: Gerar instaladores
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist
+      - name: Executar o ffmpeg embutido no app empacotado
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   npm run ffmpeg:verificar -- release/linux-unpacked/resources/ffmpeg ;;
+            Windows) npm run ffmpeg:verificar -- release/win-unpacked/resources/ffmpeg ;;
+            macOS)
+              npm run ffmpeg:verificar -- "release/mac-arm64/Ouver Estúdio.app/Contents/Resources/ffmpeg"
+              npm run ffmpeg:verificar -- "release/mac/Ouver Estúdio.app/Contents/Resources/ffmpeg" --opcional ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instaladores-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
+
+  # Uma só release, criada depois que as três plataformas terminaram (publicar de
+  # cada job em paralelo pode criar releases duplicadas).
+  release:
+    needs: instaladores
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: instaladores
+          merge-multiple: true
+      - name: Código-fonte do FFmpeg embutido (obrigação da GPL)
+        run: |
+          versao=$(node -p "require('./desktop/ffmpeg-embutido.json').versao")
+          curl -fsSL --retry 4 -o "instaladores/ffmpeg-$versao.tar.xz" "$(node -p "require('./desktop/ffmpeg-embutido.json').codigoFonte")"
+      - name: Publicar a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -la instaladores
+          # A release pode já existir (criada pela interface do GitHub, que também cria a
+          # tag): nesse caso só anexa os instaladores.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" instaladores/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" instaladores/* \
+              --title "Ouver Estúdio $GITHUB_REF_NAME" \
+              --notes-file docs/release-notas.md
+          fi

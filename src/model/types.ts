@@ -17,9 +17,9 @@ export interface Cue {
 }
 
 export type Severity = 'erro' | 'aviso' | 'revisao_manual';
-export type Verifiability = 'deterministica' | 'nlp' | 'llm' | 'manual';
+export type Verifiability = 'deterministica' | 'nlp' | 'llm' | 'sinal' | 'manual';
 
-export type RuleCategory = 'tecnica' | 'formatacao' | 'linguistica' | 'contextual';
+export type RuleCategory = 'tecnica' | 'formatacao' | 'linguistica' | 'contextual' | 'temporal';
 
 export interface CueSnapshot {
   lines: string[];
@@ -102,6 +102,15 @@ export interface RuleConfig {
   maxExclamacoesPorObra: number;
   /** X1 — nº de legendas consecutivas sem rótulo que dispara a checagem */
   janelaSemRotulo: number;
+
+  /** M1 — defasagem tolerada entre a entrada da legenda e o início do som (ms) */
+  toleranciaSincroniaMs: number;
+  /** M2 — distância ao corte abaixo da qual a legenda deve ser ajustada a ele (ms) */
+  margemCorteMs: number;
+  /** M3 — som contínuo sem legenda a partir do qual se pede revisão (ms) */
+  somSemLegendaMs: number;
+  /** lacunas para audiodescrição: duração mínima (ms) */
+  lacunaMinimaAdMs: number;
 
   contarEspacos: boolean;
   contarColchetes: boolean;

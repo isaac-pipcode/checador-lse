@@ -4,3 +4,15 @@ dist
 *.local
 coverage
 tsconfig.tsbuildinfo
+dist-desktop
+
+# saída do `tsc -b` (npm run typecheck emite JS ao lado do fonte; o Vite prefere .js a .tsx)
+src/**/*.js
+test/**/*.js
+/vite.config.js
+
+# instaladores (electron-builder)
+release
+
+# ffmpeg embutido (baixado por scripts/baixar-ffmpeg.mjs)
+vendor

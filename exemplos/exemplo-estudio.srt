@@ -1,0 +1,23 @@
+1
+00:00:01,000 --> 00:00:03,000
+[ANA] Bom dia. Você chegou cedo.
+
+2
+00:00:04,600 --> 00:00:06,500
+[PEDRO] O trânsito estava tranquilo.
+
+3
+00:00:07,000 --> 00:00:08,300
+[PORTA BATE]
+
+4
+00:00:09,000 --> 00:00:12,000
+[ANA] Quem será que está batendo na porta a esta hora?
+
+5
+00:00:13,000 --> 00:00:16,000
+[PEDRO] Deve ser o entregador.
+
+6
+00:00:17,300 --> 00:00:21,000
+[ENTREGADOR] Encomenda para a senhora Ana.

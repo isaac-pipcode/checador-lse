@@ -1,0 +1,45 @@
+{
+  "versao": "9.0.2",
+  "licenca": "GPL-3.0-or-later (compilações com libx264, --enable-gpl --enable-version3)",
+  "codigoFonte": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+  "plataformas": {
+    "darwin-arm64": {
+      "fonte": "Martin Riedl — https://ffmpeg.martin-riedl.de (binários assinados pela Apple)",
+      "receitas": "https://gitlab.com/martinr92/ffmpeg",
+      "arquivos": [
+        { "url": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffmpeg.zip", "sha256": "c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924", "extrair": ["ffmpeg"] },
+        { "url": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffprobe.zip", "sha256": "fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6", "extrair": ["ffprobe"] }
+      ],
+      "versoes": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/versions.txt"
+    },
+    "darwin-x64": {
+      "fonte": "Martin Riedl — https://ffmpeg.martin-riedl.de (binários assinados pela Apple)",
+      "receitas": "https://gitlab.com/martinr92/ffmpeg",
+      "arquivos": [
+        { "url": "https://ffmpeg.martin-riedl.de/download/macos/amd64/1789931006_9.0.2/ffmpeg.zip", "sha256": "7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4", "extrair": ["ffmpeg"] },
+        { "url": "https://ffmpeg.martin-riedl.de/download/macos/amd64/1789931006_9.0.2/ffprobe.zip", "sha256": "2322438ed2f6319a691291b247d09c69dcaa3a982460d1f269a7e1af335cfdfd", "extrair": ["ffprobe"] }
+      ],
+      "versoes": "https://ffmpeg.martin-riedl.de/download/macos/amd64/1789931006_9.0.2/versions.txt"
+    },
+    "linux-x64": {
+      "fonte": "Martin Riedl — https://ffmpeg.martin-riedl.de",
+      "receitas": "https://gitlab.com/martinr92/ffmpeg",
+      "arquivos": [
+        { "url": "https://ffmpeg.martin-riedl.de/download/linux/amd64/1789931100_9.0.2/ffmpeg.zip", "sha256": "fa8ecf4abbd290d98f7d188b8649cc6b391ae209a98452be955a15aab1909d7f", "extrair": ["ffmpeg"] },
+        { "url": "https://ffmpeg.martin-riedl.de/download/linux/amd64/1789931100_9.0.2/ffprobe.zip", "sha256": "3f428c49070be3d24ec338602b76d412e401ffcb8a5641ef0e729181a232fc32", "extrair": ["ffprobe"] }
+      ],
+      "versoes": "https://ffmpeg.martin-riedl.de/download/linux/amd64/1789931100_9.0.2/versions.txt"
+    },
+    "win32-x64": {
+      "fonte": "Gyan Doshi — https://www.gyan.dev/ffmpeg/builds (espelho oficial em github.com/GyanD/codexffmpeg)",
+      "receitas": "https://www.gyan.dev/ffmpeg/builds/ (README do pacote lista bibliotecas e versões)",
+      "arquivos": [
+        {
+          "url": "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip",
+          "sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
+          "extrair": ["ffmpeg-9.0.2-essentials_build/bin/ffmpeg.exe", "ffmpeg-9.0.2-essentials_build/bin/ffprobe.exe", "ffmpeg-9.0.2-essentials_build/README.txt"]
+        }
+      ]
+    }
+  }
+}

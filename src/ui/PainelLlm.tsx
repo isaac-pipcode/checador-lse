@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Suggestion } from '../model/types';
 import { useDespachar, useEstado } from '../state/store';
 import { ClienteLlm, descreverErroLlm } from '../llm/cliente';
+import { Icone } from './icones';
 
 /**
  * Aparece dentro de sugestões cujo módulo assistido está indisponível.
@@ -65,7 +66,7 @@ export function PainelLlm({ sugestao }: { sugestao: Suggestion }) {
           </button>
           {erro ? (
             <p role="alert" className="mt-2 text-bad">
-              <span aria-hidden="true">✕ </span>
+              <Icone nome="erro" tamanho={14} /> 
               {erro}
             </p>
           ) : null}
