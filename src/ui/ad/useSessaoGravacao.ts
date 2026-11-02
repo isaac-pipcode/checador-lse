@@ -40,7 +40,15 @@ export function useSessaoGravacao() {
 
   const gravador = useRef(new Gravador());
   const [microfones, setMicrofones] = useState<MediaDeviceInfo[]>([]);
-  const [micId, setMicId] = useState('');
+  // a escolha do microfone é do computador (como o tema), não do projeto
+  const [micId, setMicId] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_MICROFONE) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [, redesenhar] = useState(0);
   const [erroMic, setErroMic] = useState<string | null>(null);
   const [nivel, setNivel] = useState(-Infinity);
 
@@ -52,7 +60,12 @@ export function useSessaoGravacao() {
   const [prompterAberto, setPrompterAberto] = useState<string | null>(null);
 
   // Espelhos para o código assíncrono (que não pode depender de closures velhas).
-  const r = useRef({ fase: 'ocioso' as FaseGravacao, fila: [] as string[], blocoId: null as string | null, sequencia: false });
+  const r = useRef({
+    fase: 'ocioso' as FaseGravacao,
+    fila: [] as string[],
+    blocoId: null as string | null,
+    sequencia: false,
+  });
   const estadoRef = useRef(estado);
   estadoRef.current = estado;
   const vigia = useRef<number | null>(null);
@@ -65,6 +78,32 @@ export function useSessaoGravacao() {
   };
 
   useEffect(() => () => gravador.current.fechar(), []);
+
+  // Lista de microfones: já ao abrir a página (sem precisar abrir o microfone) e de
+  // novo a cada conexão/desconexão. Se a entrada em uso sumir, volta ao padrão.
+  useEffect(() => {
+    const md = navigator.mediaDevices;
+    if (!md?.enumerateDevices) return;
+    let vivo = true;
+    const listar = async () => {
+      const lista = await Gravador.microfones().catch(() => []);
+      if (!vivo) return;
+      setMicrofones(lista);
+      const e = gravador.current.entrada;
+      if (gravador.current.aberto && e && !e.viva && r.current.fase === 'ocioso') {
+        setAviso(`O microfone «${e.nome || 'em uso'}» foi desconectado. Usando o padrão do sistema.`);
+        void abrirMic(undefined);
+      }
+      redesenhar((n) => n + 1);
+    };
+    void listar();
+    md.addEventListener('devicechange', listar);
+    return () => {
+      vivo = false;
+      md.removeEventListener('devicechange', listar);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let raf = 0;
@@ -88,6 +127,7 @@ export function useSessaoGravacao() {
         const nome = e instanceof DOMException ? e.name : '';
         if (!deviceId || !['OverconstrainedError', 'NotFoundError'].includes(nome)) throw e;
         await gravador.current.abrir(ctx, undefined);
+        setAviso('O microfone escolhido não está conectado. Usando o padrão do sistema.');
       }
       setMicrofones(await Gravador.microfones());
       return true;
@@ -189,7 +229,9 @@ export function useSessaoGravacao() {
     descartarTake(tid);
     despachar({ tipo: 'adRemoverTake', blocoId: id, takeId: tid });
     // volta ao take anterior, se houver
-    const anterior = bloco(id)?.takes.filter((t) => t.id !== tid).slice(-1)[0];
+    const anterior = bloco(id)
+      ?.takes.filter((t) => t.id !== tid)
+      .slice(-1)[0];
     if (anterior) despachar({ tipo: 'adAtivarTake', blocoId: id, takeId: anterior.id });
     ultimoTakeId.current = null;
   }
@@ -331,7 +373,9 @@ export function useSessaoGravacao() {
   async function abrirPrompter() {
     if (!desktop) return;
     const r2 = await desktop.prompterAbrir();
-    setPrompterAberto(r2.secundario ? `segundo monitor: ${r2.monitor}` : `janela separada (só há um monitor: ${r2.monitor})`);
+    setPrompterAberto(
+      r2.secundario ? `segundo monitor: ${r2.monitor}` : `janela separada (só há um monitor: ${r2.monitor})`,
+    );
     ultimoEnvio.current = { em: 0, chave: '' };
     desktop.prompterEnviar(estadoPrompter);
   }
@@ -343,8 +387,15 @@ export function useSessaoGravacao() {
     micId,
     setMicId: (id: string) => {
       setMicId(id);
+      try {
+        localStorage.setItem(CHAVE_MICROFONE, id);
+      } catch {
+        /* sem armazenamento: vale só para a sessão */
+      }
       void abrirMic(id);
     },
+    /** a entrada de fato em uso (pode ser o padrão, se a escolhida sumiu) */
+    entradaEmUso: gravador.current.entrada,
     abrirMic: () => abrirMic(micId),
     micAberto: gravador.current.aberto,
     erroMic,
@@ -370,6 +421,8 @@ export function useSessaoGravacao() {
 export type SessaoGravacao = ReturnType<typeof useSessaoGravacao>;
 
 /** Mensagem do erro de microfone, com o que fazer em cada sistema. */
+const CHAVE_MICROFONE = 'estudio:microfone';
+
 export function mensagemDoMicrofone(e: unknown): string {
   const nome = e instanceof DOMException || e instanceof Error ? e.name : '';
   const so =
@@ -377,7 +430,8 @@ export function mensagemDoMicrofone(e: unknown): string {
       ? 'No macOS: Ajustes do Sistema → Privacidade e Segurança → Microfone → ative o Ouver Estúdio.'
       : 'No Windows: Configurações → Privacidade e segurança → Microfone → ative "Acesso ao microfone" e "Permitir que aplicativos da área de trabalho acessem o microfone".';
   if (nome === 'NotAllowedError' || nome === 'SecurityError') return `O sistema negou o acesso ao microfone. ${so}`;
-  if (nome === 'NotFoundError' || nome === 'OverconstrainedError') return 'Nenhum microfone encontrado. Conecte um microfone (ou escolha outro na aba Microfone) e tente de novo.';
+  if (nome === 'NotFoundError' || nome === 'OverconstrainedError')
+    return 'Nenhum microfone encontrado. Conecte um microfone (ou escolha outro na aba Microfone) e tente de novo.';
   if (nome === 'NotReadableError' || nome === 'AbortError')
     return `O microfone está ocupado por outro programa ou bloqueado pelo sistema. Feche chamadas e gravadores abertos. ${so}`;
   return `Não foi possível abrir o microfone: ${e instanceof Error ? e.message : String(e)}`;

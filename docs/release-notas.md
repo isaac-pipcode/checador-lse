@@ -10,6 +10,8 @@ janela de Libras numa mesma linha do tempo.
 - O texto do bloco de AD aparece sobre a imagem.
 - Gravação: o botão vira **Aprovar e gravar**; erros de microfone aparecem no topo da lista com o que fazer; os
   takes aparecem como trilha de áudio (**A3 Locução**) com forma de onda.
+- **Escolha do microfone** visível no topo da lista de blocos (com botão Testar e medidor), salva no
+  computador e atualizada ao conectar ou desconectar um microfone; se o escolhido sumir, usa o padrão e avisa.
 - Legendas e blocos de AD podem ser **arrastados** na linha do tempo (corpo move, bordas aparam) e têm
   **entrada e saída editáveis** (aceita `00:01:02,500`, `1:02,5` ou timecode com quadros).
 - Corrigida a lista de legendas, que ficava vazia com um vídeo aberto.
