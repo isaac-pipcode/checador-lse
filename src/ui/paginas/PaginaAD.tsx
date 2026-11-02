@@ -162,25 +162,35 @@ function RoteiroLista() {
     );
   }
   return (
-    <ol className="space-y-2 p-2">
-      {blocos.map((b, i) => (
-        <li key={b.id}>
-          <CartaoBloco
-            n={i + 1}
-            bloco={b}
-            apontamentos={verificarBloco(b, final.cues, parametros)}
-            ppm={parametros.palavrasPorMinuto}
-            aoFocar={() => setFoco(b.id)}
-            podeGravar={!!video && !sessao.ativa}
-            aoGravar={() => sessao.gravarAvulso(b.id)}
-            aoOuvir={() => {
-              buscar(Math.max(0, b.inicioMs - 2000));
-              void video?.play();
-            }}
-          />
-        </li>
-      ))}
-    </ol>
+    <>
+      {sessao.erroMic || sessao.aviso ? (
+        <div
+          role="alert"
+          className={`m-2 mb-0 rounded border px-3 py-2 text-xs ${sessao.erroMic ? 'border-bad bg-bad-100 text-bad' : 'border-paper-400 bg-paper-200 text-navy-700'}`}
+        >
+          {sessao.erroMic ?? sessao.aviso}
+        </div>
+      ) : null}
+      <ol className="space-y-2 p-2">
+        {blocos.map((b, i) => (
+          <li key={b.id}>
+            <CartaoBloco
+              n={i + 1}
+              bloco={b}
+              apontamentos={verificarBloco(b, final.cues, parametros)}
+              ppm={parametros.palavrasPorMinuto}
+              aoFocar={() => setFoco(b.id)}
+              podeGravar={!!video && !sessao.ativa}
+              aoGravar={() => sessao.gravarAvulso(b.id)}
+              aoOuvir={() => {
+                buscar(Math.max(0, b.inicioMs - 2000));
+                void video?.play();
+              }}
+            />
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 

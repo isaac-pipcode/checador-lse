@@ -2,7 +2,7 @@
   "name": "ouver-estudio",
   "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
   "author": {
@@ -74,7 +74,10 @@
       ],
       "category": "public.app-category.video",
       "icon": "build/icon.png",
-      "identity": null
+      "identity": null,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "O Ouver Estúdio usa o microfone para gravar a audiodescrição."
+      }
     },
     "win": {
       "target": [

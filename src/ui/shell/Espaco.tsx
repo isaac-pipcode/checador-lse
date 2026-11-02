@@ -4,7 +4,8 @@ import { DOCUMENT_SCOPE } from '../../model/types';
 import { useDespachar, useEstado, useResultadoFinal, type Pagina } from '../../state/store';
 import { analisarAudio, JANELA_MS } from '../../mapa/midia';
 import { ponte } from '../../desktop/ponte';
-import { LinhaDoTempo, type BlocoNaLinha } from '../LinhaDoTempo';
+import { LinhaDoTempo, type BlocoNaLinha, type TakeNaLinha } from '../LinhaDoTempo';
+import { MS_POR_PICO, picosDoTake } from '../../ad/audio';
 import { carregarMidia } from '../carregarMidia';
 import { CtxVideo } from '../contextoVideo';
 import { MotorPrevia } from '../../ad/previa';
@@ -116,6 +117,17 @@ export function Espaco() {
   // seleção e listas, nem de um botão focado pelo teclado (ali o espaço aciona o botão); um botão que
   // acabou de ser clicado com o mouse não segura o espaço. Na sessão de gravação, o espaço é do gravador.
   useEffect(() => {
+    // como o foco chegou ao elemento atual: por clique ou por teclado (Tab)
+    let ultimaFoiPonteiro = false;
+    let focoPorPonteiro = false;
+    const ponteiro = () => (ultimaFoiPonteiro = true);
+    const teclaQualquer = (e: KeyboardEvent) => {
+      if (e.key !== ' ') ultimaFoiPonteiro = false;
+    };
+    const foco = () => (focoPorPonteiro = ultimaFoiPonteiro);
+    window.addEventListener('pointerdown', ponteiro, true);
+    window.addEventListener('keydown', teclaQualquer, true);
+    window.addEventListener('focusin', foco, true);
     const tecla = (e: KeyboardEvent) => {
       if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.defaultPrevented) return;
       if (document.documentElement.dataset.sessaoGravacao) return;
@@ -126,7 +138,7 @@ export function Espaco() {
         if (tag === 'TEXTAREA' || tag === 'SELECT') return;
         if (tag === 'INPUT' && (alvo as HTMLInputElement).type !== 'range') return;
         const papel = alvo.getAttribute('role');
-        if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || papel === 'tab' || papel === 'button') && alvo.matches(':focus-visible')) return;
+        if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || papel === 'tab' || papel === 'button') && !focoPorPonteiro) return;
       }
       const v = elVideo.current;
       if (!v) return;
@@ -134,7 +146,12 @@ export function Espaco() {
       void (v.paused ? v.play() : v.pause());
     };
     window.addEventListener('keydown', tecla);
-    return () => window.removeEventListener('keydown', tecla);
+    return () => {
+      window.removeEventListener('keydown', tecla);
+      window.removeEventListener('pointerdown', ponteiro, true);
+      window.removeEventListener('keydown', teclaQualquer, true);
+      window.removeEventListener('focusin', foco, true);
+    };
   }, []);
 
   // prévia de mixagem da AD: sempre ligada ao vídeo; o botão AD do transporte liga/desliga
@@ -223,6 +240,26 @@ export function Espaco() {
       }),
     [ad.blocos, ad.parametros, final.cues],
   );
+  // takes ativos como clipes de áudio (trilha A3); a forma de onda vem do áudio já decodificado
+  const trilhaLocucao: TakeNaLinha[] | undefined = useMemo(() => {
+    const lista: TakeNaLinha[] = [];
+    ad.blocos.forEach((b, i) => {
+      const t = takeAtivo(b);
+      if (!t) return;
+      lista.push({
+        id: t.id,
+        blocoId: b.id,
+        inicioMs: t.posicaoMs,
+        fimMs: t.posicaoMs + duracaoUtil(t),
+        picos: picosDoTake(t.id),
+        msPorPico: MS_POR_PICO,
+        aparoInicioMs: t.trimInicioMs,
+        ganho: Math.pow(10, (t.ganhoDb ?? 0) / 20),
+        rotulo: `do bloco ${i + 1}`,
+      });
+    });
+    return lista.length || pagina === 'ad' ? lista : undefined;
+  }, [ad.blocos, pagina]);
   const trilhaLibras = libras.clipe
     ? { inicioMs: libras.inicioNaObraMs, fimMs: libras.inicioNaObraMs + libras.clipe.duracaoMs, rotulo: libras.clipe.nome }
     : null;
@@ -552,6 +589,17 @@ export function Espaco() {
                   despachar({ tipo: 'irParaLegenda', index });
                 }}
                 trilhaAd={trilhaAd}
+                trilhaLocucao={trilhaLocucao}
+                aoMudarLegenda={(index, startMs, endMs) => despachar({ tipo: 'cueTempo', index, startMs, endMs })}
+                aoMudarBloco={(id, inicioMs, fimMs) => {
+                  const b = ad.blocos.find((x) => x.id === id);
+                  despachar({ tipo: 'adEditar', id, mudanca: { inicioMs, fimMs } });
+                  // mover (mesma duração) leva as gravações junto; aparar não mexe nelas
+                  const delta = b ? inicioMs - b.inicioMs : 0;
+                  if (b && delta !== 0 && fimMs - inicioMs === b.fimMs - b.inicioMs)
+                    for (const t of b.takes)
+                      despachar({ tipo: 'adAjustarTake', blocoId: id, takeId: t.id, mudanca: { posicaoMs: t.posicaoMs + delta } });
+                }}
                 curvaGanho={ouvirAd ? curva : undefined}
                 trilhaLibras={trilhaLibras}
                 aoSelecionarBloco={(bid) => {

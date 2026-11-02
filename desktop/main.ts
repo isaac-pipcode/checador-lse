@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell, systemPreferences } from 'electron';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -497,7 +497,14 @@ app.whenReady().then(() => {
   // microfone permitido (gravação de AD); câmera e o resto, não
   session.defaultSession.setPermissionRequestHandler((_wc, permissao, ok, detalhes) => {
     const d = detalhes as { mediaTypes?: string[] };
-    ok(permissao === 'media' && (d.mediaTypes ?? []).every((t) => t === 'audio'));
+    const soAudio = permissao === 'media' && (d.mediaTypes ?? []).every((t) => t === 'audio');
+    if (!soAudio) return ok(false);
+    // no macOS, o sistema também precisa autorizar (pede uma vez; depois, Ajustes → Privacidade → Microfone)
+    if (process.platform === 'darwin') {
+      void systemPreferences.askForMediaAccess('microphone').then(ok, () => ok(false));
+      return;
+    }
+    ok(true);
   });
   registrarIpc();
   janela();

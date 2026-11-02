@@ -443,6 +443,15 @@ Os **painéis são redimensionáveis**: arraste as divisórias entre painel esqu
 ou a do topo da linha do tempo (também pelo teclado, com foco na divisória: setas, Home/End; Enter
 ou duplo clique restauram). As larguras ficam salvas por página; a altura da linha do tempo, para
 todas.
+**Edição na linha do tempo.** Legendas (ST) e blocos de AD (A2) se arrastam: o corpo move, as bordas
+(6 px) aparam a entrada ou a saída, com encaixe no quadro e no cursor e sem invadir os vizinhos; mover um
+bloco leva as gravações junto. Entrada e saída também são campos editáveis nos itens das listas
+(`00:01:02,500`, `1:02,5` ou `00:01:02:12`). Editar o tempo de uma legenda reanalisa as regras e mantém
+as decisões de apontamentos que não mudaram. Os takes ativos aparecem na trilha **A3 Locução**, com
+forma de onda. A linha do tempo abre ajustada à obra (**Ajustar**, tecla 0); a **barra de espaço**
+reproduz e pausa (exceto em campos de texto, caixas de seleção e botões focados pelo teclado; na sessão
+de gravação, o espaço é do gravador).
+
 Os botões à esquerda da barra superior **recolhem** o painel esquerdo, a linha do tempo e o
 inspetor, e o menu **Layout** salva o arranjo com um nome e alterna entre layouts (prontos: "Padrão"
 e "Foco no monitor").

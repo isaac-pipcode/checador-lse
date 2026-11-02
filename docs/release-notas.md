@@ -1,7 +1,20 @@
 Versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE), audiodescrição e
 janela de Libras numa mesma linha do tempo.
 
-**Novo na 0.1.1:** o ffmpeg vem embutido. Não é mais preciso instalar nada além do Ouver Estúdio.
+**Novo na 0.1.2** (correções a partir do primeiro uso real):
+
+- A tela cabe em notebooks com escala de 125–150% (não é mais preciso rolar para os lados).
+- A linha do tempo abre mostrando a obra inteira; botão **Ajustar** (tecla 0).
+- **Barra de espaço** reproduz e pausa.
+- **Gerar proxy** sempre disponível no monitor; vídeos pesados (acima de 20 Mb/s, 4K) mostram a sugestão ao abrir.
+- O texto do bloco de AD aparece sobre a imagem.
+- Gravação: o botão vira **Aprovar e gravar**; erros de microfone aparecem no topo da lista com o que fazer; os
+  takes aparecem como trilha de áudio (**A3 Locução**) com forma de onda.
+- Legendas e blocos de AD podem ser **arrastados** na linha do tempo (corpo move, bordas aparam) e têm
+  **entrada e saída editáveis** (aceita `00:01:02,500`, `1:02,5` ou timecode com quadros).
+- Corrigida a lista de legendas, que ficava vazia com um vídeo aberto.
+
+O ffmpeg continua embutido (desde a 0.1.1).
 
 ## Instaladores
 

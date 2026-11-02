@@ -78,14 +78,21 @@ export function useSessaoGravacao() {
 
   async function abrirMic(deviceId?: string): Promise<boolean> {
     setErroMic(null);
+    const ctx = contextoAudio();
     try {
-      const ctx = contextoAudio();
       await ctx.resume(); // nasce suspenso até um gesto do usuário
-      await gravador.current.abrir(ctx, deviceId || undefined);
+      try {
+        await gravador.current.abrir(ctx, deviceId || undefined);
+      } catch (e) {
+        // o microfone escolhido sumiu (desconectado, outro computador): tenta o padrão do sistema
+        const nome = e instanceof DOMException ? e.name : '';
+        if (!deviceId || !['OverconstrainedError', 'NotFoundError'].includes(nome)) throw e;
+        await gravador.current.abrir(ctx, undefined);
+      }
       setMicrofones(await Gravador.microfones());
       return true;
     } catch (e) {
-      setErroMic(`Não foi possível abrir o microfone: ${e instanceof Error ? e.message : String(e)}`);
+      setErroMic(mensagemDoMicrofone(e));
       return false;
     }
   }
@@ -137,11 +144,25 @@ export function useSessaoGravacao() {
     const b = bloco(r.current.blocoId);
     setFase('processando');
     video?.pause();
-    const blob = await gravador.current.parar();
+    let blob: Blob;
+    try {
+      blob = await gravador.current.parar();
+    } catch (e) {
+      return encerrar(`A gravação falhou: ${e instanceof Error ? e.message : String(e)}`);
+    }
     if (!b) return encerrar();
     const p = estadoRef.current.ad.parametros;
     const tid = novoId('t');
-    const buffer = await registrarTake(tid, blob);
+    let buffer: AudioBuffer;
+    try {
+      buffer = await registrarTake(tid, blob);
+    } catch (e) {
+      return encerrar(
+        blob.size === 0
+          ? 'A gravação veio vazia: o microfone não entregou áudio. Confira o microfone escolhido e o medidor de nível.'
+          : `Não foi possível ler a gravação: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
     const corte = aparar(buffer.getChannelData(0), buffer.sampleRate, p.aparoDb);
     // A pré-rolagem nunca é AD utilizável: descarta-se, haja ou não silêncio.
     const minimoInicio = Math.max(0, b.inicioMs - FOLGA_INICIO_MS - inicioGravacaoMs.current);
@@ -347,3 +368,17 @@ export function useSessaoGravacao() {
 }
 
 export type SessaoGravacao = ReturnType<typeof useSessaoGravacao>;
+
+/** Mensagem do erro de microfone, com o que fazer em cada sistema. */
+export function mensagemDoMicrofone(e: unknown): string {
+  const nome = e instanceof DOMException || e instanceof Error ? e.name : '';
+  const so =
+    typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
+      ? 'No macOS: Ajustes do Sistema → Privacidade e Segurança → Microfone → ative o Ouver Estúdio.'
+      : 'No Windows: Configurações → Privacidade e segurança → Microfone → ative "Acesso ao microfone" e "Permitir que aplicativos da área de trabalho acessem o microfone".';
+  if (nome === 'NotAllowedError' || nome === 'SecurityError') return `O sistema negou o acesso ao microfone. ${so}`;
+  if (nome === 'NotFoundError' || nome === 'OverconstrainedError') return 'Nenhum microfone encontrado. Conecte um microfone (ou escolha outro na aba Microfone) e tente de novo.';
+  if (nome === 'NotReadableError' || nome === 'AbortError')
+    return `O microfone está ocupado por outro programa ou bloqueado pelo sistema. Feche chamadas e gravadores abertos. ${so}`;
+  return `Não foi possível abrir o microfone: ${e instanceof Error ? e.message : String(e)}`;
+}
