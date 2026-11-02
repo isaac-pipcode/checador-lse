@@ -9,8 +9,8 @@ export function semMarcacao(s: string): string {
  * Conta os caracteres efetivamente exibidos em uma linha.
  *
  * Default fiel ao Guia (MinC/SAv, 2016), que contabiliza espaços — o exemplo
- * "Empresário mata ex-mulher no centro de Fortaleza" é apresentado ali como
- * 48 caracteres. Os toggles permitem reproduzir normas de mercado que excluem
+ * de manchete do Guia é apresentado ali como 48 caracteres (nos testes, uma
+ * frase inventada de mesmo tamanho: "Cantor lança o disco inédito no centro de Recife"). Os toggles permitem reproduzir normas de mercado que excluem
  * espaços, ou desconsiderar o conteúdo entre colchetes.
  */
 export function contarCaracteres(linha: string, config: RuleConfig): number {

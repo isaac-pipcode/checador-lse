@@ -88,7 +88,7 @@ Legenda de sete segundos
 });
 
 describe('T5 — velocidade (caso de aceite 3)', () => {
-  const texto = 'Empresário mata ex-mulher no centro de Fortaleza';
+  const texto = 'Cantor lança o disco inédito no centro de Recife';
 
   it('conta 48 caracteres, como o Guia', () => {
     expect(contarCaracteres(texto, config())).toBe(48);

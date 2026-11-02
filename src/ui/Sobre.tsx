@@ -150,6 +150,20 @@ function ComponentesTerceiros() {
   }, []);
   return (
     <>
+      <h3 className="mt-8 text-lg font-semibold">Licença</h3>
+      <p className="mt-2 text-sm text-navy-700">
+        O Ouver Estúdio é software livre, sob a <strong>GNU GPL versão 3 ou posterior</strong>. O código-fonte está em{' '}
+        <a
+          className="underline"
+          href="https://github.com/isaac-pipcode/checador-lse"
+          target="_blank"
+          rel="noreferrer"
+        >
+          github.com/isaac-pipcode/checador-lse
+        </a>
+        .
+      </p>
+
       <h3 className="mt-8 text-lg font-semibold">Componentes de terceiros</h3>
       <p className="mt-2 text-sm text-navy-700">
         <strong>FFmpeg</strong> lê, analisa e gera o áudio e o vídeo. Ele é executado como programa separado e não faz

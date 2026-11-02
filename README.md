@@ -86,8 +86,9 @@ Guia.
 
 ### Contagem de caracteres
 
-O padrão inclui espaços e o conteúdo entre colchetes, fiel ao Guia — que apresenta
-*"Empresário mata ex-mulher no centro de Fortaleza"* como **48 caracteres**. Casas de legendagem
+O padrão inclui espaços e o conteúdo entre colchetes, fiel ao Guia, cujo exemplo de manchete de uma
+linha conta **48 caracteres** com os espaços. Os testes usam uma frase inventada de mesmo tamanho e mesma
+estrutura (*"Cantor lança o disco inédito no centro de Recife"*). Casas de legendagem
 divergem nesse ponto, então há dois *toggles* (`contarEspacos`, `contarColchetes`); o critério usado
 fica registrado no relatório de QA.
 
@@ -535,6 +536,13 @@ linha, sem *crash*) e o fluxo completo de aprovação/rejeição/edição com ve
 e do relatório de QA.
 
 ## Licença e escopo
+
+O Ouver Estúdio é **software livre**, sob a [GNU General Public License v3.0 ou posterior](LICENSE)
+(GPL-3.0-or-later): pode ser usado, estudado, modificado e redistribuído; quem distribuir versões
+modificadas precisa distribuí-las sob a mesma licença, com o código-fonte. © 2026 Ouver e
+colaboradores. Componentes de terceiros mantêm as suas licenças: FFmpeg (GPL-3.0, embutido nos
+instaladores; ver `resources/ffmpeg` e [`desktop/ffmpeg-embutido.json`](desktop/ffmpeg-embutido.json)),
+Lucide (ISC), React (MIT) e demais dependências listadas no `package.json`.
 
 Implementação independente dos parâmetros publicados pelo MinC/SAv e pelo grupo LEAD/UECE. Não é
 produto oficial dessas instituições.
