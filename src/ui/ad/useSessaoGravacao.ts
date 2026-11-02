@@ -248,6 +248,8 @@ export function useSessaoGravacao() {
   // Teclado na janela principal (operadora).
   useEffect(() => {
     if (fase === 'ocioso') return;
+    // durante a sessão, o espaço é do gravador (encerrar o take, ouvir), não do play/pause global
+    document.documentElement.dataset.sessaoGravacao = 'ativa';
     const tecla = (e: KeyboardEvent) => {
       const alvo = e.target as HTMLElement | null;
       const emCampo = alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName);
@@ -259,7 +261,10 @@ export function useSessaoGravacao() {
       }
     };
     window.addEventListener('keydown', tecla);
-    return () => window.removeEventListener('keydown', tecla);
+    return () => {
+      window.removeEventListener('keydown', tecla);
+      delete document.documentElement.dataset.sessaoGravacao;
+    };
   }, [fase]);
 
   // Comandos vindos da janela do locutor.

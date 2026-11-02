@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDespachar, useEstado } from '../../state/store';
 import { ponte } from '../../desktop/ponte';
 import { avaliarMidia } from '../../midia/avaliacao';
@@ -52,8 +53,14 @@ export function ControleProxy() {
             Cancelar
           </button>
         </span>
-      ) : desktop && v.caminho && aval && aval.necessidade !== 'dispensavel' ? (
-        <button type="button" className="btn-secundario h-6 px-2 text-2xs" onClick={() => void gerar()} title={aval.motivos.join(' ')}>
+      ) : desktop && v.caminho ? (
+        // sempre disponível: mesmo um arquivo "leve" pode pesar numa máquina modesta
+        <button
+          type="button"
+          className={`${aval?.necessidade === 'recomendado' ? 'btn-primario' : 'btn-secundario'} h-6 px-2 text-2xs`}
+          onClick={() => void gerar()}
+          title={aval?.motivos.length ? aval.motivos.join(' ') : 'Cria uma cópia leve (H.264, 720p) para editar; a entrega usa sempre o original.'}
+        >
           Gerar proxy
         </button>
       ) : null}
@@ -108,6 +115,47 @@ export function AvisoOriginal({ erroDeReproducao }: { erroDeReproducao: boolean 
           </button>
         ) : null}
         {trabalho?.erro ? <p className="mt-2 text-xs text-cabine-erro">{trabalho.erro}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Aviso sobre a imagem, ao abrir um vídeo pesado mas reproduzível: sugere o proxy
+ * uma vez por vídeo (pode ser dispensado; o botão "Gerar proxy" continua no
+ * cabeçalho do monitor).
+ */
+export function SugestaoProxy() {
+  const { estado } = useEstado();
+  const despachar = useDespachar();
+  const desktop = ponte();
+  const v = estado.video;
+  const [dispensado, setDispensado] = useState<string | null>(null);
+  if (!v || !desktop || !v.caminho || v.proxy || v.usarProxy || dispensado === v.caminho) return null;
+  const aval = v.info ? avaliarMidia(v.info) : null;
+  if (aval?.necessidade !== 'recomendado' || aval.reproduzivel === 'nao') return null;
+  if (estado.proxies[v.caminho] && !estado.proxies[v.caminho].erro) return null;
+  return (
+    <div className="absolute left-1/2 top-3 z-10 w-[min(92%,30rem)] -translate-x-1/2 rounded border border-paper-400 bg-paper-200/95 p-3 text-xs text-navy shadow-2xl" role="status">
+      <p className="font-semibold">Vídeo pesado para editar: {aval.descricao}</p>
+      <p className="mt-1 text-navy-700">
+        {aval.motivos.join(' ')} Um proxy (cópia leve, 720p) deixa a reprodução e a busca fluidas; a entrega usa sempre o
+        original.
+      </p>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          className="btn-primario h-7"
+          onClick={async () => {
+            const px = await gerarProxyDe(despachar, v.caminho!, estado.projeto.caminho);
+            if (px) despachar({ tipo: 'videoProxy', proxy: px, usar: true });
+          }}
+        >
+          Gerar proxy
+        </button>
+        <button type="button" className="btn-fantasma h-7" onClick={() => setDispensado(v.caminho)}>
+          Agora não
+        </button>
       </div>
     </div>
   );

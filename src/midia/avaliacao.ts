@@ -55,7 +55,8 @@ const NOMES: Record<string, string> = {
 };
 
 const LIMITE_ALTURA = 1080;
-const LIMITE_BITRATE = 50e6;
+/** acima disso, o proxy é recomendado: masters H.264 de cliente costumam vir entre 20 e 50 Mb/s */
+const LIMITE_BITRATE = 20e6;
 const LIMITE_FPS = 30.5;
 
 export function fpsDeFracao(r: string | undefined | null): number | null {

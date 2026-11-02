@@ -41,7 +41,10 @@ const H_AD = 40;
 const H_LIBRAS = 26;
 const H_CANVAS = H_REGUA + H_SOM;
 
-const ZOOMS = [2, 5, 10, 20, 40, 80, 160, 320];
+/** zoom máximo (px por segundo): ~13 px por quadro a 24 qd/s */
+const ZOOM_MAX = 320;
+/** o deslizante de zoom é logarítmico: cada passo multiplica o zoom pelo mesmo fator */
+const PASSOS_ZOOM = 100;
 
 const CLASSE_SEV: Record<Severity | 'ok', string> = {
   erro: 'border-bad bg-bad-100 text-bad',
@@ -109,8 +112,10 @@ export interface PropsLinhaDoTempo {
 
 export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const id = useId();
-  const [zoom, setZoom] = useState(4); // índice em ZOOMS
-  const pxs = ZOOMS[zoom];
+  // Zoom contínuo. "Ajustado" (o padrão ao abrir) mostra a obra inteira e acompanha a
+  // largura do painel; qualquer zoom manual sai do ajuste.
+  const [ajustado, setAjustado] = useState(true);
+  const [pxsManual, setPxsManual] = useState(40);
   const [acompanhar, setAcompanhar] = useState(true);
   const [legenda, alternarLegenda] = useAjudaAberta();
   const vp = useRef<HTMLDivElement>(null);
@@ -118,7 +123,13 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const [scroll, setScroll] = useState(0);
   const [largura, setLargura] = useState(800);
 
-  const total = Math.max(1, (p.duracaoMs / 1000) * pxs);
+  const segundos = Math.max(1, p.duracaoMs / 1000);
+  const pxsAjuste = Math.min(ZOOM_MAX, Math.max(0.01, (largura - 12) / segundos));
+  const zoomMin = Math.min(pxsAjuste, 2);
+  const pxs = ajustado ? pxsAjuste : Math.min(ZOOM_MAX, Math.max(zoomMin, pxsManual));
+  const total = Math.max(1, segundos * pxs);
+  const paraPasso = (v: number) => Math.round((Math.log(v / zoomMin) / Math.log(ZOOM_MAX / zoomMin)) * PASSOS_ZOOM);
+  const doPasso = (n: number) => zoomMin * Math.pow(ZOOM_MAX / zoomMin, n / PASSOS_ZOOM);
   const hAd = p.trilhaAd ? H_AD : 0;
   const hLib = p.trilhaLibras !== undefined ? H_LIBRAS : 0;
   const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + hLib + H_LACUNAS;
@@ -147,14 +158,23 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   }, [p.tempoMs, pxs, acompanhar]);
 
   function mudarZoom(novo: number) {
-    const i = Math.max(0, Math.min(ZOOMS.length - 1, novo));
-    setZoom(i);
-    // mantém o cursor de reprodução no mesmo ponto relativo da tela
+    const v = Math.min(ZOOM_MAX, Math.max(zoomMin, novo));
+    setAjustado(false);
+    setPxsManual(v);
+    // mantém o cursor de reprodução no meio da tela
     requestAnimationFrame(() => {
       const el = vp.current;
-      if (el) el.scrollLeft = Math.max(0, (p.tempoMs / 1000) * ZOOMS[i] - el.clientWidth / 2);
+      if (el) el.scrollLeft = Math.max(0, (p.tempoMs / 1000) * v - el.clientWidth / 2);
     });
   }
+
+  function ajustar() {
+    setAjustado(true);
+    requestAnimationFrame(() => {
+      if (vp.current) vp.current.scrollLeft = 0;
+    });
+  }
+
 
   // Desenho do canvas: régua + envelope + atividade + limiar.
   useEffect(() => {
@@ -270,8 +290,9 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
     const passoMs = e.shiftKey ? 5000 : 1000;
     if (e.key === 'ArrowRight') p.aoBuscar(Math.min(p.duracaoMs, p.tempoMs + passoMs));
     else if (e.key === 'ArrowLeft') p.aoBuscar(Math.max(0, p.tempoMs - passoMs));
-    else if (e.key === '+' || e.key === '=') mudarZoom(zoom + 1);
-    else if (e.key === '-') mudarZoom(zoom - 1);
+    else if (e.key === '+' || e.key === '=') mudarZoom(pxs * 2);
+    else if (e.key === '-') mudarZoom(pxs / 2);
+    else if (e.key === '0') ajustar();
     else return;
     e.preventDefault();
   }
@@ -295,21 +316,24 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
             Acompanhar
           </button>
           <div className="ml-2 flex items-center gap-1" role="group" aria-label="Zoom">
-            <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
+            <button type="button" className="segmento" aria-pressed={ajustado} onClick={ajustar} title="Mostrar a obra inteira (0)">
+              Ajustar
+            </button>
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(pxs / 2)} disabled={pxs <= zoomMin + 1e-9}>
               <Icone nome="afastar" />
             </button>
             <input
               type="range"
               className="w-24"
               aria-label="Zoom da linha do tempo"
-              aria-valuetext={`${pxs} pixels por segundo`}
+              aria-valuetext={ajustado ? 'obra inteira' : `${pxs < 10 ? pxs.toFixed(1) : Math.round(pxs)} pixels por segundo`}
               min={0}
-              max={ZOOMS.length - 1}
+              max={PASSOS_ZOOM}
               step={1}
-              value={zoom}
-              onChange={(e) => mudarZoom(Number(e.target.value))}
+              value={paraPasso(pxs)}
+              onChange={(e) => mudarZoom(doPasso(Number(e.target.value)))}
             />
-            <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(pxs * 2)} disabled={pxs >= ZOOM_MAX}>
               <Icone nome="aproximar" />
             </button>
           </div>
@@ -484,7 +508,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
           detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
           {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}. Com a linha
-          em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s), <kbd>+</kbd>/<kbd>−</kbd> zoom.
+          em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s), <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> obra inteira.
         </p>
       ) : null}
     </section>

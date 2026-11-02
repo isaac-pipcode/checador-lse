@@ -24,6 +24,12 @@ describe('avaliação de mídia para proxy', () => {
     expect(a.descricao).toMatch(/^H\.264 10 bits/);
   });
 
+  it('master MP4 1080p H.264 a 30 Mb/s: recomendado (pesa na busca quadro a quadro)', () => {
+    const a = avaliarMidia({ ...base, bitrate: 30e6 });
+    expect(a.necessidade).toBe('recomendado');
+    expect(a.motivos.join(' ')).toMatch(/30 Mb\/s/);
+  });
+
   it('HEVC: recomendado (depende de hardware)', () => {
     expect(avaliarMidia({ ...base, codec: 'hevc' })).toMatchObject({ reproduzivel: 'incerto', necessidade: 'recomendado' });
   });

@@ -106,7 +106,9 @@ export function MenuLayouts({
       >
         <Icone nome="layout" />
         Layout
-        <span className="max-w-[9rem] truncate font-normal text-navy-500">· {nomeAtual ?? 'personalizado'}</span>
+        <span className="hidden max-w-[9rem] truncate font-normal text-navy-500 min-[1440px]:inline">
+          · {nomeAtual ?? 'personalizado'}
+        </span>
         <Icone nome="aberto" tamanho={14} className="text-navy-500" />
       </button>
       {aberto ? (

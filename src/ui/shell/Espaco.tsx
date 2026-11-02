@@ -15,7 +15,7 @@ import { CamadaLibras } from '../libras/CamadaLibras';
 import { tcSmpte, useLacunas } from '../comum';
 import { BarraSuperior } from './BarraSuperior';
 import { BarraPaginas } from './BarraPaginas';
-import { AvisoOriginal, ControleProxy } from './ControleProxy';
+import { AvisoOriginal, ControleProxy, SugestaoProxy } from './ControleProxy';
 import { avaliarMidia } from '../../midia/avaliacao';
 import { gerarProxyDe } from '../proxy';
 import { toleranciaSugerida } from '../../libras/chroma';
@@ -31,10 +31,11 @@ const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
 /** Colunas padrão por página (painel esquerdo · monitor · inspetor), até o usuário arrastar uma divisória. */
 const COLUNAS: Record<Exclude<Pagina, 'projetos'>, [string, string, string]> = {
-  lse: ['minmax(360px, 1.05fr)', 'minmax(420px, 1.4fr)', 'minmax(280px, 320px)'],
-  ad: ['minmax(380px, 1.1fr)', 'minmax(420px, 1.35fr)', 'minmax(300px, 340px)'],
-  libras: ['minmax(300px, 340px)', 'minmax(480px, 1.8fr)', 'minmax(300px, 340px)'],
-  entrega: ['minmax(340px, 1fr)', 'minmax(420px, 1.3fr)', 'minmax(320px, 380px)'],
+  // mínimos pensados para caber em 1280 px (notebook com escala de 150%); o que sobra vai para os fr
+  lse: ['minmax(280px, 1.05fr)', 'minmax(360px, 1.4fr)', 'minmax(250px, 320px)'],
+  ad: ['minmax(300px, 1.1fr)', 'minmax(360px, 1.35fr)', 'minmax(260px, 340px)'],
+  libras: ['minmax(260px, 340px)', 'minmax(400px, 1.8fr)', 'minmax(260px, 340px)'],
+  entrega: ['minmax(280px, 1fr)', 'minmax(360px, 1.3fr)', 'minmax(260px, 380px)'],
 };
 const MIN_ESQ = 240;
 const MIN_DIR = 260;
@@ -110,6 +111,31 @@ export function Espaco() {
       setTempoMs(estado.pedidoSeek.ms);
     }
   }, [estado.pedidoSeek]);
+
+  // Espaço = reproduzir/pausar, como em qualquer editor. Não toma o espaço de quem digita, de caixas de
+  // seleção e listas, nem de um botão focado pelo teclado (ali o espaço aciona o botão); um botão que
+  // acabou de ser clicado com o mouse não segura o espaço. Na sessão de gravação, o espaço é do gravador.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.defaultPrevented) return;
+      if (document.documentElement.dataset.sessaoGravacao) return;
+      const alvo = e.target as HTMLElement | null;
+      if (alvo) {
+        if (alvo.isContentEditable || alvo.closest('[role="dialog"]')) return;
+        const tag = alvo.tagName;
+        if (tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (tag === 'INPUT' && (alvo as HTMLInputElement).type !== 'range') return;
+        const papel = alvo.getAttribute('role');
+        if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || papel === 'tab' || papel === 'button') && alvo.matches(':focus-visible')) return;
+      }
+      const v = elVideo.current;
+      if (!v) return;
+      e.preventDefault();
+      void (v.paused ? v.play() : v.pause());
+    };
+    window.addEventListener('keydown', tecla);
+    return () => window.removeEventListener('keydown', tecla);
+  }, []);
 
   // prévia de mixagem da AD: sempre ligada ao vídeo; o botão AD do transporte liga/desliga
   const [motor, setMotor] = useState<MotorPrevia | null>(null);
@@ -202,6 +228,8 @@ export function Espaco() {
     : null;
 
   const atual = cuesMonitor.find((c) => tempoMs >= c.startMs && tempoMs < c.endMs);
+  // roteiro de AD sobre a imagem, na página de AD (nas outras, a AD se ouve; o texto ali seria ruído)
+  const blocoAdAtual = pagina === 'ad' ? (ad.blocos.find((b) => tempoMs >= b.inicioMs && tempoMs < b.fimMs) ?? null) : null;
   const quadroMs = 1000 / config.fps;
 
   const lados: Record<typeof pagina, [ReactNode, ReactNode]> = {
@@ -262,7 +290,13 @@ export function Espaco() {
     </div>
   );
   const maxLinha = Math.max(MIN_LINHA, janela.h - ALTURA_BARRAS - MIN_ACIMA);
-  const linhaEf = paineis.linha !== undefined ? Math.min(paineis.linha, maxLinha) : undefined;
+  // sem altura escolhida: a natural em telas altas; em telas baixas, ~1/3 da janela (as trilhas rolam)
+  const linhaEf =
+    paineis.linha !== undefined
+      ? Math.min(paineis.linha, maxLinha)
+      : janela.h < 820
+        ? Math.max(MIN_LINHA, Math.round(janela.h * 0.32))
+        : undefined;
 
   const status = !video
     ? null
@@ -276,14 +310,14 @@ export function Espaco() {
     <CtxVideo.Provider value={{ video: videoPronto, tempoMs, buscar, previa: motor, duracaoMs }}>
       <ProvedorPaginaAD>
         <div
-          className="grid h-screen bg-fundo text-navy"
+          className="grid h-screen grid-cols-[minmax(0,1fr)] overflow-hidden bg-fundo text-navy"
           style={{
             gridTemplateRows: `36px minmax(0, 1fr) ${recolhido.linha ? '0px' : linhaEf !== undefined ? `${linhaEf}px` : 'auto'} 58px`,
           }}
         >
           <BarraSuperior ferramentas={ferramentas} />
 
-          <main ref={refMain} id="conteudo" className="grid min-h-0 pt-0.5" style={{ gridTemplateColumns: colunas }}>
+          <main ref={refMain} id="conteudo" className="grid min-h-0 min-w-0 pt-0.5" style={{ gridTemplateColumns: colunas }}>
             <div style={{ gridColumn: 1 }} className={recolhido.esq ? 'hidden' : 'grid min-h-0 min-w-0'}>
               {lados[pagina][0]}
             </div>
@@ -344,6 +378,7 @@ export function Espaco() {
                       onClick={(e) => void (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())}
                     />
                     <AvisoOriginal erroDeReproducao={erroVideo} />
+                    <SugestaoProxy />
                     {verLibras && (libras.clipe || pagina === 'libras') ? (
                       <CamadaLibras
                         principal={videoPronto}
@@ -358,6 +393,14 @@ export function Espaco() {
                           despachar({ tipo: 'anunciar', texto: `Cor-chave definida: ${cor}.` });
                         }}
                       />
+                    ) : null}
+                    {blocoAdAtual ? (
+                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[5%] flex justify-center px-4">
+                        <div className="max-w-[78%] rounded border-l-4 border-ok bg-preto/80 px-2.5 py-1 text-[clamp(0.75rem,1.3vw,1rem)] leading-snug text-cabine-texto">
+                          <span className="mr-1.5 font-mono text-[0.75em] font-semibold text-ok">AD</span>
+                          {blocoAdAtual.texto.trim() || <em className="text-cabine-suave">bloco sem roteiro</em>}
+                        </div>
+                      </div>
                     ) : null}
                     {verLse && atual ? (
                       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-[6%] flex justify-center px-4">
@@ -405,8 +448,8 @@ export function Espaco() {
               </div>
 
               {/* ---- Transporte ---- */}
-              <div className="grid h-9 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-paper px-2" role="toolbar" aria-label="Transporte">
-                <span className="truncate font-mono text-2xs tabular-nums text-navy-500">
+              <div className="transporte grid h-9 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 bg-paper px-2" role="toolbar" aria-label="Transporte">
+                <span className="transporte-duracao truncate font-mono text-2xs tabular-nums text-navy-500">
                   <span className="sr-only-focusable">Duração </span>
                   {tcSmpte(duracaoMs, config.fps)}
                 </span>
@@ -436,8 +479,17 @@ export function Espaco() {
 
                 <div className="flex items-center justify-end gap-0.5" role="group" aria-label="Camadas do monitor">
                   {pagina === 'lse' ? (
-                    <button type="button" className="segmento" aria-pressed={legendaRevisada} onClick={() => setLegendaRevisada((v) => !v)}>
-                      {legendaRevisada ? 'LSE revisada' : 'LSE original'}
+                    <button
+                      type="button"
+                      className="segmento"
+                      aria-pressed={legendaRevisada}
+                      aria-label={legendaRevisada ? 'LSE revisada' : 'LSE original'}
+                      onClick={() => setLegendaRevisada((v) => !v)}
+                    >
+                      <span className="rotulo-longo">{legendaRevisada ? 'LSE revisada' : 'LSE original'}</span>
+                      <span className="rotulo-curto" aria-hidden="true">
+                        {legendaRevisada ? 'Rev.' : 'Orig.'}
+                      </span>
                     </button>
                   ) : null}
                   <button type="button" className="segmento" aria-pressed={verLse} onClick={() => setVerLse((v) => !v)}>
@@ -473,6 +525,7 @@ export function Espaco() {
           <div ref={refLinha} className={recolhido.linha ? 'hidden' : 'min-h-0'}>
             {video ? (
               <LinhaDoTempo
+                key={video.caminho ?? video.nome}
                 divisoria={
                   <Divisoria
                     orientacao="horizontal"
