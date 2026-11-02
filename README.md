@@ -164,6 +164,15 @@ Licença: o ffmpeg é executado como programa separado, e a leitura usual é que
 agregação, não obra derivada; o código do Ouver Estúdio não passa a ser GPL. É interpretação jurídica:
 para distribuição comercial, vale um parecer. Patentes de H.264/AAC: não avaliadas.
 
+**Atualização automática** ([`desktop/atualizacao.ts`](desktop/atualizacao.ts)). Ao abrir (preferência
+em *Metodologia*, ligada por padrão), o app consulta as releases deste repositório. No Windows (.exe) e
+no AppImage, o electron-updater baixa a versão nova em segundo plano (SHA-512 conferido contra o
+`latest*.yml` da release) e a instala ao fechar o app; no macOS (recusa atualização de app não assinado)
+e no .deb (é do gerenciador de pacotes), o app avisa e abre a página da release. O CI anexa os
+`latest*.yml` e `.blockmap` à release. Testado com uma atualização real 0.1.2 → 0.1.3 a partir de um
+servidor local (`OUVER_ATUALIZACAO_URL`; para o modo aviso, `OUVER_ATUALIZACAO_API`). Exige o repositório
+**público** (o app lê as releases sem credencial).
+
 Limite atual: instaladores **sem assinatura** (o macOS e o Windows avisam na primeira abertura). As notas de
 instalação para o usuário final estão em [`docs/release-notas.md`](docs/release-notas.md). Testado
 empacotado no Linux (fluxo completo, incluindo a exportação para editores); Windows e macOS são

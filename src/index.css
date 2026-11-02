@@ -144,6 +144,10 @@ body,
   display: none;
 }
 @container (max-width: 620px) {
+  /* sem a duração, os botões vão para a esquerda e as camadas ficam com o resto */
+  .transporte {
+    grid-template-columns: 0 auto minmax(0, 1fr);
+  }
   .transporte .transporte-duracao,
   .transporte .rotulo-longo {
     display: none;

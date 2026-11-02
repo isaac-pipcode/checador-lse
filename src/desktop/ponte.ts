@@ -116,6 +116,15 @@ export interface ResumoProjeto {
   libras: { clipe: boolean; sincronizado: boolean };
 }
 
+export type EstadoAtualizacao =
+  | { estado: 'desativada'; motivo: string }
+  | { estado: 'verificando' }
+  | { estado: 'atual'; versao: string }
+  | { estado: 'disponivel'; versao: string; automatica: boolean; url: string }
+  | { estado: 'baixando'; versao: string; fracao: number }
+  | { estado: 'pronta'; versao: string }
+  | { estado: 'erro'; mensagem: string };
+
 export interface PonteDesktop {
   plataforma: string;
   ffmpeg(): Promise<{
@@ -179,6 +188,15 @@ export interface PonteDesktop {
   prompterEnviar(estado: EstadoPrompter): void;
   /** janela principal: comandos vindos do locutor; devolve função para cancelar */
   aoComandoDoPrompter(cb: (c: ComandoGravacao) => void): () => void;
+  /** atualização do aplicativo (ver desktop/atualizacao.ts) */
+  atualizacao: {
+    versao(): Promise<string>;
+    estado(): Promise<EstadoAtualizacao>;
+    verificar(): Promise<EstadoAtualizacao>;
+    reiniciar(): void;
+    abrirPagina(url: string): void;
+    aoMudar(cb: (e: EstadoAtualizacao) => void): () => void;
+  };
   aoFecharPrompter(cb: () => void): () => void;
   /** janela do locutor: estado vindo da principal */
   aoEstadoDoPrompter(cb: (e: EstadoPrompter) => void): () => void;

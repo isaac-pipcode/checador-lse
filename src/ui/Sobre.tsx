@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CATALOGO } from '../rules';
 import { ponte } from '../desktop/ponte';
+import { SecaoAtualizacao } from './atualizacao';
 import { ROTULO_VERIFICABILIDADE } from './primitivos';
 
 export function Sobre() {
@@ -150,6 +151,8 @@ function ComponentesTerceiros() {
   }, []);
   return (
     <>
+      <SecaoAtualizacao />
+
       <h3 className="mt-8 text-lg font-semibold">Licença</h3>
       <p className="mt-2 text-sm text-navy-700">
         O Ouver Estúdio é software livre, sob a <strong>GNU GPL versão 3 ou posterior</strong>. O código-fonte está em{' '}

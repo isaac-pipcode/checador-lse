@@ -525,7 +525,7 @@ export function Espaco() {
                     >
                       <span className="rotulo-longo">{legendaRevisada ? 'LSE revisada' : 'LSE original'}</span>
                       <span className="rotulo-curto" aria-hidden="true">
-                        {legendaRevisada ? 'Rev.' : 'Orig.'}
+                        {legendaRevisada ? 'Revisada' : 'Original'}
                       </span>
                     </button>
                   ) : null}

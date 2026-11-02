@@ -16,6 +16,12 @@ janela de Libras numa mesma linha do tempo.
   **entrada e saída editáveis** (aceita `00:01:02,500`, `1:02,5` ou timecode com quadros).
 - Corrigida a lista de legendas, que ficava vazia com um vídeo aberto.
 
+- **Atualização automática**: no Windows e no AppImage do Linux, versões novas são baixadas sozinhas e
+  instaladas ao fechar o app (ou em "Reiniciar agora"); no macOS e no .deb, o app avisa e abre a página de
+  download. Pode ser desligada em *Metodologia → Versão e atualizações*. **Esta é a última versão que
+  precisa ser instalada à mão** (no Windows e no AppImage).
+- O Ouver Estúdio passa a ser **software livre (GPL-3.0)**.
+
 O ffmpeg continua embutido (desde a 0.1.1).
 
 ## Instaladores

@@ -39,6 +39,7 @@
     "axe-core": "^4.14.0",
     "electron": "^45.2.1",
     "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.1",
     "lucide-react": "1.66.0",
@@ -119,7 +120,13 @@
           "**/*"
         ]
       }
-    ]
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "isaac-pipcode",
+      "repo": "checador-lse",
+      "releaseType": "release"
+    }
   },
   "desktopName": "ouver-estudio.desktop"
 }

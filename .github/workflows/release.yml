@@ -75,11 +75,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: instaladores-${{ matrix.os }}
+          # latest*.yml e .blockmap: o que o atualizador automático lê (versão, SHA-512, download parcial)
           path: |
             release/*.exe
             release/*.dmg
             release/*.AppImage
             release/*.deb
+            release/*.blockmap
+            release/latest*.yml
           if-no-files-found: error
 
   # Uma só release, criada depois que as três plataformas terminaram (publicar de
