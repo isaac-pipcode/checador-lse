@@ -13,12 +13,12 @@ A juíza determinou a soltura dos dois presos  hoje ?
 
 2
 00:00:04,000 --> 00:00:08,000
-Empresário mata ex-mulher no
-centro de Fortaleza
+Cantor lança o disco inédito no
+centro de Recife
 
 3
 00:00:09,000 --> 00:00:11,300
-Empresário mata ex-mulher no centro de Fortaleza
+Cantor lança o disco inédito no centro de Recife
 `;
 
 function estado(sugestoes: Suggestion[]): ReviewState {
@@ -46,7 +46,7 @@ describe('fluxo completo (caso de aceite 10)', () => {
     review[l2.id] = {
       suggestion: l2,
       decision: 'editada',
-      editedAfter: { lines: ['Empresário mata ex-mulher', 'no centro de Fortaleza'] },
+      editedAfter: { lines: ['Cantor lança o disco inédito', 'no centro de Recife'] },
     };
 
     const { cues: finais, aplicadas } = aplicarDecisoes(cues, review);
@@ -54,9 +54,9 @@ describe('fluxo completo (caso de aceite 10)', () => {
     // C8 aplicada
     expect(finais[0].lines).toEqual(['A juíza determinou a soltura dos dois presos hoje?']);
     // L1 rejeitada: legenda 2 intacta
-    expect(finais[1].lines).toEqual(['Empresário mata ex-mulher no', 'centro de Fortaleza']);
+    expect(finais[1].lines).toEqual(['Cantor lança o disco inédito no', 'centro de Recife']);
     // L2 editada: entra a versão do usuário, não a do modelo
-    expect(finais[2].lines).toEqual(['Empresário mata ex-mulher', 'no centro de Fortaleza']);
+    expect(finais[2].lines).toEqual(['Cantor lança o disco inédito', 'no centro de Recife']);
     expect(aplicadas).toContain(c8.id);
     expect(aplicadas).not.toContain(l1.id);
 
@@ -92,8 +92,8 @@ describe('fluxo completo (caso de aceite 10)', () => {
     expect(porId.get(l1.id)!.decisao).toBe('rejeitada');
     expect(porId.get(l2.id)!.decisao).toBe('editada');
     expect(porId.get(l2.id)!.depois).toEqual([
-      'Empresário mata ex-mulher',
-      'no centro de Fortaleza',
+      'Cantor lança o disco inédito',
+      'no centro de Recife',
     ]);
     expect(rel.totais.aprovadas).toBe(2);
     expect(rel.totais.editadas).toBe(1);

@@ -2,11 +2,16 @@
   "name": "ouver-estudio",
   "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
   "author": {
     "name": "Ouver"
+  },
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isaac-pipcode/checador-lse.git"
   },
   "homepage": "https://github.com/isaac-pipcode/checador-lse",
   "scripts": {
@@ -34,6 +39,7 @@
     "axe-core": "^4.14.0",
     "electron": "^45.2.1",
     "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.1",
     "lucide-react": "1.66.0",
@@ -74,7 +80,10 @@
       ],
       "category": "public.app-category.video",
       "icon": "build/icon.png",
-      "identity": null
+      "identity": null,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "O Ouver Estúdio usa o microfone para gravar a audiodescrição."
+      }
     },
     "win": {
       "target": [
@@ -111,7 +120,13 @@
           "**/*"
         ]
       }
-    ]
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "isaac-pipcode",
+      "repo": "checador-lse",
+      "releaseType": "release"
+    }
   },
   "desktopName": "ouver-estudio.desktop"
 }

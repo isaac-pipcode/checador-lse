@@ -86,8 +86,9 @@ Guia.
 
 ### Contagem de caracteres
 
-O padrão inclui espaços e o conteúdo entre colchetes, fiel ao Guia — que apresenta
-*"Empresário mata ex-mulher no centro de Fortaleza"* como **48 caracteres**. Casas de legendagem
+O padrão inclui espaços e o conteúdo entre colchetes, fiel ao Guia, cujo exemplo de manchete de uma
+linha conta **48 caracteres** com os espaços. Os testes usam uma frase inventada de mesmo tamanho e mesma
+estrutura (*"Cantor lança o disco inédito no centro de Recife"*). Casas de legendagem
 divergem nesse ponto, então há dois *toggles* (`contarEspacos`, `contarColchetes`); o critério usado
 fica registrado no relatório de QA.
 
@@ -162,6 +163,15 @@ sistema → PATH. Para trocar de versão, atualizar o manifesto com URLs e somas
 Licença: o ffmpeg é executado como programa separado, e a leitura usual é que isso constitui
 agregação, não obra derivada; o código do Ouver Estúdio não passa a ser GPL. É interpretação jurídica:
 para distribuição comercial, vale um parecer. Patentes de H.264/AAC: não avaliadas.
+
+**Atualização automática** ([`desktop/atualizacao.ts`](desktop/atualizacao.ts)). Ao abrir (preferência
+em *Metodologia*, ligada por padrão), o app consulta as releases deste repositório. No Windows (.exe) e
+no AppImage, o electron-updater baixa a versão nova em segundo plano (SHA-512 conferido contra o
+`latest*.yml` da release) e a instala ao fechar o app; no macOS (recusa atualização de app não assinado)
+e no .deb (é do gerenciador de pacotes), o app avisa e abre a página da release. O CI anexa os
+`latest*.yml` e `.blockmap` à release. Testado com uma atualização real 0.1.2 → 0.1.3 a partir de um
+servidor local (`OUVER_ATUALIZACAO_URL`; para o modo aviso, `OUVER_ATUALIZACAO_API`). Exige o repositório
+**público** (o app lê as releases sem credencial).
 
 Limite atual: instaladores **sem assinatura** (o macOS e o Windows avisam na primeira abertura). As notas de
 instalação para o usuário final estão em [`docs/release-notas.md`](docs/release-notas.md). Testado
@@ -443,6 +453,15 @@ Os **painéis são redimensionáveis**: arraste as divisórias entre painel esqu
 ou a do topo da linha do tempo (também pelo teclado, com foco na divisória: setas, Home/End; Enter
 ou duplo clique restauram). As larguras ficam salvas por página; a altura da linha do tempo, para
 todas.
+**Edição na linha do tempo.** Legendas (ST) e blocos de AD (A2) se arrastam: o corpo move, as bordas
+(6 px) aparam a entrada ou a saída, com encaixe no quadro e no cursor e sem invadir os vizinhos; mover um
+bloco leva as gravações junto. Entrada e saída também são campos editáveis nos itens das listas
+(`00:01:02,500`, `1:02,5` ou `00:01:02:12`). Editar o tempo de uma legenda reanalisa as regras e mantém
+as decisões de apontamentos que não mudaram. Os takes ativos aparecem na trilha **A3 Locução**, com
+forma de onda. A linha do tempo abre ajustada à obra (**Ajustar**, tecla 0); a **barra de espaço**
+reproduz e pausa (exceto em campos de texto, caixas de seleção e botões focados pelo teclado; na sessão
+de gravação, o espaço é do gravador).
+
 Os botões à esquerda da barra superior **recolhem** o painel esquerdo, a linha do tempo e o
 inspetor, e o menu **Layout** salva o arranjo com um nome e alterna entre layouts (prontos: "Padrão"
 e "Foco no monitor").
@@ -526,6 +545,13 @@ linha, sem *crash*) e o fluxo completo de aprovação/rejeição/edição com ve
 e do relatório de QA.
 
 ## Licença e escopo
+
+O Ouver Estúdio é **software livre**, sob a [GNU General Public License v3.0 ou posterior](LICENSE)
+(GPL-3.0-or-later): pode ser usado, estudado, modificado e redistribuído; quem distribuir versões
+modificadas precisa distribuí-las sob a mesma licença, com o código-fonte. © 2026 Ouver e
+colaboradores. Componentes de terceiros mantêm as suas licenças: FFmpeg (GPL-3.0, embutido nos
+instaladores; ver `resources/ffmpeg` e [`desktop/ffmpeg-embutido.json`](desktop/ffmpeg-embutido.json)),
+Lucide (ISC), React (MIT) e demais dependências listadas no `package.json`.
 
 Implementação independente dos parâmetros publicados pelo MinC/SAv e pelo grupo LEAD/UECE. Não é
 produto oficial dessas instituições.

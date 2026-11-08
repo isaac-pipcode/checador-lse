@@ -39,9 +39,17 @@ const H_LEGENDAS = 44;
 const H_LACUNAS = 30;
 const H_AD = 40;
 const H_LIBRAS = 26;
+const H_LOCUCAO = 34;
+/** área, em px, nas bordas de um item onde o arrasto apara em vez de mover */
+const BORDA_ARRASTO = 6;
+/** duração mínima ao aparar */
+const MIN_ITEM_MS = 200;
 const H_CANVAS = H_REGUA + H_SOM;
 
-const ZOOMS = [2, 5, 10, 20, 40, 80, 160, 320];
+/** zoom máximo (px por segundo): ~13 px por quadro a 24 qd/s */
+const ZOOM_MAX = 320;
+/** o deslizante de zoom é logarítmico: cada passo multiplica o zoom pelo mesmo fator */
+const PASSOS_ZOOM = 100;
 
 const CLASSE_SEV: Record<Severity | 'ok', string> = {
   erro: 'border-bad bg-bad-100 text-bad',
@@ -84,6 +92,34 @@ const CLASSE_NIVEL: Record<NivelAD, string> = {
 const ICONE_NIVEL: Record<NivelAD, NomeIcone> = { ok: 'ok', aviso: 'aviso', erro: 'erro', pendente: 'pendente' };
 const ROTULO_NIVEL: Record<NivelAD, string> = { ok: 'pronto', aviso: 'com aviso', erro: 'com erro', pendente: 'pendente' };
 
+/** Take ativo de um bloco, como clipe de áudio na trilha de locução. */
+export interface TakeNaLinha {
+  id: string;
+  blocoId: string;
+  inicioMs: number;
+  fimMs: number;
+  /** picos do take inteiro e o recorte usado (aparo) */
+  picos: Float32Array | null;
+  msPorPico: number;
+  aparoInicioMs: number;
+  ganho: number;
+  rotulo: string;
+}
+
+type ItemArrastavel = { tipo: 'cue'; id: number } | { tipo: 'ad'; id: string };
+interface Arrasto {
+  item: ItemArrastavel;
+  modo: 'mover' | 'inicio' | 'fim';
+  x0: number;
+  ini0: number;
+  fim0: number;
+  ini: number;
+  fim: number;
+  min: number;
+  max: number;
+  moveu: boolean;
+}
+
 export interface PropsLinhaDoTempo {
   /** divisória de altura, desenhada no topo (dentro da região, para leitores de tela) */
   divisoria?: ReactNode;
@@ -105,12 +141,19 @@ export interface PropsLinhaDoTempo {
   curvaGanho?: PontoGanho[];
   /** trecho coberto pelo clipe do intérprete */
   trilhaLibras?: { inicioMs: number; fimMs: number; rotulo: string } | null;
+  /** takes ativos da AD (trilha A3) */
+  trilhaLocucao?: TakeNaLinha[];
+  /** edição de tempo por arrasto (mover, aparar entrada ou saída) */
+  aoMudarLegenda?: (index: number, inicioMs: number, fimMs: number) => void;
+  aoMudarBloco?: (id: string, inicioMs: number, fimMs: number) => void;
 }
 
 export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const id = useId();
-  const [zoom, setZoom] = useState(4); // índice em ZOOMS
-  const pxs = ZOOMS[zoom];
+  // Zoom contínuo. "Ajustado" (o padrão ao abrir) mostra a obra inteira e acompanha a
+  // largura do painel; qualquer zoom manual sai do ajuste.
+  const [ajustado, setAjustado] = useState(true);
+  const [pxsManual, setPxsManual] = useState(40);
   const [acompanhar, setAcompanhar] = useState(true);
   const [legenda, alternarLegenda] = useAjudaAberta();
   const vp = useRef<HTMLDivElement>(null);
@@ -118,10 +161,17 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const [scroll, setScroll] = useState(0);
   const [largura, setLargura] = useState(800);
 
-  const total = Math.max(1, (p.duracaoMs / 1000) * pxs);
+  const segundos = Math.max(1, p.duracaoMs / 1000);
+  const pxsAjuste = Math.min(ZOOM_MAX, Math.max(0.01, (largura - 12) / segundos));
+  const zoomMin = Math.min(pxsAjuste, 2);
+  const pxs = ajustado ? pxsAjuste : Math.min(ZOOM_MAX, Math.max(zoomMin, pxsManual));
+  const total = Math.max(1, segundos * pxs);
+  const paraPasso = (v: number) => Math.round((Math.log(v / zoomMin) / Math.log(ZOOM_MAX / zoomMin)) * PASSOS_ZOOM);
+  const doPasso = (n: number) => zoomMin * Math.pow(ZOOM_MAX / zoomMin, n / PASSOS_ZOOM);
   const hAd = p.trilhaAd ? H_AD : 0;
+  const hLoc = p.trilhaLocucao ? H_LOCUCAO : 0;
   const hLib = p.trilhaLibras !== undefined ? H_LIBRAS : 0;
-  const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + hLib + H_LACUNAS;
+  const H_TOTAL = H_CANVAS + H_LEGENDAS + hAd + hLoc + hLib + H_LACUNAS;
   const x = (ms: number) => (ms / 1000) * pxs;
   const t0 = (scroll / pxs) * 1000;
   const t1 = ((scroll + largura) / pxs) * 1000;
@@ -147,14 +197,119 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   }, [p.tempoMs, pxs, acompanhar]);
 
   function mudarZoom(novo: number) {
-    const i = Math.max(0, Math.min(ZOOMS.length - 1, novo));
-    setZoom(i);
-    // mantém o cursor de reprodução no mesmo ponto relativo da tela
+    const v = Math.min(ZOOM_MAX, Math.max(zoomMin, novo));
+    setAjustado(false);
+    setPxsManual(v);
+    // mantém o cursor de reprodução no meio da tela
     requestAnimationFrame(() => {
       const el = vp.current;
-      if (el) el.scrollLeft = Math.max(0, (p.tempoMs / 1000) * ZOOMS[i] - el.clientWidth / 2);
+      if (el) el.scrollLeft = Math.max(0, (p.tempoMs / 1000) * v - el.clientWidth / 2);
     });
   }
+
+  // ---- arrasto: mover (corpo) ou aparar (bordas) legendas e blocos de AD ----
+  const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  const arrastoRef = useRef<Arrasto | null>(null);
+  const cliqueSuprimido = useRef(false);
+  const mesmoItem = (a: ItemArrastavel, b: ItemArrastavel) => a.tipo === b.tipo && a.id === b.id;
+
+  /** posição a desenhar: a do arrasto em curso, se for este item */
+  const posicao = (item: ItemArrastavel, ini: number, fim: number): [number, number] =>
+    arrasto && mesmoItem(arrasto.item, item) ? [arrasto.ini, arrasto.fim] : [ini, fim];
+
+  /** um clique logo depois de um arrasto não é clique */
+  function suprimirClique() {
+    const s = cliqueSuprimido.current;
+    cliqueSuprimido.current = false;
+    return s;
+  }
+
+  /** vizinhos: o item não invade o anterior nem o seguinte */
+  function limites(item: ItemArrastavel): [number, number] {
+    const lista =
+      item.tipo === 'cue'
+        ? p.cues.map((c) => ({ id: c.index as number | string, ini: c.startMs, fim: c.endMs }))
+        : (p.trilhaAd ?? []).map((b) => ({ id: b.id as number | string, ini: b.inicioMs, fim: b.fimMs }));
+    const ordem = [...lista].sort((a, b) => a.ini - b.ini);
+    const k = ordem.findIndex((o) => o.id === item.id);
+    const antes = k > 0 ? ordem[k - 1].fim : 0;
+    const depois = k >= 0 && k < ordem.length - 1 ? ordem[k + 1].ini : Math.max(p.duracaoMs, ordem[k]?.fim ?? 0);
+    return [antes, depois];
+  }
+
+  function encaixar(ms: number) {
+    // no cursor de reprodução, se estiver a menos de 6 px; senão, no quadro
+    if (Math.abs(ms - p.tempoMs) * (pxs / 1000) < 6) return p.tempoMs;
+    const quadro = 1000 / (p.fps || 24);
+    return Math.round(ms / quadro) * quadro;
+  }
+
+  function arrastavel(item: ItemArrastavel, ini: number, fim: number) {
+    return {
+      onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+        if (e.button !== 0) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        const dx = e.clientX - r.left;
+        const borda = r.width >= BORDA_ARRASTO * 3;
+        const modo: Arrasto['modo'] = borda && dx < BORDA_ARRASTO ? 'inicio' : borda && dx > r.width - BORDA_ARRASTO ? 'fim' : 'mover';
+        const [min, max] = limites(item);
+        const a: Arrasto = { item, modo, x0: e.clientX, ini0: ini, fim0: fim, ini, fim, min, max, moveu: false };
+        arrastoRef.current = a;
+        setArrasto(a);
+        e.currentTarget.setPointerCapture(e.pointerId);
+      },
+      onPointerMove: (e: React.PointerEvent<HTMLButtonElement>) => {
+        const a = arrastoRef.current;
+        if (!a || !mesmoItem(a.item, item)) {
+          // sem arrasto: o cursor mostra o que um arrasto faria aqui
+          const r = e.currentTarget.getBoundingClientRect();
+          const dx = e.clientX - r.left;
+          const borda = r.width >= BORDA_ARRASTO * 3 && (dx < BORDA_ARRASTO || dx > r.width - BORDA_ARRASTO);
+          e.currentTarget.style.cursor = borda ? 'ew-resize' : 'grab';
+          return;
+        }
+        const dpx = e.clientX - a.x0;
+        if (!a.moveu && Math.abs(dpx) < 3) return;
+        const dt = (dpx / pxs) * 1000;
+        let { ini: novoIni, fim: novoFim } = a;
+        if (a.modo === 'mover') {
+          const dur = a.fim0 - a.ini0;
+          novoIni = Math.min(Math.max(encaixar(a.ini0 + dt), a.min), a.max - dur);
+          novoFim = novoIni + dur;
+        } else if (a.modo === 'inicio') {
+          novoIni = Math.min(Math.max(encaixar(a.ini0 + dt), a.min), a.fim0 - MIN_ITEM_MS);
+        } else {
+          novoFim = Math.max(Math.min(encaixar(a.fim0 + dt), a.max), a.ini0 + MIN_ITEM_MS);
+        }
+        const n = { ...a, ini: Math.round(novoIni), fim: Math.round(novoFim), moveu: true };
+        arrastoRef.current = n;
+        setArrasto(n);
+      },
+      onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
+        const a = arrastoRef.current;
+        arrastoRef.current = null;
+        setArrasto(null);
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+        if (!a || !a.moveu) return;
+        cliqueSuprimido.current = true;
+        if (a.ini === a.ini0 && a.fim === a.fim0) return;
+        if (a.item.tipo === 'cue') p.aoMudarLegenda?.(a.item.id, a.ini, a.fim);
+        else p.aoMudarBloco?.(a.item.id, a.ini, a.fim);
+      },
+      onPointerCancel: () => {
+        arrastoRef.current = null;
+        setArrasto(null);
+      },
+    };
+  }
+
+  function ajustar() {
+    setAjustado(true);
+    requestAnimationFrame(() => {
+      if (vp.current) vp.current.scrollLeft = 0;
+    });
+  }
+
 
   // Desenho do canvas: régua + envelope + atividade + limiar.
   useEffect(() => {
@@ -270,8 +425,9 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
     const passoMs = e.shiftKey ? 5000 : 1000;
     if (e.key === 'ArrowRight') p.aoBuscar(Math.min(p.duracaoMs, p.tempoMs + passoMs));
     else if (e.key === 'ArrowLeft') p.aoBuscar(Math.max(0, p.tempoMs - passoMs));
-    else if (e.key === '+' || e.key === '=') mudarZoom(zoom + 1);
-    else if (e.key === '-') mudarZoom(zoom - 1);
+    else if (e.key === '+' || e.key === '=') mudarZoom(pxs * 2);
+    else if (e.key === '-') mudarZoom(pxs / 2);
+    else if (e.key === '0') ajustar();
     else return;
     e.preventDefault();
   }
@@ -295,21 +451,24 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
             Acompanhar
           </button>
           <div className="ml-2 flex items-center gap-1" role="group" aria-label="Zoom">
-            <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(zoom - 1)} disabled={zoom === 0}>
+            <button type="button" className="segmento" aria-pressed={ajustado} onClick={ajustar} title="Mostrar a obra inteira (0)">
+              Ajustar
+            </button>
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Afastar" onClick={() => mudarZoom(pxs / 2)} disabled={pxs <= zoomMin + 1e-9}>
               <Icone nome="afastar" />
             </button>
             <input
               type="range"
               className="w-24"
               aria-label="Zoom da linha do tempo"
-              aria-valuetext={`${pxs} pixels por segundo`}
+              aria-valuetext={ajustado ? 'obra inteira' : `${pxs < 10 ? pxs.toFixed(1) : Math.round(pxs)} pixels por segundo`}
               min={0}
-              max={ZOOMS.length - 1}
+              max={PASSOS_ZOOM}
               step={1}
-              value={zoom}
-              onChange={(e) => mudarZoom(Number(e.target.value))}
+              value={paraPasso(pxs)}
+              onChange={(e) => mudarZoom(doPasso(Number(e.target.value)))}
             />
-            <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(zoom + 1)} disabled={zoom === ZOOMS.length - 1}>
+            <button type="button" className="btn-icone h-6 w-6" aria-label="Aproximar" onClick={() => mudarZoom(pxs * 2)} disabled={pxs >= ZOOM_MAX}>
               <Icone nome="aproximar" />
             </button>
           </div>
@@ -322,6 +481,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           <CabecaTrilha altura={H_SOM} codigo="A1" nome="Som da obra" cor="bg-navy-500" />
           <CabecaTrilha altura={H_LEGENDAS} codigo="ST" nome="Legendas" cor="bg-warn" />
           {p.trilhaAd ? <CabecaTrilha altura={H_AD} codigo="A2" nome="Audiodescrição" cor="bg-ok" /> : null}
+          {hLoc ? <CabecaTrilha altura={H_LOCUCAO} codigo="A3" nome="Locução (takes)" cor="bg-serie-2" /> : null}
           {hLib ? <CabecaTrilha altura={H_LIBRAS} codigo="V2" nome="Libras" cor="bg-serie-1" /> : null}
           <CabecaTrilha altura={H_LACUNAS} codigo="—" nome="Lacunas (AD)" cor="bg-paper-400" />
         </div>
@@ -350,27 +510,30 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                 aria-hidden="true"
                 title={`Corte em ${formatarTimecode(c.ms)} (±${c.precisaoMs} ms)`}
                 className="pointer-events-none absolute border-l border-navy"
-                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS + hAd + hLib }}
+                style={{ left: x(c.ms), top: H_REGUA, height: H_SOM + H_LEGENDAS + hAd + hLoc + hLib }}
               />
             ))}
 
             <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS, width: total, height: H_LEGENDAS }}>
               {visiveis.map((c) => {
                 const sev = p.severidades.get(c.index);
-                const w = Math.max(3, x(c.endMs - c.startMs));
+                const [ini, fim] = posicao({ tipo: 'cue', id: c.index }, c.startMs, c.endMs);
+                const w = Math.max(3, x(fim - ini));
                 const texto = c.lines.join(' ').replace(/<\/?[^>]+>/g, '');
                 return (
                   <button
                     key={c.index}
                     type="button"
                     onClick={() => {
+                      if (suprimirClique()) return;
                       p.aoBuscar(c.startMs);
                       p.aoSelecionarLegenda(c.index);
                     }}
+                    {...(p.aoMudarLegenda ? arrastavel({ tipo: 'cue', id: c.index }, c.startMs, c.endMs) : {})}
                     aria-label={`Legenda ${c.index}, ${formatarTimecode(c.startMs)} a ${formatarTimecode(c.endMs)}${sev ? `, ${ROTULO_SEVERIDADE[sev].toLowerCase()} pendente` : ''}: ${texto}`}
                     title={texto}
                     className={`absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border px-1 text-left text-[11px] leading-[34px] ${CLASSE_SEV[sev ?? 'ok']} ${atual?.index === c.index ? 'ring-2 ring-terra' : ''}`}
-                    style={{ left: x(c.startMs), width: w, height: H_LEGENDAS - 8 }}
+                    style={{ left: x(ini), width: w, height: H_LEGENDAS - 8 }}
                   >
                     {w > 14 ? (
                       <span aria-hidden="true" className="font-semibold">
@@ -388,25 +551,28 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
                 {p.trilhaAd
                   .filter((b) => b.fimMs >= t0 && b.inicioMs <= t1)
                   .map((b) => {
-                    const w = Math.max(3, x(b.fimMs - b.inicioMs));
+                    const [ini, fim] = posicao({ tipo: 'ad', id: b.id }, b.inicioMs, b.fimMs);
+                    const w = Math.max(3, x(fim - ini));
                     return (
                       <button
                         key={b.id}
                         type="button"
                         onClick={() => {
+                          if (suprimirClique()) return;
                           p.aoBuscar(b.take?.inicioMs ?? b.inicioMs);
                           p.aoSelecionarBloco?.(b.id);
                         }}
+                        {...(p.aoMudarBloco ? arrastavel({ tipo: 'ad', id: b.id }, b.inicioMs, b.fimMs) : {})}
                         aria-label={`Bloco de audiodescrição de ${formatarTimecode(b.inicioMs)} a ${formatarTimecode(b.fimMs)}, ${ROTULO_NIVEL[b.nivel]}${b.take ? ', gravado' : ''}: ${b.texto || 'sem roteiro'}`}
                         title={b.texto}
                         className={`absolute top-1 overflow-hidden whitespace-nowrap rounded-sm border text-left text-[11px] ${CLASSE_NIVEL[b.nivel]}`}
-                        style={{ left: x(b.inicioMs), width: w, height: H_AD - 8 }}
+                        style={{ left: x(ini), width: w, height: H_AD - 8 }}
                       >
                         {b.take ? (
                           <span
                             aria-hidden="true"
                             className="absolute bottom-0.5 top-0.5 rounded-sm bg-navy/25"
-                            style={{ left: x(b.take.inicioMs - b.inicioMs), width: Math.max(2, x(b.take.fimMs - b.take.inicioMs)) }}
+                            style={{ left: x(b.take.inicioMs - ini), width: Math.max(2, x(b.take.fimMs - b.take.inicioMs)) }}
                           />
                         ) : null}
                         {w > 14 ? (
@@ -420,8 +586,30 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               </div>
             ) : null}
 
+            {p.trilhaLocucao ? (
+              <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LOCUCAO }}>
+                {p.trilhaLocucao
+                  .filter((t) => t.fimMs >= t0 && t.inicioMs <= t1)
+                  .map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        p.aoBuscar(t.inicioMs);
+                        p.aoSelecionarBloco?.(t.blocoId);
+                      }}
+                      aria-label={`Take de locução ${t.rotulo}, de ${formatarTimecode(t.inicioMs)} a ${formatarTimecode(t.fimMs)}`}
+                      className="absolute top-1 overflow-hidden rounded-sm border border-serie-2 bg-serie-2/20"
+                      style={{ left: x(t.inicioMs), width: Math.max(3, x(t.fimMs - t.inicioMs)), height: H_LOCUCAO - 8 }}
+                    >
+                      <OndaDoTake take={t} largura={Math.max(3, x(t.fimMs - t.inicioMs))} altura={H_LOCUCAO - 10} />
+                    </button>
+                  ))}
+              </div>
+            ) : null}
+
             {hLib ? (
-              <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS + H_LEGENDAS + hAd, width: total, height: H_LIBRAS }}>
+              <div className="absolute left-0 border-t border-paper-200" style={{ top: H_CANVAS + H_LEGENDAS + hAd + hLoc, width: total, height: H_LIBRAS }}>
                 {p.trilhaLibras ? (
                   <button
                     type="button"
@@ -440,7 +628,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
 
             <div
               className="absolute left-0 border-t border-paper-200"
-              style={{ top: H_CANVAS + H_LEGENDAS + hAd + hLib, width: total, height: H_LACUNAS }}
+              style={{ top: H_CANVAS + H_LEGENDAS + hAd + hLoc + hLib, width: total, height: H_LACUNAS }}
             >
               {lacunasVisiveis.map((l) => {
                 const w = Math.max(3, x(l.fimMs - l.inicioMs));
@@ -466,6 +654,15 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
               })}
             </div>
 
+            {arrasto?.moveu ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute z-20 whitespace-nowrap rounded bg-preto/90 px-1.5 py-0.5 font-mono text-2xs text-cabine-texto"
+                style={{ left: x(arrasto.ini), top: arrasto.item.tipo === 'cue' ? H_CANVAS - 18 : H_CANVAS + H_LEGENDAS - 18 }}
+              >
+                {tcSmpte(arrasto.ini, p.fps)} → {tcSmpte(arrasto.fim, p.fps)} ({((arrasto.fim - arrasto.ini) / 1000).toFixed(2).replace('.', ',')} s)
+              </div>
+            ) : null}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute top-0 w-px bg-terra"
@@ -484,7 +681,7 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
           Forma de onda na banda de voz (150–4000 Hz); linha tracejada: limiar de atividade; faixa escura: som
           detectado; moldura tracejada: som sem legenda (M3); traço vertical: corte de plano
           {p.curvaGanho ? '; linha verde: ganho do som original sob a audiodescrição (ducking)' : ''}. Com a linha
-          em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s), <kbd>+</kbd>/<kbd>−</kbd> zoom.
+          em foco: <kbd>←</kbd>/<kbd>→</kbd> 1 s (<kbd>Shift</kbd> 5 s), <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> obra inteira.
         </p>
       ) : null}
     </section>
@@ -499,5 +696,43 @@ function CabecaTrilha({ altura, codigo, nome, cor }: { altura: number; codigo: s
       <span className="w-5 font-mono font-semibold text-navy">{codigo}</span>
       <span className="truncate text-navy-700">{nome}</span>
     </div>
+  );
+}
+
+/** Forma de onda do trecho usado de um take, desenhada no tamanho do clipe. */
+function OndaDoTake({ take, largura, altura }: { take: TakeNaLinha; largura: number; altura: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const w = Math.min(4096, Math.max(1, Math.round(largura)));
+  useEffect(() => {
+    const c = ref.current;
+    if (!c || !take.picos) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(altura * dpr);
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, altura);
+    const cor = getComputedStyle(document.documentElement).getPropertyValue('--c-serie-2').trim() || '217 89 38';
+    g.fillStyle = `rgb(${cor})`;
+    const ini = take.aparoInicioMs / take.msPorPico;
+    const n = (take.fimMs - take.inicioMs) / take.msPorPico;
+    const meio = altura / 2;
+    for (let px = 0; px < w; px++) {
+      const a = Math.floor(ini + (px / w) * n);
+      const b = Math.max(a + 1, Math.floor(ini + ((px + 1) / w) * n));
+      let m = 0;
+      for (let k = a; k < b && k < take.picos.length; k++) if (take.picos[k] > m) m = take.picos[k];
+      const h = Math.min(1, m * take.ganho) * (altura / 2 - 1);
+      g.fillRect(px, meio - h, 1, Math.max(1, h * 2));
+    }
+  }, [take, w, altura]);
+  return (
+    <canvas
+      ref={ref}
+      aria-hidden="true"
+      className="pointer-events-none absolute left-0 top-0.5"
+      style={{ width: largura, height: altura }}
+    />
   );
 }

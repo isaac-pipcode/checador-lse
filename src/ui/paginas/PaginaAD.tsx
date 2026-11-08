@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useDespachar, useEstado, useResultadoFinal } from '../../state/store';
 import { useVideo } from '../contextoVideo';
 import { formatarTimecode } from '../../core/texto';
@@ -10,6 +10,7 @@ import { blocosGravaveis, GRAVANDO } from '../../ad/prompter';
 import { ponte } from '../../desktop/ponte';
 import { useSessaoGravacao, type SessaoGravacao } from '../ad/useSessaoGravacao';
 import { Teleprompter } from '../ad/Teleprompter';
+import { SeletorMicrofone } from '../ad/SeletorMicrofone';
 import { AjustesLegenda, CartaoBloco, CLASSE_NIVEL, ICONE, Numero, ROTULO_NIVEL, seg } from '../ad/componentes';
 import { PainelAbas, Secao, useLacunas } from '../comum';
 import { Icone } from '../icones';
@@ -162,25 +163,36 @@ function RoteiroLista() {
     );
   }
   return (
-    <ol className="space-y-2 p-2">
-      {blocos.map((b, i) => (
-        <li key={b.id}>
-          <CartaoBloco
-            n={i + 1}
-            bloco={b}
-            apontamentos={verificarBloco(b, final.cues, parametros)}
-            ppm={parametros.palavrasPorMinuto}
-            aoFocar={() => setFoco(b.id)}
-            podeGravar={!!video && !sessao.ativa}
-            aoGravar={() => sessao.gravarAvulso(b.id)}
-            aoOuvir={() => {
-              buscar(Math.max(0, b.inicioMs - 2000));
-              void video?.play();
-            }}
-          />
-        </li>
-      ))}
-    </ol>
+    <>
+      <SeletorMicrofone sessao={sessao} compacto />
+      {sessao.erroMic || sessao.aviso ? (
+        <div
+          role="alert"
+          className={`m-2 mb-0 rounded border px-3 py-2 text-xs ${sessao.erroMic ? 'border-bad bg-bad-100 text-bad' : 'border-paper-400 bg-paper-200 text-navy-700'}`}
+        >
+          {sessao.erroMic ?? sessao.aviso}
+        </div>
+      ) : null}
+      <ol className="space-y-2 p-2">
+        {blocos.map((b, i) => (
+          <li key={b.id}>
+            <CartaoBloco
+              n={i + 1}
+              bloco={b}
+              apontamentos={verificarBloco(b, final.cues, parametros)}
+              ppm={parametros.palavrasPorMinuto}
+              aoFocar={() => setFoco(b.id)}
+              podeGravar={!!video && !sessao.ativa}
+              aoGravar={() => sessao.gravarAvulso(b.id)}
+              aoOuvir={() => {
+                buscar(Math.max(0, b.inicioMs - 2000));
+                void video?.play();
+              }}
+            />
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 
@@ -531,13 +543,11 @@ function RoteiroInspetor({ secao }: { secao: 'blocos' | 'leitura' | 'atalhos' })
 }
 
 function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'microfone' }) {
-  const id = useId();
   const { estado } = useEstado();
   const despachar = useDespachar();
   const desktop = ponte();
   const { sessao } = useAD();
   const p = estado.ad.parametros;
-  const nivelPct = Number.isFinite(sessao.nivel) ? Math.max(0, Math.min(100, ((sessao.nivel + 60) / 60) * 100)) : 0;
 
   if (secao === 'teleprompter')
     return (
@@ -573,39 +583,7 @@ function GravacaoInspetor({ secao }: { secao: 'teleprompter' | 'legenda' | 'micr
     );
   return (
     <Secao titulo="Microfone" dica="Fones para o locutor. Eco, ruído e ganho automáticos ficam desligados.">
-      {sessao.micAberto ? (
-        <>
-          <label className="rotulo" htmlFor={`${id}-mic`}>
-            Entrada
-          </label>
-          <select
-            id={`${id}-mic`}
-            className="campo"
-            value={sessao.micId}
-            onChange={(e) => sessao.setMicId(e.target.value)}
-          >
-            <option value="">Padrão do sistema</option>
-            {sessao.microfones.map((m) => (
-              <option key={m.deviceId} value={m.deviceId}>
-                {m.label || `Microfone ${m.deviceId.slice(0, 6)}`}
-              </option>
-            ))}
-          </select>
-          <div className="mt-2 h-1.5 w-full rounded bg-fundo" aria-hidden="true">
-            <div
-              className={`h-1.5 rounded ${sessao.nivel > -3 ? 'bg-bad' : sessao.nivel > -12 ? 'bg-warn' : 'bg-ok'}`}
-              style={{ width: `${nivelPct}%` }}
-            />
-          </div>
-          <p className="mt-1 text-2xs text-navy-500">
-            Pico: {Number.isFinite(sessao.nivel) ? `${sessao.nivel.toFixed(0)} dBFS` : '—'}
-          </p>
-        </>
-      ) : (
-        <button type="button" className="btn-secundario w-full justify-center" onClick={() => void sessao.abrirMic()}>
-          Abrir microfone
-        </button>
-      )}
+      <SeletorMicrofone sessao={sessao} />
       {sessao.erroMic ? <p className="mt-2 text-xs text-bad">{sessao.erroMic}</p> : null}
       <div className="mt-2 grid grid-cols-3 gap-1.5">
         <Numero

@@ -3,6 +3,7 @@ import { cpsDaLegenda, duracaoMs, faixaCps, formatarDuracao, formatarTimecode, R
 import { Regua } from './Regua';
 import { CardSugestao } from './CardSugestao';
 import { Icone, type NomeIcone } from './icones';
+import { CampoTempo } from './CampoTempo';
 
 const CLASSE_FAIXA = {
   verde: 'border-ok bg-ok-100 text-ok',
@@ -33,6 +34,7 @@ export function ItemLegenda({
   remanescentes,
   mostrarPrevia,
   aoVerNoVideo,
+  aoMudarTempo,
 }: {
   cue: Cue;
   sugestoes: Suggestion[];
@@ -42,6 +44,8 @@ export function ItemLegenda({
   remanescentes: number;
   mostrarPrevia: boolean;
   aoVerNoVideo?: () => void;
+  /** edição manual da entrada e da saída */
+  aoMudarTempo?: (startMs: number, endMs: number) => void;
 }) {
   const alterada =
     mostrarPrevia && linhasFinais && linhasFinais.join('\n') !== cue.lines.join('\n');
@@ -57,9 +61,19 @@ export function ItemLegenda({
         <h3 id={`legenda-${cue.index}`} className="text-sm font-semibold">
           Legenda {cue.index}
         </h3>
-        <span className="font-mono text-xs text-navy-700">
-          {formatarTimecode(cue.startMs)} → {formatarTimecode(cue.endMs)}
-        </span>
+        {aoMudarTempo ? (
+          <CampoTempo
+            inicioMs={cue.startMs}
+            fimMs={cue.endMs}
+            fps={config.fps}
+            rotulo={`legenda ${cue.index}`}
+            aoMudar={aoMudarTempo}
+          />
+        ) : (
+          <span className="font-mono text-xs text-navy-700">
+            {formatarTimecode(cue.startMs)} → {formatarTimecode(cue.endMs)}
+          </span>
+        )}
         <span className="text-xs text-navy-700">{formatarDuracao(duracaoMs(cue))}</span>
         <BadgeCps cue={cue} config={config} />
         {alterada ? (

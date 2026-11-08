@@ -1,3 +1,4 @@
+import { formatarTimecode } from '../core/texto';
 import React, {
   createContext,
   useContext,
@@ -149,6 +150,8 @@ type Acao =
   | { tipo: 'config'; mudanca: Partial<RuleConfig> }
   | { tipo: 'decidir'; id: string; decisao: Decision }
   | { tipo: 'editar'; id: string; lines: string[] }
+  /** entrada/saída de uma legenda, editadas à mão (campos ou arrasto na linha do tempo) */
+  | { tipo: 'cueTempo'; index: number; startMs: number; endMs: number }
   | { tipo: 'lote'; ruleId: string }
   | { tipo: 'desfazerLote' }
   | { tipo: 'filtros'; mudanca: Partial<Filtros> }
@@ -271,6 +274,23 @@ function redutor(estado: Estado, acao: Acao): Estado {
       if (estado.cues.length === 0) return { ...estado, config };
       const novo = reanalisar(estado, config);
       return { ...novo, anuncio: `Configuração atualizada; ${novo.sugestoes.length} apontamentos.` };
+    }
+
+    case 'cueTempo': {
+      const i = estado.cues.findIndex((c) => c.index === acao.index);
+      const inicio = Math.max(0, Math.round(acao.startMs));
+      const fim = Math.round(acao.endMs);
+      if (i < 0 || !(fim > inicio)) return estado;
+      const c = estado.cues[i];
+      if (c.startMs === inicio && c.endMs === fim) return estado;
+      const cues = estado.cues.map((x, k) => (k === i ? { ...x, startMs: inicio, endMs: fim } : x));
+      // as regras rodam de novo; decisões de apontamentos que não mudaram são mantidas
+      const novo = reanalisar({ ...estado, cues }, estado.config);
+      return {
+        ...novo,
+        projeto: { ...estado.projeto, sujo: true },
+        anuncio: `Legenda ${c.index}: ${formatarTimecode(inicio)} a ${formatarTimecode(fim)}.`,
+      };
     }
 
     case 'decidir': {

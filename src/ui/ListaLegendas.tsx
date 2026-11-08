@@ -58,6 +58,13 @@ export function ListaLegendas({
   }, [final.remanescentes]);
 
   // Virtualização dentro do painel (layout de editor: cada painel rola por si).
+  // O elemento que rola é um ANCESTRAL (o corpo do painel de abas): a referência a
+  // ele só é preenchida depois dos efeitos de layout deste componente. Sem um
+  // segundo desenho, o virtualizador não acha a área visível e a lista sai vazia.
+  const [rolagemPronta, setRolagemPronta] = useState(false);
+  useEffect(() => {
+    if (rolagem.current) setRolagemPronta(true);
+  }, [rolagem]);
   // O deslocamento é a posição da lista dentro do elemento que rola.
   const [offset, setOffset] = useState(0);
   useLayoutEffect(() => {
@@ -69,7 +76,7 @@ export function ListaLegendas({
     medir();
     window.addEventListener('resize', medir);
     return () => window.removeEventListener('resize', medir);
-  }, [visiveis.length, documento.length, rolagem]);
+  }, [visiveis.length, documento.length, rolagem, rolagemPronta]);
 
   const virtualizer = useVirtualizer({
     count: visiveis.length,
@@ -131,6 +138,7 @@ export function ListaLegendas({
                     remanescentes={remanescentesPorIndice.get(cue.index) ?? 0}
                     mostrarPrevia={mostrarPrevia}
                     aoVerNoVideo={temVideo ? () => despachar({ tipo: 'seek', ms: cue.startMs }) : undefined}
+                    aoMudarTempo={(startMs, endMs) => despachar({ tipo: 'cueTempo', index: cue.index, startMs, endMs })}
                   />
                 </div>
               );

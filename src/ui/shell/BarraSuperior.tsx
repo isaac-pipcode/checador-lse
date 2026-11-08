@@ -126,11 +126,12 @@ export function BotaoAjudas() {
       type="button"
       className="btn-fantasma h-6 gap-1.5 aria-pressed:text-terra-700"
       aria-pressed={ligado}
+      aria-label="Ajudas"
       title={ligado ? 'Esconder ajudas (F1)' : 'Mostrar todas as ajudas (F1)'}
       onClick={() => definirMostrarAjudas(!ligado)}
     >
       <Icone nome="ajuda" />
-      Ajudas
+      <span className="hidden min-[1440px]:inline">Ajudas</span>
     </button>
   );
 }

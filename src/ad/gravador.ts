@@ -35,6 +35,13 @@ export class Gravador {
     return this.stream !== null;
   }
 
+  /** nome da entrada em uso (o que o sistema informa) e se ela ainda está ligada */
+  get entrada(): { nome: string; deviceId: string | null; viva: boolean } | null {
+    const t = this.stream?.getAudioTracks()[0];
+    if (!t) return null;
+    return { nome: t.label, deviceId: t.getSettings().deviceId ?? null, viva: t.readyState === 'live' };
+  }
+
   /** pico do último quadro, em dBFS (para o medidor) */
   nivelDb(): number {
     if (!this.analisador) return -Infinity;

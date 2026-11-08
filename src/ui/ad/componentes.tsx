@@ -8,6 +8,7 @@ import { nivelDoBloco, type ApontamentoAD, type NivelAD } from '../../ad/verific
 import { descartarTake } from '../../ad/audio';
 import { COR_LEGENDA } from './Teleprompter';
 import { Icone, type NomeIcone } from '../icones';
+import { CampoTempo } from '../CampoTempo';
 
 /** Peças da interface de AD reutilizadas pelas páginas (cartão de bloco, take, ajustes). */
 
@@ -158,6 +159,7 @@ export function CartaoBloco({
   aoOuvir: () => void;
 }) {
   const despachar = useDespachar();
+  const { estado } = useEstado();
   const janela = b.fimMs - b.inicioMs;
   const est = duracaoEstimadaMs(b.texto, ppm);
   const palavras = contarPalavras(b.texto);
@@ -181,9 +183,13 @@ export function CartaoBloco({
         <h3 id={`titulo-${b.id}`} className="text-sm font-semibold">
           Bloco {n}
         </h3>
-        <span className="font-mono text-xs text-navy-700">
-          {formatarTimecode(b.inicioMs)} → {formatarTimecode(b.fimMs)}
-        </span>
+        <CampoTempo
+          inicioMs={b.inicioMs}
+          fimMs={b.fimMs}
+          fps={estado.config.fps}
+          rotulo={`janela do bloco ${n}`}
+          aoMudar={(inicioMs, fimMs) => despachar({ tipo: 'adEditar', id: b.id, mudanca: { inicioMs, fimMs } })}
+        />
         <span className="text-xs text-navy-700">janela de {seg(janela)}</span>
         <span className={`chip ${CLASSE_NIVEL[nivel]}`}>
           <Icone nome={ICONE[nivel]} tamanho={12} />
@@ -245,11 +251,16 @@ export function CartaoBloco({
           <button
             type="button"
             className="btn-secundario"
-            disabled={!podeGravar || !b.aprovado}
-            title={b.aprovado ? undefined : 'Aprove o roteiro para gravar'}
-            onClick={aoGravar}
+            disabled={!podeGravar || !temTexto}
+            title={temTexto ? undefined : 'Escreva o roteiro do bloco para gravar'}
+            onClick={() => {
+              // gravar é aprovar: quem grava leu o roteiro e o aceitou
+              if (!b.aprovado) despachar({ tipo: 'adAprovar', id: b.id, aprovado: true });
+              aoGravar();
+            }}
           >
-            <Icone nome="gravar" tamanho={14} /> {b.takes.length ? 'Gravar outro take' : 'Gravar este bloco'}
+            <Icone nome="gravar" tamanho={14} />{' '}
+            {!b.aprovado ? 'Aprovar e gravar' : b.takes.length ? 'Gravar outro take' : 'Gravar este bloco'}
           </button>
           {b.takes.length > 0 ? (
             <ul className="w-full space-y-1 text-xs" aria-label={`Gravações do bloco ${n}`}>

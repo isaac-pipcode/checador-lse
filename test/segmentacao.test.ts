@@ -6,15 +6,15 @@ const motor = new SegmentadorPtBr();
 
 describe('L1 — segmentação sintática (caso de aceite 3)', () => {
   it('reposiciona a quebra que separa a contração do seu complemento', () => {
-    const p = motor.avaliarQuebra(['Empresário mata ex-mulher no', 'centro de Fortaleza'], 37);
+    const p = motor.avaliarQuebra(['Cantor lança o disco inédito no', 'centro de Recife'], 37);
     expect(p).not.toBeNull();
-    expect(p!.linhas).toEqual(['Empresário mata ex-mulher', 'no centro de Fortaleza']);
+    expect(p!.linhas).toEqual(['Cantor lança o disco inédito', 'no centro de Recife']);
     expect(p!.confianca).toBeGreaterThan(0.7);
     expect(p!.diagnostico).toMatch(/contração/);
   });
 
   it('não mexe em quebra já bem posicionada', () => {
-    expect(motor.avaliarQuebra(['Empresário mata ex-mulher', 'no centro de Fortaleza'], 37)).toBeNull();
+    expect(motor.avaliarQuebra(['Cantor lança o disco inédito', 'no centro de Recife'], 37)).toBeNull();
   });
 
   it('acusa quebra após determinante e depois de preposição', () => {
@@ -52,8 +52,8 @@ describe('L1 — segmentação sintática (caso de aceite 3)', () => {
     const { sugestoes } = rodar(
       `1
 00:00:01,000 --> 00:00:04,000
-Empresário mata ex-mulher no
-centro de Fortaleza
+Cantor lança o disco inédito no
+centro de Recife
 `,
       { nlpAtivo: false },
     );
@@ -68,14 +68,14 @@ centro de Fortaleza
   it('produz sugestão L1 com confiança e sem auto-correção', () => {
     const { sugestoes } = rodar(`1
 00:00:01,000 --> 00:00:04,000
-Empresário mata ex-mulher no
-centro de Fortaleza
+Cantor lança o disco inédito no
+centro de Recife
 `);
     const l1 = daRegra(sugestoes, 'L1');
     expect(l1).toHaveLength(1);
     expect(l1[0].verifiability).toBe('nlp');
     expect(l1[0].confidence).toBeGreaterThan(0);
     expect(l1[0].autoFixable).toBe(false);
-    expect(l1[0].after?.lines).toEqual(['Empresário mata ex-mulher', 'no centro de Fortaleza']);
+    expect(l1[0].after?.lines).toEqual(['Cantor lança o disco inédito', 'no centro de Recife']);
   });
 });

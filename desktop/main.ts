@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell, systemPreferences } from 'electron';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
+import { abrirPaginaDaRelease, estadoAtualizacao, reiniciarParaAtualizar, verificarAtualizacao } from './atualizacao';
 import { FFMPEG, ORIGEM_FFMPEG, decodificarStream, executar, sondar, sondarVideo, versaoFfmpeg } from './ffmpeg';
 import { renderizar } from './render';
 import { renderizarEntrega } from './entrega';
@@ -238,6 +239,12 @@ function lerProjeto(caminho: string) {
 }
 
 function registrarIpc() {
+  ipcMain.handle('atualizacao:versao', () => app.getVersion());
+  ipcMain.handle('atualizacao:estado', () => estadoAtualizacao());
+  ipcMain.handle('atualizacao:verificar', () => verificarAtualizacao());
+  ipcMain.on('atualizacao:reiniciar', () => reiniciarParaAtualizar());
+  ipcMain.on('atualizacao:abrir', (_e, url: unknown) => abrirPaginaDaRelease(String(url)));
+
   ipcMain.handle('ffmpeg', async () => {
     const versao = await versaoFfmpeg();
     return { disponivel: versao !== null, versao, caminho: FFMPEG, origem: ORIGEM_FFMPEG };
@@ -497,7 +504,14 @@ app.whenReady().then(() => {
   // microfone permitido (gravação de AD); câmera e o resto, não
   session.defaultSession.setPermissionRequestHandler((_wc, permissao, ok, detalhes) => {
     const d = detalhes as { mediaTypes?: string[] };
-    ok(permissao === 'media' && (d.mediaTypes ?? []).every((t) => t === 'audio'));
+    const soAudio = permissao === 'media' && (d.mediaTypes ?? []).every((t) => t === 'audio');
+    if (!soAudio) return ok(false);
+    // no macOS, o sistema também precisa autorizar (pede uma vez; depois, Ajustes → Privacidade → Microfone)
+    if (process.platform === 'darwin') {
+      void systemPreferences.askForMediaAccess('microphone').then(ok, () => ok(false));
+      return;
+    }
+    ok(true);
   });
   registrarIpc();
   janela();

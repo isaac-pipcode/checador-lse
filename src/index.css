@@ -128,6 +128,35 @@
   }
 }
 
+/* O app nunca rola como página: cada painel rola por dentro. */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Transporte do monitor: compacto quando o monitor é estreito (telas pequenas ou com escala). */
+.transporte {
+  container-type: inline-size;
+}
+.transporte .rotulo-curto {
+  display: none;
+}
+@container (max-width: 620px) {
+  /* sem a duração, os botões vão para a esquerda e as camadas ficam com o resto */
+  .transporte {
+    grid-template-columns: 0 auto minmax(0, 1fr);
+  }
+  .transporte .transporte-duracao,
+  .transporte .rotulo-longo {
+    display: none;
+  }
+  .transporte .rotulo-curto {
+    display: inline;
+  }
+}
+
 /* Divisória entre painéis: o sulco visível tem 2 px; a área de pegar é maior (pseudo-elemento). */
 .divisoria {
   position: relative;
