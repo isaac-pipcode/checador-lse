@@ -1,6 +1,26 @@
 Versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE), audiodescrição e
 janela de Libras numa mesma linha do tempo.
 
+**Novo na 0.1.4**:
+
+- **Transcrição com o Whisper** para obras que chegam sem legenda: *Legendas → Transcrever o áudio da obra*
+  (ou *Arquivo → Transcrever…*). Roda no próprio computador, sem enviar nada; o rascunho já sai dentro das
+  regras mecânicas do Guia (37 caracteres, duas linhas, durações, intervalo, quebra no mais alto nível
+  sintático) e passa pela revisão de sempre. Falantes e efeitos sonoros ficam para a equipe. O modelo
+  (Turbo, 574 MB, ou Máxima precisão, 3,1 GB) é baixado uma vez e conferido por SHA-256; transcrever de
+  novo o mesmo arquivo vem do cache.
+- **Lembrar a chave de API** neste computador, cifrada pelo sistema (Windows, macOS ou chaveiro do Linux).
+
+- **Entrega em alta ou em proxy**: a seção *Qualidade das mídias* mostra de qual arquivo sai cada mídia
+  (obra e Libras) e permite exportar dos originais (padrão) ou dos proxies, para uma versão leve de
+  revisão. A escolha vale para o pacote, a AD com vídeo e a sequência para editores; saídas em proxy
+  levam "-proxy" no nome e a pasta sugerida é a do original.
+- **Cache das análises**: a análise do áudio da obra e do clipe de Libras fica guardada no computador;
+  reabrir o projeto ou importar de novo o mesmo arquivo não refaz a análise. Tamanho e "Limpar cache"
+  em *Metodologia*.
+- Corrigido: depois de gravar um take, a aba **Roteiro** não respondia (ficava presa em Gravação).
+  Agora, na revisão do take, voltar ao roteiro mantém o take.
+
 **Novo na 0.1.3**:
 
 - **Menu em português** (Arquivo, Editar, Exibir, Reprodução, Ajuda), com salvar, salvar como, ajudas

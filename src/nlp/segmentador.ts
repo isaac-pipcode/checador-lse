@@ -61,7 +61,8 @@ function pontuacaoFinal(t: string): Palavra['pontuacao'] {
   return '';
 }
 
-function tokenizar(texto: string): Palavra[] {
+/** Palavras com classe e pontuação, prontas para `nivelDaQuebra`. */
+export function tokenizar(texto: string): Palavra[] {
   return texto
     .split(/\s+/)
     .filter(Boolean)

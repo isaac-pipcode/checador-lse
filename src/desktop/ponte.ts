@@ -40,6 +40,8 @@ export interface ArquivoTake {
 }
 
 export interface PedidoRender {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -61,6 +63,8 @@ export interface RelatorioRender {
 }
 
 export interface PedidoEntrega {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -88,6 +92,8 @@ export interface RelatorioEntrega {
 }
 
 export interface PedidoIntercambio {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -215,6 +221,34 @@ export interface PonteDesktop {
   escolherLegenda(): Promise<{ nome: string; bytes: Uint8Array } | null>;
   /** chamada à Responses API da Maritaca pelo processo principal (endpoint fixo); a chave não é guardada */
   llmMaritaca(apiKey: string, corpo: object): Promise<{ status: number; texto: string }>;
+  /** cache em disco das análises de áudio (desktop/cacheMidia.ts) */
+  cacheAnalises: {
+    tamanho(): Promise<{ bytes: number; entradas: number }>;
+    limpar(): Promise<void>;
+  };
+  /** chaves de API lembradas neste computador, cifradas pelo sistema (desktop/chaves.ts) */
+  chaves: {
+    estado(): Promise<{ cifra: boolean; lembrados: string[] }>;
+    ler(provedor: string): Promise<string | null>;
+    salvar(provedor: string, chave: string): Promise<void>;
+    esquecer(provedor: string): Promise<void>;
+  };
+  /**
+   * Transcrição local com o Whisper (desktop/whisper.ts). `trabalho` é um id
+   * escolhido pela interface, para poder cancelar.
+   */
+  whisper: {
+    estado(): Promise<{ disponivel: boolean; origem: string; modelos: Array<{ id: string; baixado: boolean }> }>;
+    baixarModelo(trabalho: string, modelo: string, aoProgredir: (fracao: number) => void): Promise<void>;
+    transcrever(
+      trabalho: string,
+      caminho: string,
+      modelo: string,
+      idioma: string,
+      aoProgredir: (fracao: number, etapa: string) => void,
+    ): Promise<{ json: unknown; doCache: boolean }>;
+    cancelar(trabalho: string): Promise<void>;
+  };
   /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
   quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;

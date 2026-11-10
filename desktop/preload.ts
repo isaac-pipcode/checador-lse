@@ -5,8 +5,7 @@ let seq = 0;
 const novoId = () => `${Date.now().toString(36)}-${seq++}`;
 
 /** Invoca com canal de progresso próprio, removido ao terminar. */
-function comProgresso<T>(canal: string, dados: object, cb: (fracao: number, etapa: string) => void): Promise<T> {
-  const id = novoId();
+function comProgresso<T>(canal: string, dados: object, cb: (fracao: number, etapa: string) => void, id = novoId()): Promise<T> {
   const ouvinte = (_e: unknown, p: { id: string; fracao: number; etapa: string }) => {
     if (p.id === id) cb(p.fracao, p.etapa);
   };
@@ -58,6 +57,23 @@ const ponte: PonteDesktop = {
   },
   escolherLegenda: () => ipcRenderer.invoke('legenda:escolher'),
   quantasTelas: () => ipcRenderer.invoke('telas:quantas'),
+  whisper: {
+    estado: () => ipcRenderer.invoke('whisper:estado'),
+    baixarModelo: (trabalho, modelo, aoProgredir) => comProgresso('whisper:baixar', { modelo }, (f) => aoProgredir(f), trabalho),
+    transcrever: (trabalho, caminho, modelo, idioma, aoProgredir) =>
+      comProgresso('whisper:transcrever', { caminho, modelo, idioma }, aoProgredir, trabalho),
+    cancelar: (trabalho) => ipcRenderer.invoke('whisper:cancelar', trabalho),
+  },
+  chaves: {
+    estado: () => ipcRenderer.invoke('chave:estado'),
+    ler: (provedor) => ipcRenderer.invoke('chave:ler', provedor),
+    salvar: (provedor, chave) => ipcRenderer.invoke('chave:salvar', provedor, chave),
+    esquecer: (provedor) => ipcRenderer.invoke('chave:esquecer', provedor),
+  },
+  cacheAnalises: {
+    tamanho: () => ipcRenderer.invoke('cache:tamanho'),
+    limpar: () => ipcRenderer.invoke('cache:limpar'),
+  },
   llmMaritaca: (apiKey, corpo) => ipcRenderer.invoke('llm:maritaca', { apiKey, corpo }),
   aoFecharPrompter: (cb) => ouvir('prompter:fechado', () => cb()),
   aoEstadoDoPrompter: (cb) => ouvir('prompter:estado', cb),

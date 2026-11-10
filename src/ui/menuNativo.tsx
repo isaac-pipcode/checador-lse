@@ -5,6 +5,7 @@ import { definirMostrarAjudas, mostrarAjudas, useMostrarAjudas } from './ajudas'
 import { emitirAcao, type AcaoMenu } from './acoesMenu';
 import { useImportarLegenda } from './Carregador';
 import { useAcoesProjeto } from './Projeto';
+import { carregarChaveLembrada } from './ConfigLlm';
 import { Sobre } from './Sobre';
 import { assinarTema, salvarTema, temaSalvo } from './tema/tokens';
 
@@ -69,6 +70,7 @@ function DialogoMetodologia() {
 const PAGINA_DA_ACAO: Partial<Record<AcaoMenu, Pagina>> = {
   novoProjeto: 'projetos',
   importarInterprete: 'libras',
+  transcrever: 'lse',
 };
 
 const NAVEGACAO: Partial<Record<AcaoMenu, Pagina>> = {
@@ -123,6 +125,12 @@ export function MenuNativo() {
   };
 
   useEffect(() => desktop?.menu?.aoAcao((a) => tratar.current(a as AcaoMenu)), [desktop]);
+
+  // chave de API lembrada neste computador: carregada ao abrir, para o assistente funcionar sem redigitar
+  useEffect(() => {
+    void carregarChaveLembrada(estado.llm.provedor, (m) => despachar({ tipo: 'llm', mudanca: m }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // F1 liga/desliga as ajudas em qualquer tela (o menu só exibe o atalho)
   useEffect(() => {

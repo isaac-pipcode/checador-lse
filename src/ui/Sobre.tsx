@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CATALOGO } from '../rules';
 import { ponte } from '../desktop/ponte';
 import { SecaoAtualizacao } from './atualizacao';
+import { SecaoCache } from './SecaoCache';
 import { ROTULO_VERIFICABILIDADE } from './primitivos';
 
 export function Sobre() {
@@ -152,6 +153,7 @@ function ComponentesTerceiros() {
   return (
     <>
       <SecaoAtualizacao />
+      <SecaoCache />
 
       <h3 className="mt-8 text-lg font-semibold">Licença</h3>
       <p className="mt-2 text-sm text-navy-700">
@@ -184,6 +186,12 @@ function ComponentesTerceiros() {
           {ff.disponivel ? <span className="block break-all font-mono">{ff.caminho}</span> : null}
         </p>
       ) : null}
+      <p className="mt-2 text-sm text-navy-700">
+        <strong>whisper.cpp</strong> (licença MIT) transcreve a fala para o rascunho de LSE, neste computador. O
+        programa vai embutido, compilado a partir do código oficial; licença e versão na pasta{' '}
+        <code>resources/whisper</code>. Os modelos do <strong>Whisper</strong> (OpenAI, licença MIT) são baixados sob
+        demanda do repositório do whisper.cpp no Hugging Face e conferidos por SHA-256.
+      </p>
       <p className="mt-2 text-sm text-navy-700">
         Ícones: <strong>Lucide</strong> (licença ISC). Mãos de Libras: desenho próprio, derivado do traçado “hand” do
         Lucide.

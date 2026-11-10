@@ -9,6 +9,18 @@ import { renderizarEntrega } from './entrega';
 import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
 import { atualizarEstadoMenu, instalarMenu, type EstadoMenu } from './menu';
+import { cifraDisponivel, esquecerChave, lerChave, provedoresLembrados, salvarChave } from './chaves';
+import {
+  chaveDeAnalise,
+  gravarJsonNoCache,
+  gravarNoCache,
+  lerDoCache,
+  lerJsonDoCache,
+  limparCache,
+  tamanhoDoCache,
+} from './cacheMidia';
+import { baixarModelo, estadoWhisper, transcrever } from './whisper';
+import whisperEmbutido from './whisper-embutido.json';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoEntrega, PedidoIntercambio, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
@@ -241,6 +253,9 @@ function lerProjeto(caminho: string) {
   return { caminho, projeto, takes };
 }
 
+/** cache das análises de mídia (envelopes de áudio), fora do projeto: vale para todos */
+const pastaCache = () => join(app.getPath('userData'), 'cache', 'analises');
+
 function registrarIpc() {
   ipcMain.handle('atualizacao:versao', () => app.getVersion());
   ipcMain.handle('atualizacao:estado', () => estadoAtualizacao());
@@ -265,6 +280,14 @@ function registrarIpc() {
       return { status: 0, texto: 'sem conexão' };
     }
   });
+  // chaves de API lembradas (cifradas pelo sistema); só a janela principal
+  const daPrincipal = (e: Electron.IpcMainInvokeEvent) => {
+    if (e.sender !== principal?.webContents) throw new Error('Origem não autorizada.');
+  };
+  ipcMain.handle('chave:estado', (e) => (daPrincipal(e), { cifra: cifraDisponivel(), lembrados: provedoresLembrados() }));
+  ipcMain.handle('chave:ler', (e, provedor: string) => (daPrincipal(e), lerChave(String(provedor))));
+  ipcMain.handle('chave:salvar', (e, provedor: string, chave: string) => (daPrincipal(e), salvarChave(String(provedor), String(chave))));
+  ipcMain.handle('chave:esquecer', (e, provedor: string) => (daPrincipal(e), esquecerChave(String(provedor))));
   ipcMain.handle('telas:quantas', () => screen.getAllDisplays().length);
   ipcMain.handle('legenda:escolher', async (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);
@@ -306,6 +329,14 @@ function registrarIpc() {
   ipcMain.handle('audio:envelope', async (e, { id, caminho, janelaMs }: { id: string; caminho: string; janelaMs: number }) => {
     if (![...autorizados.values()].includes(resolve(caminho))) throw new Error('Caminho não autorizado.');
     const taxa = 16000;
+    const filtro = 'highpass=f=150,lowpass=f=4000';
+    // mesmo arquivo (caminho, tamanho, data) e mesma análise: vem do cache, sem decodificar de novo
+    const chave = chaveDeAnalise(caminho, { tipo: 'envelope', taxa, janelaMs, filtro });
+    const guardado = chave ? lerDoCache(pastaCache(), chave) : null;
+    if (guardado) {
+      progresso(e, id, 1);
+      return guardado;
+    }
     const acc = new AcumuladorEnvelope(taxa, janelaMs);
     let duracaoMs = 0;
     let lidas = 0;
@@ -314,7 +345,7 @@ function registrarIpc() {
       caminho,
       1,
       taxa,
-      'highpass=f=150,lowpass=f=4000',
+      filtro,
       (a) => {
         acc.adicionar(a);
         lidas += a.length;
@@ -326,8 +357,47 @@ function registrarIpc() {
       },
       (ms) => (duracaoMs = ms),
     );
-    return { envelopeDb: acc.concluir(), duracaoMs: duracaoMs || Math.round((lidas / taxa) * 1000) };
+    const resultado = { envelopeDb: acc.concluir(), duracaoMs: duracaoMs || Math.round((lidas / taxa) * 1000) };
+    if (chave) gravarNoCache(pastaCache(), chave, resultado.envelopeDb, resultado.duracaoMs);
+    return resultado;
   });
+  // ---- Transcrição (Whisper local) ----------------------------------------
+  const trabalhosWhisper = new Map<string, AbortController>();
+  const comCancelamento = async <T>(id: string, f: (s: AbortSignal) => Promise<T>) => {
+    const ctrl = new AbortController();
+    trabalhosWhisper.set(id, ctrl);
+    try {
+      return await f(ctrl.signal);
+    } finally {
+      trabalhosWhisper.delete(id);
+    }
+  };
+  ipcMain.handle('whisper:estado', () => estadoWhisper());
+  ipcMain.handle('whisper:cancelar', (_e, id: string) => trabalhosWhisper.get(String(id))?.abort());
+  ipcMain.handle('whisper:baixar', (e, { id, modelo }: { id: string; modelo: string }) =>
+    comCancelamento(id, (s) => baixarModelo(modelo, (f) => progresso(e, id, f, 'Baixando o modelo'), s)),
+  );
+  ipcMain.handle(
+    'whisper:transcrever',
+    (e, { id, caminho, modelo, idioma }: { id: string; caminho: string; modelo: string; idioma: string }) => {
+      if (![...autorizados.values()].includes(resolve(caminho))) throw new Error('Caminho não autorizado.');
+      // mesmo arquivo, modelo, idioma e versão do whisper.cpp: a transcrição já feita volta do cache
+      const chave = chaveDeAnalise(caminho, { tipo: 'whisper', modelo, idioma, versao: whisperEmbutido.versao });
+      const guardada = chave ? lerJsonDoCache<unknown>(pastaCache(), chave) : null;
+      if (guardada) {
+        progresso(e, id, 1, 'Concluído');
+        return { json: guardada, doCache: true };
+      }
+      return comCancelamento(id, async (s) => {
+        const json = await transcrever(caminho, modelo, idioma, (f, etapa) => progresso(e, id, f, etapa), s);
+        if (chave) gravarJsonNoCache(pastaCache(), chave, json);
+        return { json, doCache: false };
+      });
+    },
+  );
+
+  ipcMain.handle('cache:tamanho', () => tamanhoDoCache(pastaCache()));
+  ipcMain.handle('cache:limpar', () => limparCache(pastaCache()));
 
   ipcMain.handle(
     'projeto:salvar',
@@ -474,7 +544,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta para a exportação aos editores',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return exportarSincronia(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
@@ -488,7 +558,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta de saída da entrega',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return renderizarEntrega(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
@@ -500,7 +570,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta de saída da mixagem',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return renderizar(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));

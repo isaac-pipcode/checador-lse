@@ -17,6 +17,7 @@ export type AcaoMenu =
   | 'salvarComo'
   | 'abrirVideo'
   | 'importarLegenda'
+  | 'transcrever'
   | 'importarInterprete'
   | 'irProjetos'
   | 'irLse'
