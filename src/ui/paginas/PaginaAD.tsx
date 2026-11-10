@@ -78,6 +78,7 @@ function useTelas(): number {
 
 function SeletorModo() {
   const { modo, setModo, sessao } = useAD();
+  const capturando = GRAVANDO.has(sessao.fase) || sessao.fase === 'processando';
   return (
     <div
       className="ml-auto flex rounded bg-fundo p-0.5 normal-case tracking-normal"
@@ -88,8 +89,13 @@ function SeletorModo() {
         type="button"
         className="segmento"
         aria-pressed={modo === 'roteiro'}
-        disabled={sessao.ativa}
-        onClick={() => setModo('roteiro')}
+        // só durante a captura o roteiro fica fechado; na revisão do take, voltar ao roteiro mantém o take
+        disabled={capturando}
+        title={capturando ? 'Gravando: Enter encerra o take, Esc encerra a sessão' : undefined}
+        onClick={() => {
+          if (sessao.fase === 'revisao') sessao.comando('encerrar');
+          setModo('roteiro');
+        }}
       >
         Roteiro
       </button>

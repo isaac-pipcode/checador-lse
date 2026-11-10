@@ -163,9 +163,15 @@ export function useSessaoGravacao() {
     r.current.blocoId = id;
     setBlocoId(id);
     setFase('preroll');
-    await gravador.current.iniciar();
-    inicioGravacaoMs.current = video.currentTime * 1000;
-    await video.play();
+    // falha ao iniciar o microfone ou o vídeo não pode deixar a sessão presa na pré-rolagem
+    try {
+      await gravador.current.iniciar();
+      inicioGravacaoMs.current = video.currentTime * 1000;
+      await video.play();
+    } catch (e) {
+      encerrar(`Não foi possível iniciar a gravação: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
     const limite = b.fimMs + p.posrollMs;
     const laco = () => {
       if (!GRAVANDO.has(r.current.fase)) return;

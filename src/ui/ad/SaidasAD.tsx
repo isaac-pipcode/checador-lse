@@ -6,6 +6,7 @@ import { bytesDoTake } from '../../ad/audio';
 import { roteiroCsv, roteiroTexto, roteiroVtt } from '../../ad/roteiro';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
 import { baixar } from '../comum';
+import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
 import { Icone } from '../icones';
 
 /**
@@ -20,6 +21,7 @@ export function SaidasAD() {
   const { blocos, parametros } = estado.ad;
   const desktop = ponte();
   const [saidas, setSaidas] = useState({ mixagem: true, trilhaAd: true, video: true });
+  const fontes = useFontesExportacao();
   const [progresso, setProgresso] = useState<{ f: number; etapa: string } | null>(null);
   const [relatorio, setRelatorio] = useState<RelatorioRender | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function SaidasAD() {
   const gravados = blocos.filter((b) => b.takeAtivoId).length;
 
   async function renderizar() {
-    if (!desktop || !estado.video?.caminho) return;
+    if (!desktop || !fontes.video) return;
     setErro(null);
     setRelatorio(null);
     const clipes = clipesDosBlocos(blocos, parametros);
@@ -45,8 +47,9 @@ export function SaidasAD() {
     try {
       const r = await desktop.renderizar(
         {
-          videoCaminho: estado.video.caminho,
-          nomeBase: nome,
+          videoCaminho: fontes.video.caminho,
+          pastaPadrao: fontes.pastaPadrao,
+          nomeBase: nome + fontes.sufixo,
           duracaoMs: estado.mapa?.duracaoMs ?? 0,
           clipes,
           curva: curvaDeDucking(clipes, parametros),
@@ -129,6 +132,7 @@ export function SaidasAD() {
               >
                 Renderizar…
               </button>
+              {saidas.video ? <FonteDasMidias compacto /> : null}
               {progresso ? (
                 <div className="mt-2 flex items-center gap-2 text-xs" role="status">
                   <progress max={1} value={progresso.f} className="w-40" aria-label="Progresso da renderização" />

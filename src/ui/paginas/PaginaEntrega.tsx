@@ -13,6 +13,7 @@ import { NBR_15290 } from '../../libras/tipos';
 import { serializarSrt } from '../../export/serializar';
 import { useVideo } from '../contextoVideo';
 import { Icone } from '../icones';
+import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
 
 interface Item {
   ok: boolean | null; // null = não se aplica / não iniciado
@@ -149,12 +150,13 @@ export function EntregaDireita() {
   const temAd = clipes.length > 0;
   const temLse = final.cues.length > 0;
   const [incluir, setIncluir] = useState({ libras: true, ad: true, lse: true });
+  const fontes = useFontesExportacao();
   const [progresso, setProgresso] = useState<{ f: number; etapa: string } | null>(null);
   const [rel, setRel] = useState<RelatorioEntrega | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   async function renderizar() {
-    if (!desktop || !estado.video?.caminho) return;
+    if (!desktop || !fontes.video) return;
     setErro(null);
     setRel(null);
     setProgresso({ f: 0, etapa: 'Preparando' });
@@ -169,13 +171,14 @@ export function EntregaDireita() {
       const { clipe, inicioNaObraMs, ...janela } = estado.libras;
       const r = await desktop.renderizarEntrega(
         {
-          videoCaminho: estado.video.caminho,
-          nomeBase: (estado.projeto.nome || estado.video.nome).replace(/\.[^.]+$/, ''),
+          videoCaminho: fontes.video.caminho,
+          pastaPadrao: fontes.pastaPadrao,
+          nomeBase: (estado.projeto.nome || estado.video!.nome).replace(/\.[^.]+$/, '') + fontes.sufixo,
           duracaoMs,
           libras:
-            incluir.libras && clipe?.caminho
+            incluir.libras && clipe?.caminho && fontes.libras
               ? {
-                  caminho: clipe.caminho,
+                  caminho: fontes.libras.caminho,
                   inicioNaObraMs,
                   janela,
                 }
@@ -224,6 +227,12 @@ export function EntregaDireita() {
             </label>
           ))}
           <p className="mt-2 text-2xs text-navy-500">Formato: {formato}</p>
+        </Secao>
+        <Secao
+          titulo="Qualidade das mídias"
+          dica="Originais para entregar; proxy para uma versão leve de revisão. Vale também para a AD e a sequência para editores."
+        >
+          <FonteDasMidias />
         </Secao>
         <Secao titulo="Renderizar">
           {!desktop ? (

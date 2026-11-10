@@ -9,6 +9,7 @@ import { renderizarEntrega } from './entrega';
 import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
 import { atualizarEstadoMenu, instalarMenu, type EstadoMenu } from './menu';
+import { chaveDeAnalise, gravarNoCache, lerDoCache, limparCache, tamanhoDoCache } from './cacheMidia';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoEntrega, PedidoIntercambio, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
@@ -241,6 +242,9 @@ function lerProjeto(caminho: string) {
   return { caminho, projeto, takes };
 }
 
+/** cache das análises de mídia (envelopes de áudio), fora do projeto: vale para todos */
+const pastaCache = () => join(app.getPath('userData'), 'cache', 'analises');
+
 function registrarIpc() {
   ipcMain.handle('atualizacao:versao', () => app.getVersion());
   ipcMain.handle('atualizacao:estado', () => estadoAtualizacao());
@@ -306,6 +310,14 @@ function registrarIpc() {
   ipcMain.handle('audio:envelope', async (e, { id, caminho, janelaMs }: { id: string; caminho: string; janelaMs: number }) => {
     if (![...autorizados.values()].includes(resolve(caminho))) throw new Error('Caminho não autorizado.');
     const taxa = 16000;
+    const filtro = 'highpass=f=150,lowpass=f=4000';
+    // mesmo arquivo (caminho, tamanho, data) e mesma análise: vem do cache, sem decodificar de novo
+    const chave = chaveDeAnalise(caminho, { tipo: 'envelope', taxa, janelaMs, filtro });
+    const guardado = chave ? lerDoCache(pastaCache(), chave) : null;
+    if (guardado) {
+      progresso(e, id, 1);
+      return guardado;
+    }
     const acc = new AcumuladorEnvelope(taxa, janelaMs);
     let duracaoMs = 0;
     let lidas = 0;
@@ -314,7 +326,7 @@ function registrarIpc() {
       caminho,
       1,
       taxa,
-      'highpass=f=150,lowpass=f=4000',
+      filtro,
       (a) => {
         acc.adicionar(a);
         lidas += a.length;
@@ -326,8 +338,12 @@ function registrarIpc() {
       },
       (ms) => (duracaoMs = ms),
     );
-    return { envelopeDb: acc.concluir(), duracaoMs: duracaoMs || Math.round((lidas / taxa) * 1000) };
+    const resultado = { envelopeDb: acc.concluir(), duracaoMs: duracaoMs || Math.round((lidas / taxa) * 1000) };
+    if (chave) gravarNoCache(pastaCache(), chave, resultado.envelopeDb, resultado.duracaoMs);
+    return resultado;
   });
+  ipcMain.handle('cache:tamanho', () => tamanhoDoCache(pastaCache()));
+  ipcMain.handle('cache:limpar', () => limparCache(pastaCache()));
 
   ipcMain.handle(
     'projeto:salvar',
@@ -474,7 +490,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta para a exportação aos editores',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return exportarSincronia(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
@@ -488,7 +504,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta de saída da entrega',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return renderizarEntrega(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));
@@ -500,7 +516,7 @@ function registrarIpc() {
     const r = await dialog.showOpenDialog(w!, {
       title: 'Pasta de saída da mixagem',
       properties: ['openDirectory', 'createDirectory'],
-      defaultPath: dirname(pedido.videoCaminho),
+      defaultPath: pedido.pastaPadrao ?? dirname(pedido.videoCaminho),
     });
     if (r.canceled || !r.filePaths[0]) return null;
     return renderizar(pedido, r.filePaths[0], (f, etapa) => progresso(e, id, f, etapa));

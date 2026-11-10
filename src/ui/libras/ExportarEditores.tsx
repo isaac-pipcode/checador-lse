@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useEstado } from '../../state/store';
 import { ponte, type RelatorioIntercambio } from '../../desktop/ponte';
 import { useVideo } from '../contextoVideo';
+import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
 import { Icone } from '../icones';
 
 /**
@@ -21,12 +22,13 @@ export function ExportarEditores() {
   const [rel, setRel] = useState<RelatorioIntercambio | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const j = estado.libras;
+  const fontes = useFontesExportacao();
   const pronto = !!desktop && !!estado.video?.caminho && !!j.clipe?.caminho;
   const comDeriva = Math.abs(j.velocidade - 1) > 1e-6;
   const idFalta = useId();
 
   async function exportar() {
-    if (!desktop || !estado.video?.caminho || !j.clipe?.caminho) return;
+    if (!desktop || !fontes.video || !fontes.libras) return;
     setErro(null);
     setRel(null);
     setProgresso({ f: 0, etapa: 'Preparando' });
@@ -34,10 +36,11 @@ export function ExportarEditores() {
       const { clipe, inicioNaObraMs, ...janela } = j;
       const r = await desktop.exportarParaEditores(
         {
-          videoCaminho: estado.video.caminho,
-          nomeBase: (estado.projeto.nome || estado.video.nome).replace(/\.[^.]+$/, ''),
+          videoCaminho: fontes.video.caminho,
+          pastaPadrao: fontes.pastaPadrao,
+          nomeBase: (estado.projeto.nome || estado.video!.nome).replace(/\.[^.]+$/, '') + fontes.sufixo,
           duracaoMs,
-          libras: { caminho: clipe!.caminho!, inicioNaObraMs, janela },
+          libras: { caminho: fontes.libras.caminho, inicioNaObraMs, janela },
           formatos,
           incluirBruto: incluirBruto && !comDeriva,
         },
@@ -100,6 +103,7 @@ export function ExportarEditores() {
       >
         Exportar…
       </button>
+      <FonteDasMidias compacto />
       {falta && !rel ? (
         <p id={idFalta} className="mt-1 text-2xs text-navy-500">
           {falta}

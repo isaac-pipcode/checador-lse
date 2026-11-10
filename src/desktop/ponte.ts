@@ -40,6 +40,8 @@ export interface ArquivoTake {
 }
 
 export interface PedidoRender {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -61,6 +63,8 @@ export interface RelatorioRender {
 }
 
 export interface PedidoEntrega {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -88,6 +92,8 @@ export interface RelatorioEntrega {
 }
 
 export interface PedidoIntercambio {
+  /** pasta sugerida para a saída (a do original, também quando a mídia exportada é o proxy) */
+  pastaPadrao?: string;
   videoCaminho: string;
   nomeBase: string;
   duracaoMs: number;
@@ -215,6 +221,11 @@ export interface PonteDesktop {
   escolherLegenda(): Promise<{ nome: string; bytes: Uint8Array } | null>;
   /** chamada à Responses API da Maritaca pelo processo principal (endpoint fixo); a chave não é guardada */
   llmMaritaca(apiKey: string, corpo: object): Promise<{ status: number; texto: string }>;
+  /** cache em disco das análises de áudio (desktop/cacheMidia.ts) */
+  cacheAnalises: {
+    tamanho(): Promise<{ bytes: number; entradas: number }>;
+    limpar(): Promise<void>;
+  };
   /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
   quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;

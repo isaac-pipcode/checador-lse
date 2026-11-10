@@ -58,6 +58,10 @@ const ponte: PonteDesktop = {
   },
   escolherLegenda: () => ipcRenderer.invoke('legenda:escolher'),
   quantasTelas: () => ipcRenderer.invoke('telas:quantas'),
+  cacheAnalises: {
+    tamanho: () => ipcRenderer.invoke('cache:tamanho'),
+    limpar: () => ipcRenderer.invoke('cache:limpar'),
+  },
   llmMaritaca: (apiKey, corpo) => ipcRenderer.invoke('llm:maritaca', { apiKey, corpo }),
   aoFecharPrompter: (cb) => ouvir('prompter:fechado', () => cb()),
   aoEstadoDoPrompter: (cb) => ouvir('prompter:estado', cb),
