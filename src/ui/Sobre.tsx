@@ -158,11 +158,11 @@ function ComponentesTerceiros() {
         O Ouver Estúdio é software livre, sob a <strong>GNU GPL versão 3 ou posterior</strong>. O código-fonte está em{' '}
         <a
           className="underline"
-          href="https://github.com/isaac-pipcode/checador-lse"
+          href="https://github.com/isaac-pipcode/ouver-estudio"
           target="_blank"
           rel="noreferrer"
         >
-          github.com/isaac-pipcode/checador-lse
+          github.com/isaac-pipcode/ouver-estudio
         </a>
         .
       </p>

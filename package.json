@@ -11,9 +11,9 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/isaac-pipcode/checador-lse.git"
+    "url": "https://github.com/isaac-pipcode/ouver-estudio.git"
   },
-  "homepage": "https://github.com/isaac-pipcode/checador-lse",
+  "homepage": "https://github.com/isaac-pipcode/ouver-estudio",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -124,7 +124,7 @@
     "publish": {
       "provider": "github",
       "owner": "isaac-pipcode",
-      "repo": "checador-lse",
+      "repo": "ouver-estudio",
       "releaseType": "release"
     }
   },
