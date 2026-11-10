@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { MODELOS } from '../llm/cliente';
+import { PROVEDORES, type Provedor } from '../llm/cliente';
 import { useAcoes, useDespachar, useEstado } from '../state/store';
 import { Campo } from './primitivos';
 import { Icone } from './icones';
@@ -15,6 +15,7 @@ export function ConfigLlm() {
   const [aberto, setAberto] = useState(false);
   const idBase = useId();
   const ativo = estado.config.llmAtivo;
+  const prov = PROVEDORES[estado.llm.provedor];
 
   return (
     <div className="text-sm">
@@ -37,8 +38,8 @@ export function ConfigLlm() {
         <p className="text-navy-700">
           Todo o restante do checador funciona <strong>offline</strong>. Ativando este módulo, o
           texto das legendas para as quais você pedir uma proposta — e somente elas — é enviado à
-          API da Anthropic. A chave fica apenas na memória desta aba e não é gravada em lugar
-          nenhum.
+          API do provedor escolhido (hoje: <strong>{prov.empresa}</strong>). A chave fica apenas na
+          memória desta aba e não é gravada em lugar nenhum.
         </p>
 
         <label className="mt-3 flex items-start gap-2">
@@ -57,10 +58,32 @@ export function ConfigLlm() {
         </label>
 
         {ativo ? (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3">
+            <Campo
+              id={`${idBase}-provedor`}
+              rotulo="Provedor"
+              dica={estado.llm.provedor === 'maritaca' ? 'Modelos “Brasil (São Paulo)”: processados em servidores no país.' : undefined}
+            >
+              <select
+                id={`${idBase}-provedor`}
+                className="campo"
+                value={estado.llm.provedor}
+                onChange={(e) => {
+                  const provedor = e.target.value as Provedor;
+                  // a chave é de um provedor só: trocar a descarta, para não enviá-la ao outro
+                  despachar({ tipo: 'llm', mudanca: { provedor, modelo: PROVEDORES[provedor].padrao, apiKey: '' } });
+                }}
+              >
+                {(Object.keys(PROVEDORES) as Provedor[]).map((k) => (
+                  <option key={k} value={k}>
+                    {PROVEDORES[k].rotulo}
+                  </option>
+                ))}
+              </select>
+            </Campo>
             <Campo
               id={`${idBase}-chave`}
-              rotulo="Chave de API (Anthropic)"
+              rotulo={`Chave de API (${prov.empresa})`}
               dica="Somente em memória; não é salva."
             >
               <input
@@ -79,7 +102,7 @@ export function ConfigLlm() {
                 value={estado.llm.modelo}
                 onChange={(e) => despachar({ tipo: 'llm', mudanca: { modelo: e.target.value } })}
               >
-                {MODELOS.map((m) => (
+                {prov.modelos.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.rotulo}
                   </option>

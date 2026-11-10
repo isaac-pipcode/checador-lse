@@ -9,6 +9,7 @@ import { descartarTake } from '../../ad/audio';
 import { COR_LEGENDA } from './Teleprompter';
 import { Icone, type NomeIcone } from '../icones';
 import { CampoTempo } from '../CampoTempo';
+import { abrirBloco, alternarBloco, useBlocoAberto, useModoBlocos } from './exibicaoAD';
 
 /** Peças da interface de AD reutilizadas pelas páginas (cartão de bloco, take, ajustes). */
 
@@ -172,17 +173,91 @@ export function CartaoBloco({
   const mover = (campo: 'inicioMs' | 'fimMs', delta: number) =>
     despachar({ tipo: 'adEditar', id: b.id, mudanca: { [campo]: Math.max(0, b[campo] + delta) } });
 
+  const aberto = useBlocoAberto(b.id);
+  const retratil = useModoBlocos() === 'compacto';
+  const borda =
+    nivel === 'erro' ? 'border-l-bad' : nivel === 'aviso' ? 'border-l-warn' : nivel === 'ok' ? 'border-l-ok' : 'border-l-navy-300';
+  const idCorpo = `corpo-${b.id}`;
+  // número do bloco como cabeçalho; no modo compacto, é o botão que abre e recolhe (padrão "acordeão")
+  const titulo = (
+    <h3 id={`titulo-${b.id}`} className="text-sm font-semibold">
+      {retratil ? (
+        <button
+          type="button"
+          className="-ml-1 inline-flex items-center gap-1 rounded px-1 hover:bg-paper-200"
+          aria-expanded={aberto}
+          aria-controls={aberto ? idCorpo : undefined}
+          onClick={() => alternarBloco(b.id)}
+        >
+          <Icone nome={aberto ? 'aberto' : 'recolhido'} tamanho={14} />
+          Bloco {n}
+        </button>
+      ) : (
+        <>Bloco {n}</>
+      )}
+    </h3>
+  );
+
+  if (!aberto) {
+    const comApontamento = apontamentos.some((a) => a.nivel === 'erro' || a.nivel === 'aviso');
+    return (
+      <article
+        id={`bloco-${b.id}`}
+        aria-labelledby={`titulo-${b.id}`}
+        onFocus={aoFocar}
+        className={`rounded border-y border-l-4 border-r border-paper-400 bg-paper px-2 py-1.5 ${borda}`}
+      >
+        <header className="flex items-center gap-2">
+          {titulo}
+          <span className="font-mono text-2xs text-navy-500">
+            {formatarTimecode(b.inicioMs).slice(3, 10)}–{formatarTimecode(b.fimMs).slice(3, 10)}
+          </span>
+          <span className="ml-auto flex shrink-0 items-center gap-1">
+            {nivel !== 'pendente' || comApontamento ? (
+              <span className={`chip ${CLASSE_NIVEL[nivel]}`}>
+                <Icone nome={ICONE[nivel]} tamanho={12} />
+                {ROTULO_NIVEL[nivel]}
+              </span>
+            ) : null}
+            <span
+              className={`chip ${b.aprovado ? 'border-ok bg-ok-100 text-ok' : 'border-navy-300 bg-paper-200 text-navy-700'}`}
+            >
+              <Icone nome={b.aprovado ? 'ok' : 'rascunho'} tamanho={12} />
+              {b.aprovado ? 'Aprovado' : 'Rascunho'}
+            </span>
+            {b.takes.length ? (
+              <span className="chip border-navy-300 bg-paper-200 text-navy-700">
+                <Icone nome="gravar" tamanho={10} />
+                {b.takes.length}
+                <span className="sr-only-focusable"> {b.takes.length === 1 ? 'gravação' : 'gravações'}</span>
+              </span>
+            ) : null}
+          </span>
+        </header>
+        {/* prévia do roteiro: clicar abre o bloco no editor (pelo teclado, o botão do título) */}
+        <p
+          className={`mt-0.5 cursor-text truncate text-xs ${temTexto ? 'text-navy-700' : 'italic text-navy-500'}`}
+          title={temTexto ? b.texto : undefined}
+          onClick={() => {
+            abrirBloco(b.id, false);
+            requestAnimationFrame(() => document.getElementById(`texto-${b.id}`)?.focus());
+          }}
+        >
+          {temTexto ? b.texto : 'Sem roteiro'}
+        </p>
+      </article>
+    );
+  }
+
   return (
     <article
       id={`bloco-${b.id}`}
       aria-labelledby={`titulo-${b.id}`}
       onFocus={aoFocar}
-      className={`rounded border-y border-l-4 border-r border-paper-400 bg-paper p-3 ${nivel === 'erro' ? 'border-l-bad' : nivel === 'aviso' ? 'border-l-warn' : nivel === 'ok' ? 'border-l-ok' : 'border-l-navy-300'}`}
+      className={`rounded border-y border-l-4 border-r border-paper-400 bg-paper p-3 ${borda}`}
     >
       <header className="flex flex-wrap items-center gap-2">
-        <h3 id={`titulo-${b.id}`} className="text-sm font-semibold">
-          Bloco {n}
-        </h3>
+        {titulo}
         <CampoTempo
           inicioMs={b.inicioMs}
           fimMs={b.fimMs}
@@ -201,6 +276,7 @@ export function CartaoBloco({
         </span>
       </header>
 
+      <div id={idCorpo} className="contents">
       <div className="mt-2 grid gap-2">
         <div>
           <label className="rotulo sr-only-focusable" htmlFor={`texto-${b.id}`}>
@@ -314,6 +390,7 @@ export function CartaoBloco({
             ))}
         </ul>
       ) : null}
+      </div>
     </article>
   );
 }

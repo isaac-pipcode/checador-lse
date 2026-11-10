@@ -96,7 +96,7 @@ export function usePaineis(pagina: string) {
 
 // ---- layouts nomeados ------------------------------------------------------
 
-const PAGINAS = ['lse', 'ad', 'libras', 'entrega'];
+const PAGINAS = ['lse', 'ad', 'ad-gravacao', 'libras', 'entrega'];
 
 /** Layouts prontos: não podem ser sobrescritos nem excluídos. */
 export const PRONTOS: Record<string, Layout> = {

@@ -1,6 +1,6 @@
 /** Funções puras da atualização (testáveis sem o Electron). */
 
-export const REPO = 'isaac-pipcode/checador-lse';
+export const REPO = 'isaac-pipcode/ouver-estudio';
 
 /** Como esta instalação se atualiza. */
 export function modoDeAtualizacao(plataforma: NodeJS.Platform, env: NodeJS.ProcessEnv): 'automatica' | 'aviso' {

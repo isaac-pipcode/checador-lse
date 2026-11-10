@@ -24,9 +24,12 @@ import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
 import { EntregaEsquerda, EntregaDireita } from '../paginas/PaginaEntrega';
-import { Divisoria, useJanela, useLayoutsNomeados, usePaineis, type Painel } from './divisorias';
+import { Divisoria, PRONTOS, useJanela, useLayoutsNomeados, usePaineis, type Painel } from './divisorias';
 import { MenuLayouts } from './MenuLayouts';
 import { Icone, type NomeIcone } from '../icones';
+import { useAcaoMenu } from '../acoesMenu';
+import { useEstadoPaineisNoMenu } from '../menuNativo';
+import { abrirBloco, useMonitorAcoplado } from '../ad/exibicaoAD';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
@@ -38,6 +41,8 @@ const COLUNAS: Record<Exclude<Pagina, 'projetos'>, [string, string, string]> = {
   libras: ['minmax(260px, 340px)', 'minmax(400px, 1.8fr)', 'minmax(260px, 340px)'],
   entrega: ['minmax(280px, 1fr)', 'minmax(360px, 1.3fr)', 'minmax(260px, 380px)'],
 };
+/** AD em gravação sem segundo monitor: o teleprompter acoplado ocupa o lado direito (~40%). */
+const COLUNAS_MONITOR_ACOPLADO: [string, string, string] = ['minmax(260px, 0.8fr)', 'minmax(360px, 1fr)', 'minmax(380px, 1.25fr)'];
 const MIN_ESQ = 240;
 const MIN_DIR = 260;
 const MIN_MONITOR = 360;
@@ -277,7 +282,9 @@ export function Espaco() {
   };
 
   // ---- painéis redimensionáveis ----------------------------------------------
-  const paineis = usePaineis(pagina);
+  // o arranjo com o monitor acoplado é lembrado à parte do arranjo de roteiro
+  const acoplado = useMonitorAcoplado() && pagina === 'ad';
+  const paineis = usePaineis(acoplado ? 'ad-gravacao' : pagina);
   const janela = useJanela();
   const refMain = useRef<HTMLElement>(null);
   const refLinha = useRef<HTMLDivElement>(null);
@@ -285,7 +292,7 @@ export function Espaco() {
   const { esq, dir } = paineis.medidas;
   const dirEf = dir !== undefined ? Math.min(dir, janela.w - MIN_ESQ - MIN_MONITOR - 4) : undefined;
   const esqEf = esq !== undefined ? Math.min(esq, janela.w - (dirEf ?? (largura(4) || MIN_DIR)) - MIN_MONITOR - 4) : undefined;
-  const padrao = COLUNAS[pagina];
+  const padrao = acoplado ? COLUNAS_MONITOR_ACOPLADO : COLUNAS[pagina];
   const { recolhido } = paineis;
   const colunas = [
     recolhido.esq ? '0px' : esqEf !== undefined ? `${esqEf}px` : padrao[0],
@@ -295,6 +302,18 @@ export function Espaco() {
     recolhido.dir ? '0px' : dirEf !== undefined ? `${dirEf}px` : padrao[2],
   ].join(' ');
   const nomeados = useLayoutsNomeados();
+
+  // menu nativo: Exibir (painéis, layouts), Arquivo (vídeo) e Reprodução
+  useEstadoPaineisNoMenu({ esq: !recolhido.esq, linha: !recolhido.linha, dir: !recolhido.dir });
+  useAcaoMenu('painelEsq', () => paineis.alternar('esq'));
+  useAcaoMenu('painelLinha', () => paineis.alternar('linha'));
+  useAcaoMenu('painelDir', () => paineis.alternar('dir'));
+  useAcaoMenu('layoutPadrao', () => paineis.aplicar(PRONTOS['Padrão']));
+  useAcaoMenu('layoutFoco', () => paineis.aplicar(PRONTOS['Foco no monitor']));
+  useAcaoMenu('abrirVideo', () => void abrirVideo());
+  useAcaoMenu('reproduzir', () => videoPronto && void (videoPronto.paused ? videoPronto.play() : videoPronto.pause()));
+  useAcaoMenu('inicio', () => buscar(0));
+  useAcaoMenu('fim', () => buscar(duracaoMs));
   const BOTOES_PAINEIS: Array<[Painel, NomeIcone, string]> = [
     ['esq', 'painelEsquerdo', 'Painel esquerdo'],
     ['linha', 'painelInferior', 'Linha do tempo'],
@@ -485,7 +504,8 @@ export function Espaco() {
               </div>
 
               {/* ---- Transporte ---- */}
-              <div className="transporte grid h-9 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 bg-paper px-2" role="toolbar" aria-label="Transporte">
+              <div className="transporte-caixa shrink-0">
+              <div className="transporte grid h-9 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 bg-paper px-2" role="toolbar" aria-label="Transporte">
                 <span className="transporte-duracao truncate font-mono text-2xs tabular-nums text-navy-500">
                   <span className="sr-only-focusable">Duração </span>
                   {tcSmpte(duracaoMs, config.fps)}
@@ -539,6 +559,7 @@ export function Espaco() {
                     AD
                   </button>
                 </div>
+              </div>
               </div>
             </section>
 
@@ -604,6 +625,7 @@ export function Espaco() {
                 trilhaLibras={trilhaLibras}
                 aoSelecionarBloco={(bid) => {
                   if (pagina !== 'ad') despachar({ tipo: 'navegar', pagina: 'ad' });
+                  abrirBloco(bid);
                   requestAnimationFrame(() => {
                     document.getElementById(`bloco-${bid}`)?.scrollIntoView({ block: 'center' });
                     document.getElementById(`texto-${bid}`)?.focus({ preventScroll: true });

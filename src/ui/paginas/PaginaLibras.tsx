@@ -15,6 +15,7 @@ import { amostrarQuadros, corChaveDosQuadros, enquadramentoAutomatico, envelopes
 import { ConferenciaOndas, ResiduoSincronia } from '../libras/GraficosSincronia';
 import { DICA_EXPORTAR, ExportarEditores } from '../libras/ExportarEditores';
 import { Icone } from '../icones';
+import { useAcaoMenu } from '../acoesMenu';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const dec = (v: number, c = 2) => v.toFixed(c).replace('.', ',');
@@ -95,6 +96,9 @@ export function LibrasEsquerda() {
   const trabalhoClipe = j.clipe?.caminho ? estado.proxies[j.clipe.caminho] : undefined;
   const envClipe = j.clipe?.caminho ? envelopesDoClipe.get(j.clipe.caminho) : undefined;
   const erros = ap.filter((a) => a.nivel === 'erro').length;
+
+  // menu Arquivo → Importar vídeo da intérprete de Libras
+  useAcaoMenu('importarInterprete', () => void escolher());
 
   async function escolher() {
     if (!desktop) return;

@@ -1,6 +1,19 @@
 Versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE), audiodescrição e
 janela de Libras numa mesma linha do tempo.
 
+**Novo na 0.1.3**:
+
+- **Menu em português** (Arquivo, Editar, Exibir, Reprodução, Ajuda), com salvar, salvar como, ajudas
+  (F1), tema, metodologia e atualizações; a barra superior fica mais limpa.
+- **Importar legenda** e **importar o vídeo da intérprete de Libras** pelo menu Arquivo, de qualquer
+  página; em Legendas, "Trocar legenda…" abre o diálogo direto.
+- **Blocos de AD retráteis**: uma linha por bloco, abrindo só o que está em edição ("Abertos" mostra todos).
+- **Monitor de gravação acoplado**: sem segundo monitor, o teleprompter divide a janela com a interface,
+  com largura ajustável pela divisória.
+- **Assistente de LSE pela Maritaca** (modelo S5, processado no Brasil); a Anthropic continua como opção.
+  Corrigido: com o assistente ligado, o botão "Gerar proposta de redução" não aparecia.
+- Corrigidos os botões de transporte, que se sobrepunham em monitores estreitos.
+
 **Novo na 0.1.2** (correções a partir do primeiro uso real):
 
 - A tela cabe em notebooks com escala de 125–150% (não é mais preciso rolar para os lados).

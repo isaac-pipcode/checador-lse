@@ -75,7 +75,7 @@ export function Sobre() {
       <p className="mt-2 text-sm text-navy-700">
         Análise, revisão e geração do arquivo final acontecem inteiramente no navegador. A única
         exceção possível é o módulo assistido de redução textual (L2): se — e somente se — você o
-        ativar e pedir uma proposta, o texto daquela legenda é enviado à API da Anthropic. Nenhum
+        ativar e pedir uma proposta, o texto daquela legenda é enviado à API do provedor escolhido (Maritaca ou Anthropic). Nenhum
         arquivo é enviado a servidor em nenhuma outra circunstância.
       </p>
 
@@ -158,11 +158,11 @@ function ComponentesTerceiros() {
         O Ouver Estúdio é software livre, sob a <strong>GNU GPL versão 3 ou posterior</strong>. O código-fonte está em{' '}
         <a
           className="underline"
-          href="https://github.com/isaac-pipcode/checador-lse"
+          href="https://github.com/isaac-pipcode/ouver-estudio"
           target="_blank"
           rel="noreferrer"
         >
-          github.com/isaac-pipcode/checador-lse
+          github.com/isaac-pipcode/ouver-estudio
         </a>
         .
       </p>

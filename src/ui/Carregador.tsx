@@ -1,8 +1,40 @@
 import { useCallback, useId, useRef, useState } from 'react';
 import { decodeBuffer } from '../parser/encoding';
 import { parseSubtitle } from '../parser/srt';
-import { useDespachar } from '../state/store';
+import { useDespachar, type Acao } from '../state/store';
+import { ponte } from '../desktop/ponte';
 import { Icone } from './icones';
+
+/** Lê .srt/.vtt (qualquer codificação comum) e devolve a ação de carregar; lança se não der. */
+export function acaoDeLegenda(nome: string, buffer: ArrayBuffer): Acao {
+  if (!/\.(srt|vtt|txt)$/i.test(nome)) throw new Error('Formato não reconhecido. Use um arquivo .srt ou .vtt.');
+  const { texto, encoding, avisos } = decodeBuffer(buffer);
+  const r = parseSubtitle(texto);
+  return { tipo: 'carregar', nome, encoding, cues: r.cues, erros: r.erros, avisos: [...avisos, ...r.avisos] };
+}
+
+/**
+ * Importa uma legenda pelo diálogo do sistema (desktop). Se já houver uma, pede
+ * confirmação: trocar a legenda descarta as decisões de revisão dela.
+ * Devolve false se o usuário desistiu; lança com a mensagem se o arquivo não serve.
+ */
+export function useImportarLegenda() {
+  const despachar = useDespachar();
+  return useCallback(
+    async (jaCarregada: boolean): Promise<boolean> => {
+      const desktop = ponte();
+      if (!desktop?.escolherLegenda) return false;
+      if (jaCarregada && !window.confirm('Substituir a legenda atual? As decisões de revisão dela serão descartadas.'))
+        return false;
+      const r = await desktop.escolherLegenda();
+      if (!r) return false;
+      const b = r.bytes;
+      despachar(acaoDeLegenda(r.nome, b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer));
+      return true;
+    },
+    [despachar],
+  );
+}
 
 /** Tela inicial: carregamento do arquivo. Nada sai do navegador. */
 export function Carregador() {
@@ -15,26 +47,10 @@ export function Carregador() {
   const processar = useCallback(
     async (arquivo: File) => {
       setErro(null);
-      if (!/\.(srt|vtt|txt)$/i.test(arquivo.name)) {
-        setErro('Formato não reconhecido. Envie um arquivo .srt ou .vtt.');
-        return;
-      }
       try {
-        const buffer = await arquivo.arrayBuffer();
-        const { texto, encoding, avisos } = decodeBuffer(buffer);
-        const r = parseSubtitle(texto);
-        despachar({
-          tipo: 'carregar',
-          nome: arquivo.name,
-          encoding,
-          cues: r.cues,
-          erros: r.erros,
-          avisos: [...avisos, ...r.avisos],
-        });
+        despachar(acaoDeLegenda(arquivo.name, await arquivo.arrayBuffer()));
       } catch (e) {
-        setErro(
-          `Não foi possível ler o arquivo: ${e instanceof Error ? e.message : 'erro desconhecido'}.`,
-        );
+        setErro(`Não foi possível ler o arquivo: ${e instanceof Error ? e.message : 'erro desconhecido'}`);
       }
     },
     [despachar],

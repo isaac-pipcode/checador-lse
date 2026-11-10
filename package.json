@@ -2,7 +2,7 @@
   "name": "ouver-estudio",
   "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
   "author": {
@@ -11,9 +11,9 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/isaac-pipcode/checador-lse.git"
+    "url": "https://github.com/isaac-pipcode/ouver-estudio.git"
   },
-  "homepage": "https://github.com/isaac-pipcode/checador-lse",
+  "homepage": "https://github.com/isaac-pipcode/ouver-estudio",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -124,7 +124,7 @@
     "publish": {
       "provider": "github",
       "owner": "isaac-pipcode",
-      "repo": "checador-lse",
+      "repo": "ouver-estudio",
       "releaseType": "release"
     }
   },

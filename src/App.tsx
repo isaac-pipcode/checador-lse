@@ -2,6 +2,7 @@ import { useEstado } from './state/store';
 import { Dashboard } from './ui/shell/Dashboard';
 import { Espaco } from './ui/shell/Espaco';
 import { AvisoAtualizacao } from './ui/atualizacao';
+import { MenuNativo } from './ui/menuNativo';
 
 /**
  * Raiz: o dashboard de projetos ou o espaço de trabalho (editor). O anúncio
@@ -13,6 +14,7 @@ export function App() {
     <>
       {estado.pagina === 'projetos' ? <Dashboard /> : <Espaco />}
       <AvisoAtualizacao />
+      <MenuNativo />
       <div aria-live="polite" aria-atomic="true" className="sr-only-focusable absolute">
         {estado.anuncio}
       </div>

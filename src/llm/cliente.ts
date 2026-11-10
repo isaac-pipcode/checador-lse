@@ -1,25 +1,64 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Cue, RuleConfig } from '../model/types';
 import { caracteresDaLegenda, duracaoMs } from '../core/texto';
+import { ponte } from '../desktop/ponte';
 
 /**
  * Cliente LLM opcional — DESLIGADO POR PADRÃO.
  *
  * Ativá-lo significa enviar o texto das legendas selecionadas ao provedor
- * (Anthropic). A interface avisa disso antes de qualquer chamada. A chave de
- * API fica apenas em memória, nunca em localStorage nem em disco.
+ * escolhido (Maritaca ou Anthropic). A interface avisa disso antes de qualquer
+ * chamada. A chave de API fica apenas em memória, nunca em localStorage nem em
+ * disco; trocar de provedor a descarta (uma chave nunca vai ao provedor errado).
  *
  * Toda saída do modelo entra no fluxo como Suggestion com `confidence` e passa
  * pela mesma aprovação humana das demais. Sem exceção.
  */
 
-export const MODELOS = [
-  { id: 'claude-sonnet-5', rotulo: 'Claude Sonnet 5' },
-  { id: 'claude-opus-5', rotulo: 'Claude Opus 5' },
-  { id: 'claude-haiku-4-5', rotulo: 'Claude Haiku 4.5' },
-] as const;
+export type Provedor = 'maritaca' | 'anthropic';
 
-export const MODELO_PADRAO = 'claude-sonnet-5';
+export const PROVEDORES: Record<
+  Provedor,
+  { rotulo: string; empresa: string; modelos: ReadonlyArray<{ id: string; rotulo: string }>; padrao: string }
+> = {
+  maritaca: {
+    rotulo: 'Maritaca (Sabiá)',
+    empresa: 'Maritaca AI',
+    // ids conforme docs.maritaca.ai/pt/modelos; "-br-sp": inferência em São Paulo
+    modelos: [
+      { id: 'S5-br-sp', rotulo: 'S5 · processado no Brasil (São Paulo)' },
+      { id: 'S5', rotulo: 'S5' },
+      { id: 'sabia-4-br-sp', rotulo: 'Sabiá 4 · processado no Brasil (São Paulo)' },
+    ],
+    padrao: 'S5-br-sp',
+  },
+  anthropic: {
+    rotulo: 'Anthropic (Claude)',
+    empresa: 'Anthropic',
+    modelos: [
+      { id: 'claude-sonnet-5', rotulo: 'Claude Sonnet 5' },
+      { id: 'claude-opus-5', rotulo: 'Claude Opus 5' },
+      { id: 'claude-haiku-4-5', rotulo: 'Claude Haiku 4.5' },
+    ],
+    padrao: 'claude-sonnet-5',
+  },
+};
+
+export const PROVEDOR_PADRAO: Provedor = 'maritaca';
+export const MODELO_PADRAO = PROVEDORES[PROVEDOR_PADRAO].padrao;
+
+/** Endpoint da Responses API da Maritaca (compatível com a da OpenAI). */
+export const URL_MARITACA = 'https://chat.maritaca.ai/api/responses';
+
+/** Erro HTTP de um provedor sem SDK próprio (Maritaca). */
+export class ErroProvedor extends Error {
+  constructor(
+    readonly status: number,
+    mensagem: string,
+  ) {
+    super(mensagem);
+  }
+}
 
 export type Estrategia = 'condensacao' | 'omissao' | 'resegmentacao';
 
@@ -68,25 +107,123 @@ const FERRAMENTA: Anthropic.Tool = {
 
 export interface OpcoesLlm {
   apiKey: string;
+  provedor?: Provedor;
   modelo?: string;
 }
 
+/** Corpo da Responses API (Maritaca) com saída estruturada pelo mesmo esquema da ferramenta. */
+export function corpoMaritaca(modelo: string, prompt: string) {
+  // a Maritaca não documenta additionalProperties nem `strict` no esquema: ficam de fora
+  const { additionalProperties: _a, ...esquema } = FERRAMENTA.input_schema as Record<string, unknown>;
+  return {
+    model: modelo,
+    instructions: SISTEMA.replace(
+      'Responda exclusivamente pela ferramenta, sem preâmbulo.',
+      'Responda exclusivamente com o JSON pedido, sem preâmbulo.',
+    ),
+    input: prompt,
+    temperature: 0.2,
+    text: { format: { type: 'json_schema', name: FERRAMENTA.name, schema: esquema } },
+  };
+}
+
+/** Extrai o JSON da resposta da Responses API (item "message", conteúdo "output_text"). */
+export function lerRespostaMaritaca(dados: unknown): Partial<PropostaLlm> {
+  const d = dados as {
+    output_text?: string;
+    output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string; refusal?: string }> }>;
+  };
+  let texto = typeof d.output_text === 'string' ? d.output_text : '';
+  for (const item of d.output ?? []) {
+    for (const c of item.content ?? []) {
+      if (c.type === 'refusal' || c.refusal) throw new Error('O modelo recusou a solicitação.');
+      if (!texto && typeof c.text === 'string') texto = c.text;
+    }
+  }
+  if (!texto) throw new Error('O modelo não devolveu a estrutura esperada.');
+  // tolera cerca de código (```json … ```) em volta do objeto
+  const inicio = texto.indexOf('{');
+  const fim = texto.lastIndexOf('}');
+  try {
+    return JSON.parse(inicio >= 0 && fim > inicio ? texto.slice(inicio, fim + 1) : texto) as Partial<PropostaLlm>;
+  } catch {
+    throw new Error('O modelo não devolveu um JSON válido.');
+  }
+}
+
 export class ClienteLlm {
-  private client: Anthropic;
+  private client: Anthropic | null = null;
+  readonly provedor: Provedor;
   readonly modelo: string;
+  private readonly apiKey: string;
 
   constructor(opcoes: OpcoesLlm) {
-    this.modelo = opcoes.modelo ?? MODELO_PADRAO;
-    this.client = new Anthropic({
-      apiKey: opcoes.apiKey,
-      // Uso client-side deliberado: o app não tem backend. A chave é do usuário
-      // e vive apenas na memória da aba.
-      dangerouslyAllowBrowser: true,
-    });
+    this.provedor = opcoes.provedor ?? PROVEDOR_PADRAO;
+    this.modelo = opcoes.modelo ?? PROVEDORES[this.provedor].padrao;
+    this.apiKey = opcoes.apiKey;
+    if (this.provedor === 'anthropic')
+      this.client = new Anthropic({
+        apiKey: opcoes.apiKey,
+        // Uso client-side deliberado: o app não tem backend. A chave é do usuário
+        // e vive apenas na memória da aba.
+        dangerouslyAllowBrowser: true,
+      });
+  }
+
+  private async pedirMaritaca(prompt: string): Promise<Partial<PropostaLlm>> {
+    const corpo = corpoMaritaca(this.modelo, prompt);
+    const desktop = ponte();
+    let status: number;
+    let texto: string;
+    if (desktop?.llmMaritaca) {
+      // no desktop, a chamada sai pelo processo principal (sem CORS, pelo proxy do sistema)
+      ({ status, texto } = await desktop.llmMaritaca(this.apiKey, corpo));
+    } else {
+      let r: Response;
+      try {
+        r = await fetch(URL_MARITACA, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(corpo),
+        });
+      } catch {
+        throw new ErroProvedor(0, 'sem conexão');
+      }
+      status = r.status;
+      texto = await r.text();
+    }
+    if (status < 200 || status >= 300) {
+      let msg = texto.slice(0, 300);
+      try {
+        const j = JSON.parse(texto) as { detail?: unknown; error?: { message?: string }; message?: string };
+        msg = String(
+          j.error?.message ?? j.message ?? (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail ?? msg)),
+        );
+      } catch {
+        /* corpo não é JSON */
+      }
+      throw new ErroProvedor(status, msg);
+    }
+    return lerRespostaMaritaca(JSON.parse(texto));
   }
 
   private async pedir(prompt: string): Promise<PropostaLlm> {
-    const resposta = await this.client.messages.create({
+    const dados = this.provedor === 'maritaca' ? await this.pedirMaritaca(prompt) : await this.pedirAnthropic(prompt);
+    if (!Array.isArray(dados.propostaLinhas) || dados.propostaLinhas.length === 0) {
+      throw new Error('Proposta vazia.');
+    }
+    return {
+      propostaLinhas: dados.propostaLinhas.map((l) => String(l)),
+      estrategia: (['condensacao', 'omissao', 'resegmentacao'].includes(String(dados.estrategia))
+        ? dados.estrategia
+        : 'condensacao') as Estrategia,
+      justificativa: String(dados.justificativa ?? ''),
+      confianca: Math.max(0, Math.min(1, Number(dados.confianca ?? 0.5))),
+    };
+  }
+
+  private async pedirAnthropic(prompt: string): Promise<Partial<PropostaLlm>> {
+    const resposta = await this.client!.messages.create({
       model: this.modelo,
       max_tokens: 1024,
       system: SISTEMA,
@@ -102,16 +239,7 @@ export class ClienteLlm {
     if (!bloco || bloco.type !== 'tool_use') {
       throw new Error('O modelo não devolveu a estrutura esperada.');
     }
-    const dados = bloco.input as Partial<PropostaLlm>;
-    if (!Array.isArray(dados.propostaLinhas) || dados.propostaLinhas.length === 0) {
-      throw new Error('Proposta vazia.');
-    }
-    return {
-      propostaLinhas: dados.propostaLinhas.map((l) => String(l)),
-      estrategia: (dados.estrategia ?? 'condensacao') as Estrategia,
-      justificativa: String(dados.justificativa ?? ''),
-      confianca: Math.max(0, Math.min(1, Number(dados.confianca ?? 0.5))),
-    };
+    return bloco.input as Partial<PropostaLlm>;
   }
 
   /** L2 — redução textual para trazer a velocidade ao alvo. */
@@ -152,6 +280,15 @@ export class ClienteLlm {
 }
 
 export function descreverErroLlm(e: unknown): string {
+  if (e instanceof ErroProvedor) {
+    if (e.status === 0)
+      return 'Não foi possível conectar ao provedor. Verifique a rede — o restante do checador funciona offline.';
+    if (e.status === 401 || e.status === 403) return 'Chave de API inválida ou sem permissão.';
+    if (e.status === 402) return 'Sem créditos na conta do provedor.';
+    if (e.status === 429) return 'Limite de requisições atingido; tente de novo em instantes.';
+    if (e.status === 400 || e.status === 422) return `Requisição rejeitada: ${e.message}`;
+    return `Erro ${e.status} do provedor: ${e.message}`;
+  }
   if (e instanceof Anthropic.AuthenticationError) return 'Chave de API inválida ou sem permissão.';
   if (e instanceof Anthropic.RateLimitError) return 'Limite de requisições atingido; tente de novo em instantes.';
   if (e instanceof Anthropic.BadRequestError) return `Requisição rejeitada: ${e.message}`;

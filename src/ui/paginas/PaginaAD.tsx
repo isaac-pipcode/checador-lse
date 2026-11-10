@@ -14,6 +14,7 @@ import { SeletorMicrofone } from '../ad/SeletorMicrofone';
 import { AjustesLegenda, CartaoBloco, CLASSE_NIVEL, ICONE, Numero, ROTULO_NIVEL, seg } from '../ad/componentes';
 import { PainelAbas, Secao, useLacunas } from '../comum';
 import { Icone } from '../icones';
+import { abrirBloco, definirModoBlocos, definirMonitorAcoplado, useModoBlocos } from '../ad/exibicaoAD';
 
 type Modo = 'roteiro' | 'gravacao';
 
@@ -25,6 +26,8 @@ interface ContextoAD {
   setRepetir: (v: boolean) => void;
   foco: string | null;
   setFoco: (id: string | null) => void;
+  /** gravação sem segundo monitor (nem janela do locutor aberta): teleprompter na própria janela */
+  acoplado: boolean;
 }
 
 const CtxAD = createContext<ContextoAD | null>(null);
@@ -46,9 +49,31 @@ export function ProvedorPaginaAD({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (sessao.ativa) setModo('gravacao');
   }, [sessao.ativa]);
+  const telas = useTelas();
+  const acoplado = modo === 'gravacao' && !sessao.prompterAberto && telas < 2;
+  useEffect(() => {
+    definirMonitorAcoplado(acoplado);
+    return () => definirMonitorAcoplado(false);
+  }, [acoplado]);
   return (
-    <CtxAD.Provider value={{ sessao, modo, setModo, repetir, setRepetir, foco, setFoco }}>{children}</CtxAD.Provider>
+    <CtxAD.Provider value={{ sessao, modo, setModo, repetir, setRepetir, foco, setFoco, acoplado }}>
+      {children}
+    </CtxAD.Provider>
   );
+}
+
+/** Monitores conectados (desktop); conferido de novo quando a janela volta ao foco. No navegador, 1. */
+function useTelas(): number {
+  const [n, setN] = useState(1);
+  useEffect(() => {
+    const desktop = ponte();
+    if (!desktop?.quantasTelas) return;
+    const ler = () => void desktop.quantasTelas().then(setN, () => {});
+    ler();
+    window.addEventListener('focus', ler);
+    return () => window.removeEventListener('focus', ler);
+  }, []);
+  return n;
 }
 
 function SeletorModo() {
@@ -102,6 +127,17 @@ function RoteiroLista() {
   const focoRef = useRef(foco);
   focoRef.current = foco;
   const pendenteFoco = useRef<number | null>(null);
+  const modoBlocos = useModoBlocos();
+  // bloco novo (Ctrl+B, "+ Bloco em…") abre para edição; criação em lote (lacunas) não abre nenhum
+  const idsAntes = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(blocos.map((b) => b.id));
+    if (idsAntes.current) {
+      const novos = blocos.filter((b) => !idsAntes.current!.has(b.id));
+      if (novos.length === 1) abrirBloco(novos[0].id);
+    }
+    idsAntes.current = ids;
+  }, [blocos]);
 
   // "Escrever assistindo": com um bloco em foco e o vídeo tocando, o trecho repete.
   useEffect(() => {
@@ -112,9 +148,12 @@ function RoteiroLista() {
 
   function irPara(b: BlocoAD) {
     buscar(Math.max(0, b.inicioMs - 1500));
-    const el = document.getElementById(`texto-${b.id}`);
-    el?.scrollIntoView({ block: 'center' });
-    el?.focus({ preventScroll: true });
+    abrirBloco(b.id);
+    // o editor do bloco só existe depois de aberto
+    requestAnimationFrame(() => {
+      document.getElementById(`bloco-${b.id}`)?.scrollIntoView({ block: 'nearest' });
+      document.getElementById(`texto-${b.id}`)?.focus({ preventScroll: true });
+    });
   }
 
   // Atalhos da editora (Ctrl ou ⌘), valem também com o cursor na caixa de texto.
@@ -148,7 +187,8 @@ function RoteiroLista() {
     const b = blocos.find((x) => x.inicioMs === pendenteFoco.current);
     if (b) {
       pendenteFoco.current = null;
-      document.getElementById(`texto-${b.id}`)?.focus();
+      abrirBloco(b.id);
+      requestAnimationFrame(() => document.getElementById(`texto-${b.id}`)?.focus());
     }
   }, [blocos]);
 
@@ -173,7 +213,32 @@ function RoteiroLista() {
           {sessao.erroMic ?? sessao.aviso}
         </div>
       ) : null}
-      <ol className="space-y-2 p-2">
+      <div className="flex items-center gap-1 border-b border-fundo px-2 py-1 text-2xs text-navy-500">
+        <span>
+          {blocos.length} {blocos.length === 1 ? 'bloco' : 'blocos'}
+        </span>
+        <span className="ml-auto flex rounded bg-fundo p-0.5" role="group" aria-label="Exibição dos blocos">
+          <button
+            type="button"
+            className="segmento"
+            aria-pressed={modoBlocos === 'compacto'}
+            title="Uma linha por bloco; abre só o que está em edição"
+            onClick={() => definirModoBlocos('compacto')}
+          >
+            Recolhidos
+          </button>
+          <button
+            type="button"
+            className="segmento"
+            aria-pressed={modoBlocos === 'todos'}
+            title="Todos os blocos abertos"
+            onClick={() => definirModoBlocos('todos')}
+          >
+            Abertos
+          </button>
+        </span>
+      </div>
+      <ol className={`p-2 ${modoBlocos === 'compacto' ? 'space-y-1' : 'space-y-2'}`}>
         {blocos.map((b, i) => (
           <li key={b.id}>
             <CartaoBloco
@@ -357,7 +422,8 @@ function GravacaoLista() {
 // ===========================================================================
 
 export function AdDireita() {
-  const { modo, sessao } = useAD();
+  const { modo, sessao, acoplado } = useAD();
+  if (acoplado) return <MonitorAcoplado />;
   const titulo = (
     <>
       Inspetor{' '}
@@ -403,6 +469,41 @@ export function AdDireita() {
         },
       ]}
     />
+  );
+}
+
+/**
+ * Monitor de gravação acoplado: sem segundo monitor, o teleprompter divide a
+ * janela com a interface, no lugar do inspetor. A largura é a do painel
+ * (divisória arrastável); os ajustes de legenda e microfone ficam embaixo.
+ */
+function MonitorAcoplado() {
+  const { sessao } = useAD();
+  const desktop = ponte();
+  return (
+    <section className="painel" aria-label="Monitor de gravação">
+      <header className="painel-cabeca">
+        <h2 className="min-w-0 truncate">Monitor de gravação</h2>
+        {desktop ? (
+          <button
+            type="button"
+            className="btn-fantasma ml-auto h-6 px-2 text-2xs font-normal normal-case tracking-normal"
+            title="Abre o teleprompter numa janela própria (para levar a outra tela)"
+            onClick={() => void sessao.abrirPrompter()}
+          >
+            Janela separada
+          </button>
+        ) : null}
+      </header>
+      <div className="min-h-0 flex-1">
+        <Teleprompter estado={sessao.estadoPrompter} acoplado />
+      </div>
+      <details className="max-h-[45%] shrink-0 overflow-auto border-t border-fundo">
+        <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium text-navy-700">Legenda e microfone</summary>
+        <GravacaoInspetor secao="legenda" />
+        <GravacaoInspetor secao="microfone" />
+      </details>
+    </section>
   );
 }
 

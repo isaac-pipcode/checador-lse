@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Painel, PainelAbas } from '../comum';
 import { useDespachar, useEstado } from '../../state/store';
-import { Carregador } from '../Carregador';
+import { Carregador, useImportarLegenda } from '../Carregador';
+import { ponte } from '../../desktop/ponte';
 import { Resumo } from '../Resumo';
 import { AcoesLote, Filtros } from '../Filtros';
 import { ApontamentosObra, ListaLegendas, useContagemObra } from '../ListaLegendas';
@@ -28,6 +29,8 @@ export function LseEsquerda() {
     (r) => r.decision === 'pendente' && r.suggestion.cueIndex !== -1,
   ).length;
   const carregado = estado.cues.length > 0;
+  const importar = useImportarLegenda();
+  const [erroTroca, setErroTroca] = useState<string | null>(null);
 
   if (!carregado) {
     return (
@@ -64,9 +67,16 @@ export function LseEsquerda() {
           <button
             type="button"
             className="btn-fantasma h-6 px-2 text-2xs"
-            onClick={() => despachar({ tipo: 'limpar' })}
+            onClick={() => {
+              // desktop: diálogo do sistema direto; navegador: volta à área de importar
+              if (!ponte()?.escolherLegenda) return despachar({ tipo: 'limpar' });
+              setErroTroca(null);
+              importar(true).catch((e: unknown) => setErroTroca(e instanceof Error ? e.message : String(e)));
+            }}
+            title={erroTroca ?? 'Importar outra legenda (.srt ou .vtt)'}
           >
-            Trocar arquivo
+            {erroTroca ? <Icone nome="erro" tamanho={14} className="text-bad" /> : null}
+            Trocar legenda…
           </button>
         </>
       }

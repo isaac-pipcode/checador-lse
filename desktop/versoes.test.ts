@@ -19,8 +19,8 @@ describe('atualização', () => {
   });
   it('só abre páginas de release do próprio repositório', () => {
     expect(urlPermitida(paginaDaVersao('0.1.3'))).toBe(true);
-    expect(paginaDaVersao('v0.1.3')).toBe('https://github.com/isaac-pipcode/checador-lse/releases/tag/v0.1.3');
+    expect(paginaDaVersao('v0.1.3')).toBe('https://github.com/isaac-pipcode/ouver-estudio/releases/tag/v0.1.3');
     expect(urlPermitida('https://github.com/outro/repo/releases')).toBe(false);
-    expect(urlPermitida('https://exemplo.com/github.com/isaac-pipcode/checador-lse/releases')).toBe(false);
+    expect(urlPermitida('https://exemplo.com/github.com/isaac-pipcode/ouver-estudio/releases')).toBe(false);
   });
 });

@@ -116,6 +116,15 @@ export interface ResumoProjeto {
   libras: { clipe: boolean; sincronizado: boolean };
 }
 
+export interface EstadoMenu {
+  projetoAberto: boolean;
+  temVideo: boolean;
+  pagina: 'projetos' | 'lse' | 'ad' | 'libras' | 'entrega';
+  paineis: { esq: boolean; linha: boolean; dir: boolean };
+  tema: 'escuro' | 'claro';
+  ajudas: boolean;
+}
+
 export type EstadoAtualizacao =
   | { estado: 'desativada'; motivo: string }
   | { estado: 'verificando' }
@@ -197,6 +206,17 @@ export interface PonteDesktop {
     abrirPagina(url: string): void;
     aoMudar(cb: (e: EstadoAtualizacao) => void): () => void;
   };
+  /** menu nativo (desktop/menu.ts): ações vindas dele e o estado que ele reflete */
+  menu: {
+    aoAcao(cb: (acao: string) => void): () => void;
+    estado(e: Partial<EstadoMenu>): void;
+  };
+  /** diálogo do sistema para .srt/.vtt; devolve os bytes (a decodificação fica na interface) */
+  escolherLegenda(): Promise<{ nome: string; bytes: Uint8Array } | null>;
+  /** chamada à Responses API da Maritaca pelo processo principal (endpoint fixo); a chave não é guardada */
+  llmMaritaca(apiKey: string, corpo: object): Promise<{ status: number; texto: string }>;
+  /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
+  quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;
   /** janela do locutor: estado vindo da principal */
   aoEstadoDoPrompter(cb: (e: EstadoPrompter) => void): () => void;

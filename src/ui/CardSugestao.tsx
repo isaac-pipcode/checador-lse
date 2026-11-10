@@ -93,7 +93,8 @@ export function CardSugestao({ item }: { item: ReviewItem }) {
       <p className="mt-2 text-sm text-navy">{s.message}</p>
       {meta ? <p className="mt-1 text-xs text-navy-500">Fundamento: {meta.fundamento}</p> : null}
 
-      {s.unavailable ? <PainelLlm sugestao={s} /> : null}
+      {/* L2 sem proposta: o painel explica como ligar o módulo ou, ligado, pede a proposta */}
+      {s.unavailable || (s.ruleId === 'L2' && !s.after) ? <PainelLlm sugestao={s} /> : null}
 
       {mudaTexto && !editando ? (
         <div className="mt-3 overflow-x-auto rounded border border-paper-400 bg-paper p-2 font-mono text-sm">
