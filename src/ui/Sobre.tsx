@@ -75,7 +75,7 @@ export function Sobre() {
       <p className="mt-2 text-sm text-navy-700">
         Análise, revisão e geração do arquivo final acontecem inteiramente no navegador. A única
         exceção possível é o módulo assistido de redução textual (L2): se — e somente se — você o
-        ativar e pedir uma proposta, o texto daquela legenda é enviado à API da Anthropic. Nenhum
+        ativar e pedir uma proposta, o texto daquela legenda é enviado à API do provedor escolhido (Maritaca ou Anthropic). Nenhum
         arquivo é enviado a servidor em nenhuma outra circunstância.
       </p>
 

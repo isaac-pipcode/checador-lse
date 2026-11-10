@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, screen, session, shell, systemPreferences } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, screen, session, shell, systemPreferences } from 'electron';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -250,6 +250,20 @@ function registrarIpc() {
 
   ipcMain.on('menu:estado', (e, novo: Partial<EstadoMenu>) => {
     if (e.sender === principal?.webContents) atualizarEstadoMenu(novo);
+  });
+  // Assistente de LSE pela Maritaca: endpoint fixo (a janela não usa isto como proxy genérico)
+  ipcMain.handle('llm:maritaca', async (e, { apiKey, corpo }: { apiKey: string; corpo: object }) => {
+    if (e.sender !== principal?.webContents) throw new Error('Origem não autorizada.');
+    try {
+      const r = await net.fetch('https://chat.maritaca.ai/api/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${String(apiKey)}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      });
+      return { status: r.status, texto: await r.text() };
+    } catch {
+      return { status: 0, texto: 'sem conexão' };
+    }
   });
   ipcMain.handle('telas:quantas', () => screen.getAllDisplays().length);
   ipcMain.handle('legenda:escolher', async (e) => {

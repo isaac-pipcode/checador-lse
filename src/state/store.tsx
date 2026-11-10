@@ -1,4 +1,5 @@
 import { formatarTimecode } from '../core/texto';
+import { MODELO_PADRAO, PROVEDOR_PADRAO, type Provedor } from '../llm/cliente';
 import React, {
   createContext,
   useContext,
@@ -54,6 +55,7 @@ export interface Filtros {
 }
 
 export interface EstadoLlm {
+  provedor: Provedor;
   apiKey: string;
   modelo: string;
   ocupadas: string[];
@@ -122,7 +124,7 @@ export const estadoInicial: Estado = {
   sugestoes: [],
   review: {},
   filtros: FILTROS_INICIAIS,
-  llm: { apiKey: '', modelo: 'claude-sonnet-5', ocupadas: [], erro: null },
+  llm: { provedor: PROVEDOR_PADRAO, apiKey: '', modelo: MODELO_PADRAO, ocupadas: [], erro: null },
   anuncio: '',
   historicoLote: [],
   video: null,

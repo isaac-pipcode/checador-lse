@@ -213,6 +213,8 @@ export interface PonteDesktop {
   };
   /** diálogo do sistema para .srt/.vtt; devolve os bytes (a decodificação fica na interface) */
   escolherLegenda(): Promise<{ nome: string; bytes: Uint8Array } | null>;
+  /** chamada à Responses API da Maritaca pelo processo principal (endpoint fixo); a chave não é guardada */
+  llmMaritaca(apiKey: string, corpo: object): Promise<{ status: number; texto: string }>;
   /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
   quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;

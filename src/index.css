@@ -137,8 +137,15 @@ body,
 }
 
 /* Transporte do monitor: compacto quando o monitor é estreito (telas pequenas ou com escala). */
-.transporte {
+/* o contêiner é o invólucro: uma consulta @container não restiliza o próprio contêiner */
+.transporte-caixa {
   container-type: inline-size;
+}
+/* os botões de transporte não encolhem abaixo do alvo de 28 px (WCAG 2.5.8) */
+.transporte .btn-icone {
+  flex-shrink: 0;
+  /* a largura mínima entra no tamanho intrínseco da coluna "auto" da grade */
+  min-width: 1.75rem;
 }
 .transporte .rotulo-curto {
   display: none;
@@ -148,7 +155,10 @@ body,
   .transporte {
     grid-template-columns: 0 auto minmax(0, 1fr);
   }
-  .transporte .transporte-duracao,
+  /* a duração continua na grade (ocupa a coluna de 0 px), só invisível: fora do fluxo, os botões cairiam nessa coluna */
+  .transporte .transporte-duracao {
+    visibility: hidden;
+  }
   .transporte .rotulo-longo {
     display: none;
   }

@@ -2,7 +2,7 @@
   "name": "ouver-estudio",
   "productName": "Ouver Estúdio",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Ouver Estúdio — legendagem para surdos e ensurdecidos (LSE), audiodescrição e janela de Libras numa mesma linha do tempo.",
   "author": {

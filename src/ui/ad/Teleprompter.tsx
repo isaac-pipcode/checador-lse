@@ -22,10 +22,14 @@ export function Teleprompter({
   estado: e,
   aoComando,
   compacto = false,
+  acoplado = false,
 }: {
   estado: EstadoPrompter;
   aoComando?: (c: ComandoGravacao) => void;
+  /** miniatura no inspetor (sem vídeo) */
   compacto?: boolean;
+  /** dentro da janela principal, ocupando o painel: medidas pelo painel, não pela tela */
+  acoplado?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
 
@@ -105,22 +109,24 @@ export function Teleprompter({
   }, [b?.texto, escala, maxPx, compacto]);
 
   const estiloCaixa = {
-    '--base': compacto ? '0.875rem' : 'clamp(1.5rem, 3.2vw, 3.6rem)',
+    // acoplado: a letra acompanha a largura do painel (unidades de contêiner), não a da tela
+    '--base': compacto ? '0.875rem' : acoplado ? 'clamp(1rem, 5.2cqw, 3rem)' : 'clamp(1.5rem, 3.2vw, 3.6rem)',
     '--escala': String(escala),
     '--reducao': String(reducao),
     fontSize: 'calc(var(--base) * var(--escala) * var(--reducao))',
     color: COR_LEGENDA[cor],
     maxHeight: maxPx > 0 ? `${maxPx}px` : undefined,
   } as CSSProperties;
-  const tamFaixa = compacto ? 'text-xs' : 'text-xl';
+  const tamFaixa = compacto ? 'text-xs' : acoplado ? 'text-sm' : 'text-xl';
+  const tamRodape = compacto ? 'text-[10px]' : acoplado ? 'text-xs' : 'text-base';
 
   return (
     <div
-      className={`flex flex-col overflow-hidden bg-preto text-cabine-texto ${compacto ? 'rounded border border-paper-400' : 'h-screen'}`}
+      className={`flex flex-col overflow-hidden bg-preto text-cabine-texto ${compacto ? 'rounded border border-paper-400' : acoplado ? 'h-full [container-type:inline-size]' : 'h-screen'}`}
     >
       {/* Faixa de fase */}
       <div role="status" aria-live="assertive" className={`flex items-center px-4 py-1.5 font-semibold ${tamFaixa} ${f.classe}`}>
-        {f.gravando ? <Icone nome="gravar" tamanho={compacto ? 10 : 18} className="mr-2" /> : null}
+        {f.gravando ? <Icone nome="gravar" tamanho={compacto ? 10 : acoplado ? 14 : 18} className="mr-2" /> : null}
         <span>{f.rotulo}</span>
         {b ? (
           <span className="ml-auto font-normal opacity-90">{e.sequencia ? `Bloco ${b.n} de ${b.total}` : 'Bloco avulso'}</span>
@@ -148,7 +154,7 @@ export function Teleprompter({
         {contagem !== null ? (
           <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
             <span
-              className={`rounded-full bg-preto/55 font-bold tabular-nums text-cabine-texto ${compacto ? 'px-4 text-4xl' : 'px-10 text-[clamp(5rem,14vw,12rem)]'}`}
+              className={`rounded-full bg-preto/55 font-bold tabular-nums text-cabine-texto ${compacto ? 'px-4 text-4xl' : acoplado ? 'px-6 text-[clamp(3rem,18cqw,8rem)]' : 'px-10 text-[clamp(5rem,14vw,12rem)]'}`}
             >
               {contagem}
             </span>
@@ -171,13 +177,13 @@ export function Teleprompter({
                 {b.texto}
               </p>
               {b.nota.trim() ? (
-                <p className={`rounded bg-preto/60 px-2 italic text-cabine-suave ${compacto ? 'text-[10px]' : 'text-lg'}`}>
+                <p className={`rounded bg-preto/60 px-2 italic text-cabine-suave ${compacto ? 'text-[10px]' : acoplado ? 'text-sm' : 'text-lg'}`}>
                   Nota: {b.nota}
                 </p>
               ) : null}
             </>
           ) : (
-            <p className={`rounded bg-preto/70 px-3 py-1 text-cabine-suave ${compacto ? 'text-xs' : 'text-2xl'}`}>
+            <p className={`rounded bg-preto/70 px-3 py-1 text-cabine-suave ${compacto ? 'text-xs' : acoplado ? 'text-base' : 'text-2xl'}`}>
               {e.aviso ?? 'Nenhuma gravação em curso.'}
             </p>
           )}
@@ -185,7 +191,7 @@ export function Teleprompter({
       </div>
 
       {/* Faixa inferior: resultado do take, próximo bloco, teclas */}
-      <div className={`space-y-0.5 bg-cabine px-4 py-1.5 text-cabine-suave ${compacto ? 'text-[10px]' : 'text-base'}`}>
+      <div className={`space-y-0.5 bg-cabine px-4 py-1.5 text-cabine-suave ${tamRodape}`}>
         {e.fase === 'revisao' && e.take ? (
           <p className="text-cabine-texto">
             Duração útil {seg(e.take.duracaoMs)} ·{' '}

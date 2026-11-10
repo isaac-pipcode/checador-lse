@@ -8,6 +8,8 @@ import { Icone } from './icones';
  * Aparece dentro de sugestões cujo módulo assistido está indisponível.
  * Nenhuma chamada acontece sem que o usuário ligue o módulo e clique aqui.
  */
+const NOME_ESTRATEGIA: Record<string, string> = { condensacao: 'condensação', omissao: 'omissão', resegmentacao: 'ressegmentação' };
+
 export function PainelLlm({ sugestao }: { sugestao: Suggestion }) {
   const { estado } = useEstado();
   const despachar = useDespachar();
@@ -37,14 +39,14 @@ export function PainelLlm({ sugestao }: { sugestao: Suggestion }) {
     setErro(null);
     setOcupado(true);
     try {
-      const cliente = new ClienteLlm({ apiKey: estado.llm.apiKey, modelo: estado.llm.modelo });
+      const cliente = new ClienteLlm({ provedor: estado.llm.provedor, apiKey: estado.llm.apiKey, modelo: estado.llm.modelo });
       const p = await cliente.reduzir(cue, estado.config);
       despachar({
         tipo: 'sugestaoLlm',
         base: sugestao,
         after: { lines: p.propostaLinhas },
         confianca: p.confianca,
-        texto: `Redução por ${p.estrategia}: ${p.justificativa}`,
+        texto: `Redução por ${NOME_ESTRATEGIA[p.estrategia] ?? p.estrategia}: ${p.justificativa}`,
       });
     } catch (e) {
       setErro(descreverErroLlm(e));

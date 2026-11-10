@@ -209,8 +209,10 @@ trilha a mais.
    ou **aprovado para gravação**; mudar o texto de um aprovado revoga a aprovação.
    **Gravação** (operadora): só blocos aprovados. Inclui microfone, pré e pós-rolagem, latência,
    a lista dos aprovados e uma prévia do que o locutor vê.
-4. **Teleprompter no monitor do locutor.** No desktop, abre uma segunda janela em tela cheia no
-   segundo monitor (com um só, em janela comum). A imagem (vídeo mudo sincronizado) ocupa a
+4. **Teleprompter no monitor do locutor.** Com segundo monitor, o desktop abre uma janela em tela
+   cheia nele. **Com um monitor só, o teleprompter fica acoplado à própria janela**, no lugar do
+   inspetor, ocupando cerca de 40% da largura; a divisória lateral o redimensiona, e essa largura é
+   lembrada à parte do arranjo de roteiro ("Janela separada" ainda abre a janela própria). A imagem (vídeo mudo sincronizado) ocupa a
    tela; o roteiro aparece **sobre ela, embaixo, como uma legenda**, com a nota para o locutor.
    Uma faixa fina no topo mostra a fase e o tempo: *Prepare-se · entra em 3,0 s* (com contagem
    regressiva grande 3, 2, 1 no centro) → *GRAVANDO — LEIA · restam 2,0 s* (com barra) →
@@ -462,6 +464,16 @@ forma de onda. A linha do tempo abre ajustada à obra (**Ajustar**, tecla 0); a 
 reproduz e pausa (exceto em campos de texto, caixas de seleção e botões focados pelo teclado; na sessão
 de gravação, o espaço é do gravador).
 
+O **menu do aplicativo** é em português e concentra os comandos: *Arquivo* (novo, abrir, salvar,
+salvar como, abrir vídeo, **importar legenda**, **importar vídeo da intérprete de Libras**, entrega),
+*Exibir* (páginas `Ctrl+0`–`4`, painéis, layouts, tema, zoom), *Reprodução* e *Ajuda* (ajudas na
+tela `F1`, metodologia, atualizações, sobre). Itens que dependem de projeto ou de vídeo ficam
+desativados quando não se aplicam. No navegador, sem menu, os mesmos comandos ficam na barra superior.
+
+No roteiro de AD, os blocos ficam **recolhidos** por padrão (uma linha: número, janela, estado e o
+começo do texto); ir a um bloco pela linha do tempo, por `Ctrl+↑/↓` ou criando um novo abre esse e
+recolhe o anterior. "Abertos" mostra todos os editores de uma vez.
+
 Os botões à esquerda da barra superior **recolhem** o painel esquerdo, a linha do tempo e o
 inspetor, e o menu **Layout** salva o arranjo com um nome e alterna entre layouts (prontos: "Padrão"
 e "Foco no monitor").
@@ -485,7 +497,7 @@ src/
   libras/     janela de Libras: modelo, geometria e verificações, sincronia, chroma (puro)
   mapa/       mapa temporal: envelope de áudio, atividade, cortes, lacunas (puro) + camada de navegador
   nlp/        léxico de classes fechadas do pt-BR + segmentador, atrás de uma interface
-  llm/        cliente opcional (Anthropic), atrás de feature flag
+  llm/        cliente opcional (Maritaca ou Anthropic), atrás de feature flag
   export/     aplicação dos diffs aprovados, serialização, relatório de QA
   state/      estado da revisão (useReducer + contexto)
   ui/         interface: shell/ (dashboard, espaço de trabalho, barras), paginas/ (uma por
@@ -509,10 +521,14 @@ a hierarquia de pontos de quebra de Karamitroglou (1998).
 
 ### Módulo LLM (opcional, desligado por padrão)
 
-Usado apenas para L2 (redução textual). Ao ativar, a interface avisa que o texto das legendas
-escolhidas será enviado à API da Anthropic. A chave fica somente em memória — não vai para
-`localStorage` nem para disco. A saída é estruturada (ferramenta com esquema estrito) e entra no
-mesmo fluxo de aprovação das demais sugestões, com grau de confiança. Sem exceção.
+Usado apenas para L2 (redução textual). Provedores: **Maritaca** (padrão; modelo `S5-br-sp`, com
+inferência em São Paulo, ou `S5` e `sabia-4-br-sp`) e **Anthropic** (Claude). Ao ativar, a interface
+avisa que o texto das legendas escolhidas será enviado ao provedor. A chave fica somente em memória —
+não vai para `localStorage` nem para disco — e trocar de provedor a descarta, para que nunca seja
+enviada ao provedor errado. Na Maritaca, a chamada usa a Responses API (`chat.maritaca.ai/api`) com
+saída estruturada em JSON Schema; no desktop, sai pelo processo principal, a um endpoint fixo. Na
+Anthropic, usa ferramenta com esquema estrito. Em ambos, a saída entra no mesmo fluxo de aprovação
+das demais sugestões, com grau de confiança. Sem exceção.
 
 ## Acessibilidade
 
