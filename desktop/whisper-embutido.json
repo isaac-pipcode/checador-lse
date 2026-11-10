@@ -1,6 +1,6 @@
 {
-  "$comentario": "whisper.cpp embutido no instalador (MIT). O CI compila o whisper-cli desta tag do repositório oficial (scripts/compilar-whisper.mjs) e confere o commit. 'commit' vazio: o CI imprime o commit da tag para fixá-lo aqui.",
+  "$comentario": "whisper.cpp embutido no instalador (MIT). O CI compila o whisper-cli desta tag do repositório oficial (scripts/compilar-whisper.mjs) e confere o commit.",
   "versao": "v1.9.1",
   "repositorio": "https://github.com/ggml-org/whisper.cpp",
-  "commit": ""
+  "commit": "f049fff95a089aa9969deb009cdd4892b3e74916"
 }
