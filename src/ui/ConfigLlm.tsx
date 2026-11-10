@@ -1,8 +1,21 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { ponte } from '../desktop/ponte';
 import { PROVEDORES, type Provedor } from '../llm/cliente';
 import { useAcoes, useDespachar, useEstado } from '../state/store';
 import { Campo } from './primitivos';
 import { Icone } from './icones';
+
+/** Traz a chave guardada deste provedor, se houver (desktop). */
+export async function carregarChaveLembrada(provedor: Provedor, aplicar: (m: { apiKey: string; lembrada: boolean }) => void) {
+  const chaves = ponte()?.chaves;
+  if (!chaves) return;
+  try {
+    const k = await chaves.ler(provedor);
+    if (k) aplicar({ apiKey: k, lembrada: true });
+  } catch {
+    /* sem chave guardada */
+  }
+}
 
 /**
  * Configuração do módulo opcional de LLM. Desligado por padrão, com aviso
@@ -16,6 +29,24 @@ export function ConfigLlm() {
   const idBase = useId();
   const ativo = estado.config.llmAtivo;
   const prov = PROVEDORES[estado.llm.provedor];
+  const desktop = ponte();
+  const [cifra, setCifra] = useState<boolean | null>(null);
+  const [erroChave, setErroChave] = useState<string | null>(null);
+  useEffect(() => {
+    void desktop?.chaves?.estado().then((e) => setCifra(e.cifra), () => setCifra(false));
+  }, [desktop]);
+
+  async function lembrar(sim: boolean) {
+    if (!desktop?.chaves) return;
+    setErroChave(null);
+    try {
+      if (sim && estado.llm.apiKey.trim()) await desktop.chaves.salvar(estado.llm.provedor, estado.llm.apiKey);
+      else await desktop.chaves.esquecer(estado.llm.provedor);
+      despachar({ tipo: 'llm', mudanca: { lembrada: sim && !!estado.llm.apiKey.trim() } });
+    } catch (e) {
+      setErroChave(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   return (
     <div className="text-sm">
@@ -38,8 +69,8 @@ export function ConfigLlm() {
         <p className="text-navy-700">
           Todo o restante do checador funciona <strong>offline</strong>. Ativando este módulo, o
           texto das legendas para as quais você pedir uma proposta — e somente elas — é enviado à
-          API do provedor escolhido (hoje: <strong>{prov.empresa}</strong>). A chave fica apenas na
-          memória desta aba e não é gravada em lugar nenhum.
+          API do provedor escolhido (hoje: <strong>{prov.empresa}</strong>). A chave fica só na memória,
+          a menos que você peça para lembrá-la neste computador (guardada cifrada pelo sistema).
         </p>
 
         <label className="mt-3 flex items-start gap-2">
@@ -70,8 +101,9 @@ export function ConfigLlm() {
                 value={estado.llm.provedor}
                 onChange={(e) => {
                   const provedor = e.target.value as Provedor;
-                  // a chave é de um provedor só: trocar a descarta, para não enviá-la ao outro
-                  despachar({ tipo: 'llm', mudanca: { provedor, modelo: PROVEDORES[provedor].padrao, apiKey: '' } });
+                  // a chave é de um provedor só: trocar a descarta (e traz a lembrada do outro, se houver)
+                  despachar({ tipo: 'llm', mudanca: { provedor, modelo: PROVEDORES[provedor].padrao, apiKey: '', lembrada: false } });
+                  void carregarChaveLembrada(provedor, (m) => despachar({ tipo: 'llm', mudanca: m }));
                 }}
               >
                 {(Object.keys(PROVEDORES) as Provedor[]).map((k) => (
@@ -84,7 +116,7 @@ export function ConfigLlm() {
             <Campo
               id={`${idBase}-chave`}
               rotulo={`Chave de API (${prov.empresa})`}
-              dica="Somente em memória; não é salva."
+              dica={estado.llm.lembrada ? 'Guardada neste computador.' : 'Somente em memória.'}
             >
               <input
                 id={`${idBase}-chave`}
@@ -93,8 +125,32 @@ export function ConfigLlm() {
                 autoComplete="off"
                 value={estado.llm.apiKey}
                 onChange={(e) => despachar({ tipo: 'llm', mudanca: { apiKey: e.target.value } })}
+                // lembrada: a chave editada substitui a guardada ao sair do campo
+                onBlur={() => {
+                  if (estado.llm.lembrada) void lembrar(true);
+                }}
               />
             </Campo>
+            {desktop?.chaves ? (
+              <label className={`flex items-start gap-2 text-xs ${cifra === false ? 'text-navy-500' : ''}`}>
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={estado.llm.lembrada}
+                  disabled={cifra === false || (!estado.llm.lembrada && !estado.llm.apiKey.trim())}
+                  onChange={(e) => void lembrar(e.target.checked)}
+                />
+                <span>
+                  Lembrar a chave neste computador
+                  <span className="block text-2xs text-navy-500">
+                    {cifra === false
+                      ? 'Indisponível: o sistema não oferece armazenamento seguro.'
+                      : 'Cifrada pelo sistema (Windows, macOS ou chaveiro do Linux). Desmarque para apagá-la.'}
+                  </span>
+                  {erroChave ? <span className="block text-2xs text-bad">{erroChave}</span> : null}
+                </span>
+              </label>
+            ) : null}
             <Campo id={`${idBase}-modelo`} rotulo="Modelo">
               <select
                 id={`${idBase}-modelo`}

@@ -9,6 +9,7 @@ import { renderizarEntrega } from './entrega';
 import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
 import { atualizarEstadoMenu, instalarMenu, type EstadoMenu } from './menu';
+import { cifraDisponivel, esquecerChave, lerChave, provedoresLembrados, salvarChave } from './chaves';
 import { chaveDeAnalise, gravarNoCache, lerDoCache, limparCache, tamanhoDoCache } from './cacheMidia';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
@@ -269,6 +270,14 @@ function registrarIpc() {
       return { status: 0, texto: 'sem conexão' };
     }
   });
+  // chaves de API lembradas (cifradas pelo sistema); só a janela principal
+  const daPrincipal = (e: Electron.IpcMainInvokeEvent) => {
+    if (e.sender !== principal?.webContents) throw new Error('Origem não autorizada.');
+  };
+  ipcMain.handle('chave:estado', (e) => (daPrincipal(e), { cifra: cifraDisponivel(), lembrados: provedoresLembrados() }));
+  ipcMain.handle('chave:ler', (e, provedor: string) => (daPrincipal(e), lerChave(String(provedor))));
+  ipcMain.handle('chave:salvar', (e, provedor: string, chave: string) => (daPrincipal(e), salvarChave(String(provedor), String(chave))));
+  ipcMain.handle('chave:esquecer', (e, provedor: string) => (daPrincipal(e), esquecerChave(String(provedor))));
   ipcMain.handle('telas:quantas', () => screen.getAllDisplays().length);
   ipcMain.handle('legenda:escolher', async (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);

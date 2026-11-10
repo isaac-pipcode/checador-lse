@@ -226,6 +226,13 @@ export interface PonteDesktop {
     tamanho(): Promise<{ bytes: number; entradas: number }>;
     limpar(): Promise<void>;
   };
+  /** chaves de API lembradas neste computador, cifradas pelo sistema (desktop/chaves.ts) */
+  chaves: {
+    estado(): Promise<{ cifra: boolean; lembrados: string[] }>;
+    ler(provedor: string): Promise<string | null>;
+    salvar(provedor: string, chave: string): Promise<void>;
+    esquecer(provedor: string): Promise<void>;
+  };
   /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
   quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;

@@ -57,6 +57,8 @@ export interface Filtros {
 export interface EstadoLlm {
   provedor: Provedor;
   apiKey: string;
+  /** a chave deste provedor está guardada neste computador (cifrada pelo sistema) */
+  lembrada: boolean;
   modelo: string;
   ocupadas: string[];
   erro: string | null;
@@ -124,7 +126,7 @@ export const estadoInicial: Estado = {
   sugestoes: [],
   review: {},
   filtros: FILTROS_INICIAIS,
-  llm: { provedor: PROVEDOR_PADRAO, apiKey: '', modelo: MODELO_PADRAO, ocupadas: [], erro: null },
+  llm: { provedor: PROVEDOR_PADRAO, apiKey: '', lembrada: false, modelo: MODELO_PADRAO, ocupadas: [], erro: null },
   anuncio: '',
   historicoLote: [],
   video: null,

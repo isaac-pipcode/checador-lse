@@ -58,6 +58,12 @@ const ponte: PonteDesktop = {
   },
   escolherLegenda: () => ipcRenderer.invoke('legenda:escolher'),
   quantasTelas: () => ipcRenderer.invoke('telas:quantas'),
+  chaves: {
+    estado: () => ipcRenderer.invoke('chave:estado'),
+    ler: (provedor) => ipcRenderer.invoke('chave:ler', provedor),
+    salvar: (provedor, chave) => ipcRenderer.invoke('chave:salvar', provedor, chave),
+    esquecer: (provedor) => ipcRenderer.invoke('chave:esquecer', provedor),
+  },
   cacheAnalises: {
     tamanho: () => ipcRenderer.invoke('cache:tamanho'),
     limpar: () => ipcRenderer.invoke('cache:limpar'),
