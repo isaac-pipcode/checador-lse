@@ -1,19 +1,24 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useDespachar, useEstado } from '../../state/store';
 import { useAcoesProjeto } from '../Projeto';
-import { salvarTema, temaSalvo, type Tema } from '../tema/tokens';
-import { Sobre } from '../Sobre';
+import { assinarTema, salvarTema, temaSalvo } from '../tema/tokens';
 import { Marca } from './Marca';
-import { definirMostrarAjudas, mostrarAjudas, useMostrarAjudas } from '../ajudas';
+import { definirMostrarAjudas, useMostrarAjudas } from '../ajudas';
 import { Icone } from '../icones';
+import { abrirMetodologia } from '../menuNativo';
+import { ponte } from '../../desktop/ponte';
 
-/** Barra superior: projeto, salvar, ajudas, tema, metodologia. */
+/**
+ * Barra superior: projeto, salvar, ajudas, tema, metodologia. No desktop,
+ * salvar, ajudas, tema e metodologia ficam no menu nativo (Arquivo, Exibir,
+ * Ajuda); aqui ficam só no navegador, que não tem menu.
+ */
 export function BarraSuperior({ ferramentas }: { ferramentas?: ReactNode } = {}) {
   const { estado } = useEstado();
   const despachar = useDespachar();
   const acoes = useAcoesProjeto();
   const [erro, setErro] = useState<string | null>(null);
-  const [sobre, setSobre] = useState(false);
+  const comMenu = !!ponte()?.menu;
   const nome = estado.projeto.nome || (estado.video?.nome ?? 'Projeto sem título');
 
   async function salvar(como: boolean) {
@@ -25,8 +30,9 @@ export function BarraSuperior({ ferramentas }: { ferramentas?: ReactNode } = {})
     }
   }
 
-  // Ctrl/⌘+S salva
+  // Ctrl/⌘+S salva (no desktop, o atalho é do menu Arquivo)
   useEffect(() => {
+    if (comMenu) return;
     const t = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
@@ -66,7 +72,7 @@ export function BarraSuperior({ ferramentas }: { ferramentas?: ReactNode } = {})
 
       <div className="ml-auto flex items-center gap-1">
         {erro ? <span className="max-w-xs truncate text-xs text-bad">{erro}</span> : null}
-        {acoes.disponivel ? (
+        {comMenu ? null : acoes.disponivel ? (
           <>
             <button type="button" className="btn-secundario h-6" onClick={() => void salvar(false)} title="Ctrl+S">
               Salvar
@@ -78,49 +84,24 @@ export function BarraSuperior({ ferramentas }: { ferramentas?: ReactNode } = {})
         ) : (
           <span className="text-2xs text-navy-500">Modo navegador: o projeto não é salvo em disco</span>
         )}
-        <BotaoAjudas />
-        <SeletorTema />
-        <button type="button" className="btn-fantasma h-6" onClick={() => setSobre(true)}>
-          Metodologia
-        </button>
-      </div>
-
-      {sobre ? (
-        <div role="dialog" aria-modal="true" aria-label="Sobre e metodologia" className="fixed inset-0 z-50 overflow-auto bg-fundo/95">
-          <div className="sticky top-0 flex justify-end p-3">
-            <button type="button" className="btn-secundario" onClick={() => setSobre(false)} autoFocus>
-              Fechar (Esc)
+        <BotaoAjudas visivel={!comMenu} />
+        {comMenu ? null : (
+          <>
+            <SeletorTema />
+            <button type="button" className="btn-fantasma h-6" onClick={abrirMetodologia}>
+              Metodologia
             </button>
-          </div>
-          <FecharComEsc aoFechar={() => setSobre(false)} />
-          <Sobre />
-        </div>
-      ) : null}
+          </>
+        )}
+      </div>
     </header>
   );
 }
 
-function FecharComEsc({ aoFechar }: { aoFechar: () => void }) {
-  useEffect(() => {
-    const t = (e: KeyboardEvent) => e.key === 'Escape' && aoFechar();
-    window.addEventListener('keydown', t);
-    return () => window.removeEventListener('keydown', t);
-  }, [aoFechar]);
-  return null;
-}
-
-/** Liga o modo "mostrar ajudas" (todas as explicações abertas). Atalho: F1. */
-export function BotaoAjudas() {
+/** Liga o modo "mostrar ajudas" (todas as explicações abertas). O atalho F1 é tratado em menuNativo. */
+export function BotaoAjudas({ visivel = true }: { visivel?: boolean } = {}) {
   const ligado = useMostrarAjudas();
-  useEffect(() => {
-    const t = (e: KeyboardEvent) => {
-      if (e.key !== 'F1') return;
-      e.preventDefault();
-      definirMostrarAjudas(!mostrarAjudas());
-    };
-    window.addEventListener('keydown', t);
-    return () => window.removeEventListener('keydown', t);
-  }, []);
+  if (!visivel) return null;
   return (
     <button
       type="button"
@@ -137,7 +118,7 @@ export function BotaoAjudas() {
 }
 
 export function SeletorTema() {
-  const [tema, setTema] = useState<Tema>(temaSalvo());
+  const tema = useSyncExternalStore(assinarTema, temaSalvo, temaSalvo);
   return (
     <button
       type="button"
@@ -147,7 +128,6 @@ export function SeletorTema() {
       onClick={() => {
         const novo = tema === 'escuro' ? 'claro' : 'escuro';
         salvarTema(novo);
-        setTema(novo);
       }}
     >
       <Icone nome={tema === 'escuro' ? 'temaClaro' : 'temaEscuro'} />

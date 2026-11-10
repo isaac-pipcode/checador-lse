@@ -24,9 +24,11 @@ import { LseEsquerda, LseDireita } from '../paginas/PaginaLSE';
 import { AdEsquerda, AdDireita, ProvedorPaginaAD } from '../paginas/PaginaAD';
 import { LibrasEsquerda, LibrasDireita } from '../paginas/PaginaLibras';
 import { EntregaEsquerda, EntregaDireita } from '../paginas/PaginaEntrega';
-import { Divisoria, useJanela, useLayoutsNomeados, usePaineis, type Painel } from './divisorias';
+import { Divisoria, PRONTOS, useJanela, useLayoutsNomeados, usePaineis, type Painel } from './divisorias';
 import { MenuLayouts } from './MenuLayouts';
 import { Icone, type NomeIcone } from '../icones';
+import { useAcaoMenu } from '../acoesMenu';
+import { useEstadoPaineisNoMenu } from '../menuNativo';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
@@ -295,6 +297,18 @@ export function Espaco() {
     recolhido.dir ? '0px' : dirEf !== undefined ? `${dirEf}px` : padrao[2],
   ].join(' ');
   const nomeados = useLayoutsNomeados();
+
+  // menu nativo: Exibir (painéis, layouts), Arquivo (vídeo) e Reprodução
+  useEstadoPaineisNoMenu({ esq: !recolhido.esq, linha: !recolhido.linha, dir: !recolhido.dir });
+  useAcaoMenu('painelEsq', () => paineis.alternar('esq'));
+  useAcaoMenu('painelLinha', () => paineis.alternar('linha'));
+  useAcaoMenu('painelDir', () => paineis.alternar('dir'));
+  useAcaoMenu('layoutPadrao', () => paineis.aplicar(PRONTOS['Padrão']));
+  useAcaoMenu('layoutFoco', () => paineis.aplicar(PRONTOS['Foco no monitor']));
+  useAcaoMenu('abrirVideo', () => void abrirVideo());
+  useAcaoMenu('reproduzir', () => videoPronto && void (videoPronto.paused ? videoPronto.play() : videoPronto.pause()));
+  useAcaoMenu('inicio', () => buscar(0));
+  useAcaoMenu('fim', () => buscar(duracaoMs));
   const BOTOES_PAINEIS: Array<[Painel, NomeIcone, string]> = [
     ['esq', 'painelEsquerdo', 'Painel esquerdo'],
     ['linha', 'painelInferior', 'Linha do tempo'],

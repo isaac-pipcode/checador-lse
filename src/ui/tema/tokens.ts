@@ -121,4 +121,14 @@ export function salvarTema(t: Tema) {
     /* sem armazenamento: o tema vale só para a sessão */
   }
   aplicarTema(t);
+  for (const f of ouvintesTema) f();
+}
+
+const ouvintesTema = new Set<() => void>();
+/** avisa quando o tema muda (botão, menu nativo); devolve a função para cancelar */
+export function assinarTema(f: () => void): () => void {
+  ouvintesTema.add(f);
+  return () => {
+    ouvintesTema.delete(f);
+  };
 }

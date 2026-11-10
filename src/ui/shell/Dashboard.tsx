@@ -5,6 +5,7 @@ import { useAcoesProjeto } from '../Projeto';
 import { Marca } from './Marca';
 import { SeletorTema } from './BarraSuperior';
 import { Icone } from '../icones';
+import { useAcaoMenu } from '../acoesMenu';
 
 const quando = (iso: string) => {
   const d = new Date(iso);
@@ -30,6 +31,7 @@ export function Dashboard() {
   const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const idBusca = useId();
+  useAcaoMenu('novoProjeto', () => setCriando(true));
   // React 18 não repassa `inert`: aplica-se direto no elemento
   const fundo = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -65,9 +67,12 @@ export function Dashboard() {
       <header className="flex h-12 shrink-0 items-center gap-4 border-b border-fundo bg-paper-200 px-6">
         <Marca grande />
         <span className="text-xs text-navy-500">LSE · Audiodescrição · Libras</span>
-        <div className="ml-auto flex items-center gap-2">
-          <SeletorTema />
-        </div>
+        {/* no desktop, o tema fica no menu Exibir */}
+        {desktop?.menu ? null : (
+          <div className="ml-auto flex items-center gap-2">
+            <SeletorTema />
+          </div>
+        )}
       </header>
 
       <main id="conteudo" className="min-h-0 flex-1 overflow-auto">

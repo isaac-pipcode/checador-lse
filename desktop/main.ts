@@ -8,6 +8,7 @@ import { renderizar } from './render';
 import { renderizarEntrega } from './entrega';
 import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
+import { atualizarEstadoMenu, instalarMenu, type EstadoMenu } from './menu';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoEntrega, PedidoIntercambio, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
@@ -122,6 +123,8 @@ function abrirPrompter(): { monitor: string; secundario: boolean } {
     autoHideMenuBar: true,
     webPreferences: PREFERENCIAS,
   });
+  // o menu do app (Arquivo, Exibir…) não faz sentido na janela do locutor
+  prompter.removeMenu();
   carregar(prompter, 'prompter');
   prompter.webContents.on('did-finish-load', () => {
     if (ultimoEstadoPrompter) prompter?.webContents.send('prompter:estado', ultimoEstadoPrompter);
@@ -244,6 +247,22 @@ function registrarIpc() {
   ipcMain.handle('atualizacao:verificar', () => verificarAtualizacao());
   ipcMain.on('atualizacao:reiniciar', () => reiniciarParaAtualizar());
   ipcMain.on('atualizacao:abrir', (_e, url: unknown) => abrirPaginaDaRelease(String(url)));
+
+  ipcMain.on('menu:estado', (e, novo: Partial<EstadoMenu>) => {
+    if (e.sender === principal?.webContents) atualizarEstadoMenu(novo);
+  });
+  ipcMain.handle('telas:quantas', () => screen.getAllDisplays().length);
+  ipcMain.handle('legenda:escolher', async (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    const r = await dialog.showOpenDialog(w!, {
+      title: 'Importar legenda',
+      properties: ['openFile'],
+      filters: [{ name: 'Legenda (.srt, .vtt)', extensions: ['srt', 'vtt'] }],
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const caminho = r.filePaths[0];
+    return { nome: basename(caminho), bytes: new Uint8Array(readFileSync(caminho)) };
+  });
 
   ipcMain.handle('ffmpeg', async () => {
     const versao = await versaoFfmpeg();
@@ -514,6 +533,7 @@ app.whenReady().then(() => {
     ok(true);
   });
   registrarIpc();
+  instalarMenu(() => principal);
   janela();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) janela();

@@ -52,6 +52,12 @@ const ponte: PonteDesktop = {
     abrirPagina: (url) => ipcRenderer.send('atualizacao:abrir', url),
     aoMudar: (cb) => ouvir('atualizacao:evento', cb),
   },
+  menu: {
+    aoAcao: (cb) => ouvir('menu:acao', cb),
+    estado: (e) => ipcRenderer.send('menu:estado', e),
+  },
+  escolherLegenda: () => ipcRenderer.invoke('legenda:escolher'),
+  quantasTelas: () => ipcRenderer.invoke('telas:quantas'),
   aoFecharPrompter: (cb) => ouvir('prompter:fechado', () => cb()),
   aoEstadoDoPrompter: (cb) => ouvir('prompter:estado', cb),
   enviarComando: (c) => ipcRenderer.send('prompter:comando', c),
