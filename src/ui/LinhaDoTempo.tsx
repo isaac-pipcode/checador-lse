@@ -8,6 +8,7 @@ import { formatarTimecode } from '../core/texto';
 import { ICONE_SEVERIDADE, ROTULO_SEVERIDADE } from './primitivos';
 import { BotaoDica, tcSmpte } from './comum';
 import { useAjudaAberta } from './ajudas';
+import { useProgressoAnalise } from './progressoAnalise';
 import { Icone, type NomeIcone } from './icones';
 
 /**
@@ -150,6 +151,7 @@ export interface PropsLinhaDoTempo {
 
 export function LinhaDoTempo(p: PropsLinhaDoTempo) {
   const id = useId();
+  const analiseSom = useProgressoAnalise();
   // Zoom contínuo. "Ajustado" (o padrão ao abrir) mostra a obra inteira e acompanha a
   // largura do painel; qualquer zoom manual sai do ajuste.
   const [ajustado, setAjustado] = useState(true);
@@ -416,9 +418,12 @@ export function LinhaDoTempo(p: PropsLinhaDoTempo) {
     } else {
       g.fillStyle = COR.navy500;
       g.font = '12px system-ui, sans-serif';
-      g.fillText(mapa && !mapa.audio ? 'Áudio não decodificado' : 'Sem análise de áudio', 8, y0 + H_SOM / 2);
+      const emAndamento = analiseSom
+        ? `Analisando o som da obra${analiseSom.fracao != null ? ` · ${Math.round(analiseSom.fracao * 100)}%` : '…'}`
+        : null;
+      g.fillText(emAndamento ?? (mapa && !mapa.audio ? 'Áudio não decodificado' : 'Sem análise de áudio'), 8, y0 + H_SOM / 2);
     }
-  }, [scroll, largura, pxs, p.mapa, p.alertasSom, p.curvaGanho, t0, t1]);
+  }, [scroll, largura, pxs, p.mapa, p.alertasSom, p.curvaGanho, t0, t1, analiseSom]);
 
   function teclado(e: KeyboardEvent<HTMLDivElement>) {
     if (e.target !== e.currentTarget) return;

@@ -6,6 +6,7 @@ import { MODELO_WHISPER_PADRAO, MODELOS_WHISPER, modeloWhisper } from '../transc
 import { palavrasDoWhisper } from '../transcricao/whisperJson';
 import { useAcaoMenu } from './acoesMenu';
 import { Icone } from './icones';
+import { BarraProgresso } from './BarraProgresso';
 
 /**
  * Rascunho de LSE por transcrição automática (Whisper, no próprio computador).
@@ -161,26 +162,18 @@ export function PainelTranscricao({ aoConcluir }: { aoConcluir?: () => void }) {
             {!baixado ? ` Baixado uma vez (${gb(m.bytes)}) do repositório oficial e conferido.` : ''}
           </p>
           {ocupado ? (
-            <div className="mt-2" role="status">
-              <progress
-                className="w-full"
-                max={1}
-                value={fase.f}
-                aria-label={fase.tipo === 'baixando' ? 'Progresso do download do modelo' : 'Progresso da transcrição'}
-              />
-              <div className="mt-0.5 flex items-center">
-                <span>
-                  {fase.tipo === 'baixando' ? 'Baixando o modelo' : fase.etapa} · {Math.round(fase.f * 100)}%
-                </span>
-                <button
-                  type="button"
-                  className="btn-fantasma ml-auto h-6 px-2 text-2xs"
-                  onClick={() => trabalho.current && void desktop.whisper.cancelar(trabalho.current)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
+            <BarraProgresso
+              className="mt-2"
+              // sem número ainda (começo da extração, modelo carregando): barra em andamento
+              fracao={
+                fase.tipo === 'transcrevendo' && (fase.f === 0 || fase.etapa.startsWith('Carregando')) ? null : fase.f
+              }
+              rotulo={fase.tipo === 'baixando' ? 'Progresso do download do modelo' : 'Progresso da transcrição'}
+              etapa={fase.tipo === 'baixando' ? `Baixando o modelo (${gb(m.bytes)})` : fase.etapa}
+              // o Whisper informa de 5% em 5% (95% do total): a barra avança suavemente entre os degraus
+              passo={fase.tipo === 'transcrevendo' && fase.etapa === 'Transcrevendo' ? 0.0475 : undefined}
+              aoCancelar={() => trabalho.current && void desktop.whisper.cancelar(trabalho.current)}
+            />
           ) : (
             <button type="button" className="btn-primario mt-2 w-full justify-center" onClick={() => void iniciar()}>
               {baixado ? 'Transcrever' : `Baixar o modelo e transcrever`}

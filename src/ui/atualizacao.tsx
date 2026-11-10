@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BarraProgresso } from './BarraProgresso';
 import { ponte, type EstadoAtualizacao } from '../desktop/ponte';
 
 /**
@@ -58,9 +59,9 @@ export function AvisoAtualizacao() {
     corpo = (
       <>
         <p>
-          Baixando a versão <strong>{estado.versao}</strong>… {Math.round(estado.fracao * 100)}%
+          Baixando a versão <strong>{estado.versao}</strong>
         </p>
-        <progress className="mt-1 w-full" max={1} value={estado.fracao} aria-label="Progresso do download" />
+        <BarraProgresso className="mt-1" fracao={estado.fracao > 0 ? estado.fracao : null} rotulo="Progresso do download" />
       </>
     );
   else if (estado.estado === 'pronta')

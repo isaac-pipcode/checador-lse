@@ -7,6 +7,7 @@ import { roteiroCsv, roteiroTexto, roteiroVtt } from '../../ad/roteiro';
 import { verificarBloco, nivelDoBloco } from '../../ad/verificacoes';
 import { baixar } from '../comum';
 import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
+import { BarraProgresso } from '../BarraProgresso';
 import { Icone } from '../icones';
 
 /**
@@ -134,10 +135,12 @@ export function SaidasAD() {
               </button>
               {saidas.video ? <FonteDasMidias compacto /> : null}
               {progresso ? (
-                <div className="mt-2 flex items-center gap-2 text-xs" role="status">
-                  <progress max={1} value={progresso.f} className="w-40" aria-label="Progresso da renderização" />
-                  {progresso.etapa} · {Math.round(progresso.f * 100)}%
-                </div>
+                <BarraProgresso
+                  className="mt-2"
+                  fracao={progresso.f > 0 ? progresso.f : null}
+                  rotulo="Progresso da renderização"
+                  etapa={progresso.etapa}
+                />
               ) : null}
             </>
           )}

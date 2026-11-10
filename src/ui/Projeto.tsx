@@ -103,7 +103,7 @@ export function useAcoesProjeto() {
         const url = await desktop.urlDeMidia(v.caminho);
         const caminho = v.caminho;
         const info = await desktop.sondarMidia(caminho).catch(() => null);
-        const analise = carregarMidia(despachar, { url, nome: v.nome, caminho, info }, () => desktop.analisarAudio(caminho, JANELA_MS, () => {}));
+        const analise = carregarMidia(despachar, { url, nome: v.nome, caminho, info }, (p) => desktop.analisarAudio(caminho, JANELA_MS, p));
         if (v.proxy) {
           const proxy = v.proxy;
           const purl = await desktop.urlDeMidia(proxy).catch(() => null);

@@ -252,3 +252,24 @@ input[type='range']:disabled {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* barra de progresso indeterminada (BarraProgresso): vai e volta; sem animação para quem pede menos movimento */
+@keyframes barra-indeterminada {
+  0% {
+    left: -33%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.barra-indeterminada {
+  animation: barra-indeterminada 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-indeterminada {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

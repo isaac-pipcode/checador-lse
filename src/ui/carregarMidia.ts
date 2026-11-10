@@ -4,6 +4,7 @@ import type { InfoVideo } from '../midia/avaliacao';
 import { detectarAtividade } from '../mapa/sinal';
 import { ErroMidia, JANELA_MS } from '../mapa/midia';
 import { PARAMETROS_ATIVIDADE_PADRAO, type MapaTemporal } from '../mapa/tipos';
+import { informarAnalise } from './progressoAnalise';
 
 /**
  * Carrega uma mídia e monta o mapa temporal. A análise de áudio vem de fora:
@@ -13,7 +14,8 @@ import { PARAMETROS_ATIVIDADE_PADRAO, type MapaTemporal } from '../mapa/tipos';
 export async function carregarMidia(
   despachar: Dispatch<Acao>,
   midia: { url: string; nome: string; caminho: string | null; info?: InfoVideo | null },
-  analisar: () => Promise<{ envelopeDb: Float32Array; duracaoMs: number }>,
+  /** recebe o informante de progresso (fração 0..1); quem não sabe medir simplesmente não o chama */
+  analisar: (aoProgredir: (fracao: number) => void) => Promise<{ envelopeDb: Float32Array; duracaoMs: number }>,
 ) {
   despachar({ tipo: 'video', ...midia });
   const parametros = PARAMETROS_ATIVIDADE_PADRAO;
@@ -24,8 +26,9 @@ export async function carregarMidia(
     cortes: [],
     statusCortes: { tipo: 'nao_detectado' },
   };
+  informarAnalise({ fracao: null });
   try {
-    const { envelopeDb, duracaoMs } = await analisar();
+    const { envelopeDb, duracaoMs } = await analisar((fracao) => informarAnalise({ fracao }));
     const { atividade, pisoDb } = detectarAtividade(envelopeDb, JANELA_MS, parametros);
     despachar({ tipo: 'mapa', mapa: { ...base, duracaoMs, audio: true, envelopeDb, pisoDb, atividade } });
   } catch (e) {
@@ -36,5 +39,7 @@ export async function carregarMidia(
       tipo: 'mapa',
       mapa: { ...base, duracaoMs: 0, audio: false, erroAudio, envelopeDb: new Float32Array(0), pisoDb: -100, atividade: [] },
     });
+  } finally {
+    informarAnalise(null);
   }
 }

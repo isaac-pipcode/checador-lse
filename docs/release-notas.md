@@ -1,6 +1,15 @@
 Versão desktop do **Ouver Estúdio**: legendagem para surdos e ensurdecidos (LSE), audiodescrição e
 janela de Libras numa mesma linha do tempo.
 
+**Novo na 0.1.5**:
+
+- **Progresso visível** na análise do som e na transcrição: uma barra sobre o monitor e no inspetor (também
+  ao abrir um projeto salvo, que antes não mostrava nada), com a etapa, o percentual e o tempo restante
+  estimado. Na transcrição, a barra mostra cada etapa (extraindo o áudio, carregando o modelo,
+  transcrevendo) e avança suavemente entre os degraus de 5% que o Whisper informa.
+- As demais barras (proxy, renderização, exportação, download de atualização) ficaram iguais: visíveis nos
+  dois temas e anunciadas para leitores de tela.
+
 **Novo na 0.1.4**:
 
 - **Transcrição com o Whisper** para obras que chegam sem legenda: *Legendas → Transcrever o áudio da obra*

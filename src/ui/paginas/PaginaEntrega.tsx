@@ -13,6 +13,7 @@ import { NBR_15290 } from '../../libras/tipos';
 import { serializarSrt } from '../../export/serializar';
 import { useVideo } from '../contextoVideo';
 import { Icone } from '../icones';
+import { BarraProgresso } from '../BarraProgresso';
 import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
 
 interface Item {
@@ -250,10 +251,12 @@ export function EntregaDireita() {
             </button>
           )}
           {progresso ? (
-            <div className="mt-2 text-2xs" role="status">
-              <progress max={1} value={progresso.f} className="w-full" aria-label="Progresso da renderização" />
-              {progresso.etapa} · {Math.round(progresso.f * 100)}%
-            </div>
+            <BarraProgresso
+              className="mt-2"
+              fracao={progresso.f > 0 ? progresso.f : null}
+              rotulo="Progresso da renderização"
+              etapa={progresso.etapa}
+            />
           ) : null}
           {erro ? <p className="mt-2 text-xs text-bad">Erro: {erro}</p> : null}
           {rel ? (

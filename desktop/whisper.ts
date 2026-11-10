@@ -149,6 +149,8 @@ export async function transcrever(
     );
     if (sinal?.aborted) throw new Error('Transcrição cancelada.');
     if (r.codigo !== 0) throw new Error(`ffmpeg: ${r.stderr.trim().split('\n').pop()}`);
+    // até o primeiro "progress = N%", o whisper-cli carrega o modelo e lê a primeira janela de 30 s
+    aoProgredir(0.05, 'Carregando o modelo');
 
     // 2) whisper-cli: JSON completo (tempos por token), sem tokens de não fala
     const base = join(dir, 'transcricao');

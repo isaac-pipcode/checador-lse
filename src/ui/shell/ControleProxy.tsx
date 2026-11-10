@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDespachar, useEstado } from '../../state/store';
 import { ponte } from '../../desktop/ponte';
 import { avaliarMidia } from '../../midia/avaliacao';
+import { BarraProgresso } from '../BarraProgresso';
 import { gerarProxyDe } from '../proxy';
 
 /**
@@ -47,7 +48,7 @@ export function ControleProxy() {
         </span>
       ) : trabalho && !trabalho.erro ? (
         <span className="flex items-center gap-1 text-2xs font-normal text-navy-700" role="status">
-          <progress max={1} value={trabalho.progresso} className="w-16" aria-label="Progresso do proxy" />
+          <BarraProgresso className="w-16" fracao={trabalho.progresso} rotulo="Progresso do proxy" compacto />
           proxy {Math.round(trabalho.progresso * 100)}%
           <button type="button" className="btn-fantasma h-6 px-1.5 text-2xs" onClick={() => v.caminho && void desktop?.cancelarProxy(v.caminho)}>
             Cancelar
@@ -94,9 +95,13 @@ export function AvisoOriginal({ erroDeReproducao }: { erroDeReproducao: boolean 
           leve (H.264, 720p); a entrega é feita sempre a partir do original.
         </p>
         {trabalho && !trabalho.erro ? (
-          <div className="mt-3">
-            <progress max={1} value={trabalho.progresso} className="w-56" aria-label="Progresso do proxy" />
-            <p className="text-xs text-cabine-suave">Gerando proxy… {Math.round(trabalho.progresso * 100)}%</p>
+          <div className="mt-3 w-64 text-cabine-suave">
+            <BarraProgresso
+              fracao={trabalho.progresso > 0 ? trabalho.progresso : null}
+              rotulo="Progresso do proxy"
+              etapa="Gerando proxy"
+              sobreEscuro
+            />
           </div>
         ) : v.proxy ? (
           <button type="button" className="btn-primario mt-3" onClick={() => despachar({ tipo: 'videoUsarProxy', usar: true })}>

@@ -3,6 +3,8 @@ import { Painel, PainelAbas } from '../comum';
 import { useDespachar, useEstado } from '../../state/store';
 import { Carregador, useImportarLegenda } from '../Carregador';
 import { DialogoTranscricao, PainelTranscricao } from '../Transcricao';
+import { BarraProgresso } from '../BarraProgresso';
+import { useProgressoAnalise } from '../progressoAnalise';
 import { ponte } from '../../desktop/ponte';
 import { Resumo } from '../Resumo';
 import { AcoesLote, Filtros } from '../Filtros';
@@ -217,11 +219,19 @@ function AnaliseVideo() {
   const [passo, setPasso] = useState(500);
   const abortar = useRef<AbortController | null>(null);
   const { lacunas, fonte } = useLacunas();
+  const analiseSom = useProgressoAnalise();
   useEffect(() => () => abortar.current?.abort(), []);
 
   if (!video)
     return <p className="text-xs text-navy-500">Abra o vídeo no monitor para analisar som, cortes e lacunas.</p>;
-  if (!mapa) return <p className="text-xs text-navy-500">Analisando o áudio…</p>;
+  if (!mapa)
+    return (
+      <BarraProgresso
+        fracao={analiseSom?.fracao ?? null}
+        rotulo="Progresso da análise do som"
+        etapa="Analisando o som da obra"
+      />
+    );
   const sc = mapa.statusCortes;
 
   async function cortes() {
@@ -304,7 +314,7 @@ function AnaliseVideo() {
           )}
         </div>
         {sc.tipo === 'em_andamento' ? (
-          <progress max={1} value={sc.progresso} className="mt-1 w-full" aria-label="Progresso" />
+          <BarraProgresso className="mt-1" fracao={sc.progresso} rotulo="Progresso da detecção de cortes" compacto />
         ) : null}
         <p className="mt-1 text-2xs text-navy-500">
           {sc.tipo === 'concluido'

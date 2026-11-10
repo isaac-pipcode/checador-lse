@@ -30,6 +30,8 @@ import { Icone, type NomeIcone } from '../icones';
 import { useAcaoMenu } from '../acoesMenu';
 import { useEstadoPaineisNoMenu } from '../menuNativo';
 import { abrirBloco, useMonitorAcoplado } from '../ad/exibicaoAD';
+import { useProgressoAnalise } from '../progressoAnalise';
+import { BarraProgresso } from '../BarraProgresso';
 
 const PESO: Record<Severity, number> = { erro: 3, aviso: 2, revisao_manual: 1 };
 
@@ -68,7 +70,7 @@ export function Espaco() {
   const [tempoMs, setTempoMs] = useState(0);
   const [tocando, setTocando] = useState(false);
   const [duracaoVideoMs, setDuracaoVideoMs] = useState(0);
-  const [progressoAudio, setProgressoAudio] = useState<number | null>(null);
+  const analiseSom = useProgressoAnalise();
   const [ouvirAd, setOuvirAd] = useState(true);
   const [legendaRevisada, setLegendaRevisada] = useState(true);
   const [verLse, setVerLse] = useState(true);
@@ -198,9 +200,8 @@ export function Espaco() {
     if (!desktop) return;
     const m = await desktop.escolherVideo();
     if (!m) return;
-    setProgressoAudio(0);
     ultimoTempo.current = 0;
-    const analise = carregarMidia(despachar, m, () => desktop.analisarAudio(m.caminho, JANELA_MS, setProgressoAudio));
+    const analise = carregarMidia(despachar, m, (p) => desktop.analisarAudio(m.caminho, JANELA_MS, p));
     // formato de finalização: o proxy é gerado já, em paralelo à análise do áudio
     if (m.info && avaliarMidia(m.info).necessidade === 'obrigatorio') {
       void gerarProxyDe(despachar, m.caminho, estado.projeto.caminho).then((px) => {
@@ -208,7 +209,6 @@ export function Espaco() {
       });
     }
     await analise;
-    setProgressoAudio(null);
   }
 
   // ---- dados da linha do tempo ----------------------------------------------
@@ -357,7 +357,7 @@ export function Espaco() {
   const status = !video
     ? null
     : !mapa
-      ? `Analisando o áudio${progressoAudio !== null ? ` · ${Math.round(progressoAudio * 100)}%` : '…'}`
+      ? `Analisando o som${analiseSom?.fracao != null ? ` · ${Math.round(analiseSom.fracao * 100)}%` : '…'}`
       : mapa.audio
         ? null
         : mapa.erroAudio ?? 'Áudio não analisado';
@@ -435,6 +435,19 @@ export function Espaco() {
                     />
                     <AvisoOriginal erroDeReproducao={erroVideo} />
                     <SugestaoProxy />
+                    {/* análise do som em andamento: faixa sobre a imagem, onde o olho está */}
+                    {analiseSom ? (
+                      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded border border-paper-400 bg-paper/95 px-3 py-2 shadow-lg">
+                        <BarraProgresso
+                          fracao={analiseSom.fracao}
+                          rotulo="Progresso da análise do som"
+                          etapa="Analisando o som da obra"
+                        />
+                        <p className="mt-0.5 text-2xs text-navy-500">
+                          Lacunas, sincronia e forma de onda ficam disponíveis ao terminar. Dá para assistir enquanto isso.
+                        </p>
+                      </div>
+                    ) : null}
                     {verLibras && (libras.clipe || pagina === 'libras') ? (
                       <CamadaLibras
                         principal={videoPronto}

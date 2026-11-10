@@ -3,6 +3,7 @@ import { useEstado } from '../../state/store';
 import { ponte, type RelatorioIntercambio } from '../../desktop/ponte';
 import { useVideo } from '../contextoVideo';
 import { FonteDasMidias, useFontesExportacao } from '../fontesExportacao';
+import { BarraProgresso } from '../BarraProgresso';
 import { Icone } from '../icones';
 
 /**
@@ -110,10 +111,12 @@ export function ExportarEditores() {
         </p>
       ) : null}
       {progresso ? (
-        <div className="mt-2 text-2xs" role="status">
-          <progress max={1} value={progresso.f} className="w-full" aria-label="Progresso da exportação" />
-          {progresso.etapa} · {Math.round(progresso.f * 100)}%
-        </div>
+        <BarraProgresso
+          className="mt-2"
+          fracao={progresso.f > 0 ? progresso.f : null}
+          rotulo="Progresso da exportação"
+          etapa={progresso.etapa}
+        />
       ) : null}
       {erro ? <p className="mt-2 text-bad">Erro: {erro}</p> : null}
       {rel ? (
