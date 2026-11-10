@@ -233,6 +233,22 @@ export interface PonteDesktop {
     salvar(provedor: string, chave: string): Promise<void>;
     esquecer(provedor: string): Promise<void>;
   };
+  /**
+   * Transcrição local com o Whisper (desktop/whisper.ts). `trabalho` é um id
+   * escolhido pela interface, para poder cancelar.
+   */
+  whisper: {
+    estado(): Promise<{ disponivel: boolean; origem: string; modelos: Array<{ id: string; baixado: boolean }> }>;
+    baixarModelo(trabalho: string, modelo: string, aoProgredir: (fracao: number) => void): Promise<void>;
+    transcrever(
+      trabalho: string,
+      caminho: string,
+      modelo: string,
+      idioma: string,
+      aoProgredir: (fracao: number, etapa: string) => void,
+    ): Promise<{ json: unknown; doCache: boolean }>;
+    cancelar(trabalho: string): Promise<void>;
+  };
   /** monitores conectados (para decidir entre janela do locutor e monitor acoplado) */
   quantasTelas(): Promise<number>;
   aoFecharPrompter(cb: () => void): () => void;

@@ -10,7 +10,17 @@ import { exportarSincronia } from './intercambio';
 import { gerarProxy } from './proxy';
 import { atualizarEstadoMenu, instalarMenu, type EstadoMenu } from './menu';
 import { cifraDisponivel, esquecerChave, lerChave, provedoresLembrados, salvarChave } from './chaves';
-import { chaveDeAnalise, gravarNoCache, lerDoCache, limparCache, tamanhoDoCache } from './cacheMidia';
+import {
+  chaveDeAnalise,
+  gravarJsonNoCache,
+  gravarNoCache,
+  lerDoCache,
+  lerJsonDoCache,
+  limparCache,
+  tamanhoDoCache,
+} from './cacheMidia';
+import { baixarModelo, estadoWhisper, transcrever } from './whisper';
+import whisperEmbutido from './whisper-embutido.json';
 import { createHash } from 'node:crypto';
 import { AcumuladorEnvelope } from '../src/mapa/sinal';
 import type { ArquivoTake, PedidoEntrega, PedidoIntercambio, PedidoRender, ProjetoArquivo, ResumoProjeto } from '../src/desktop/ponte';
@@ -351,6 +361,41 @@ function registrarIpc() {
     if (chave) gravarNoCache(pastaCache(), chave, resultado.envelopeDb, resultado.duracaoMs);
     return resultado;
   });
+  // ---- Transcrição (Whisper local) ----------------------------------------
+  const trabalhosWhisper = new Map<string, AbortController>();
+  const comCancelamento = async <T>(id: string, f: (s: AbortSignal) => Promise<T>) => {
+    const ctrl = new AbortController();
+    trabalhosWhisper.set(id, ctrl);
+    try {
+      return await f(ctrl.signal);
+    } finally {
+      trabalhosWhisper.delete(id);
+    }
+  };
+  ipcMain.handle('whisper:estado', () => estadoWhisper());
+  ipcMain.handle('whisper:cancelar', (_e, id: string) => trabalhosWhisper.get(String(id))?.abort());
+  ipcMain.handle('whisper:baixar', (e, { id, modelo }: { id: string; modelo: string }) =>
+    comCancelamento(id, (s) => baixarModelo(modelo, (f) => progresso(e, id, f, 'Baixando o modelo'), s)),
+  );
+  ipcMain.handle(
+    'whisper:transcrever',
+    (e, { id, caminho, modelo, idioma }: { id: string; caminho: string; modelo: string; idioma: string }) => {
+      if (![...autorizados.values()].includes(resolve(caminho))) throw new Error('Caminho não autorizado.');
+      // mesmo arquivo, modelo, idioma e versão do whisper.cpp: a transcrição já feita volta do cache
+      const chave = chaveDeAnalise(caminho, { tipo: 'whisper', modelo, idioma, versao: whisperEmbutido.versao });
+      const guardada = chave ? lerJsonDoCache<unknown>(pastaCache(), chave) : null;
+      if (guardada) {
+        progresso(e, id, 1, 'Concluído');
+        return { json: guardada, doCache: true };
+      }
+      return comCancelamento(id, async (s) => {
+        const json = await transcrever(caminho, modelo, idioma, (f, etapa) => progresso(e, id, f, etapa), s);
+        if (chave) gravarJsonNoCache(pastaCache(), chave, json);
+        return { json, doCache: false };
+      });
+    },
+  );
+
   ipcMain.handle('cache:tamanho', () => tamanhoDoCache(pastaCache()));
   ipcMain.handle('cache:limpar', () => limparCache(pastaCache()));
 

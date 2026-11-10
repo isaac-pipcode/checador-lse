@@ -8,6 +8,8 @@
 #
 # Os instaladores NÃO são assinados (ainda): o macOS e o Windows avisam na
 # primeira abertura. O ffmpeg (GPL) vai embutido; seu código-fonte é anexado à release.
+# O whisper-cli (whisper.cpp, MIT) é compilado aqui, do código oficial na tag fixada
+# em desktop/whisper-embutido.json; os modelos são baixados pelo app, sob demanda.
 name: Instaladores
 
 on:
@@ -57,6 +59,14 @@ jobs:
           key: ffmpeg-${{ runner.os }}-${{ hashFiles('desktop/ffmpeg-embutido.json') }}
       - name: Baixar e conferir o ffmpeg embutido (SHA-256 fixo)
         run: npm run ffmpeg:baixar
+      - uses: actions/cache@v4
+        id: cache-whisper
+        with:
+          path: vendor/whisper
+          key: whisper-${{ runner.os }}-${{ hashFiles('desktop/whisper-embutido.json', 'scripts/compilar-whisper.mjs') }}
+      - name: Compilar o whisper-cli embutido (whisper.cpp na tag fixada)
+        if: steps.cache-whisper.outputs.cache-hit != 'true'
+        run: npm run whisper:compilar
       - name: Gerar instaladores
         shell: bash
         env:
@@ -72,6 +82,28 @@ jobs:
               npm run ffmpeg:verificar -- "release/mac-arm64/Ouver Estúdio.app/Contents/Resources/ffmpeg"
               npm run ffmpeg:verificar -- "release/mac/Ouver Estúdio.app/Contents/Resources/ffmpeg" --opcional ;;
           esac
+      - name: Executar o whisper-cli embutido no app empacotado
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)   npm run whisper:verificar -- release/linux-unpacked/resources/whisper ;;
+            Windows) npm run whisper:verificar -- release/win-unpacked/resources/whisper ;;
+            macOS)
+              npm run whisper:verificar -- "release/mac-arm64/Ouver Estúdio.app/Contents/Resources/whisper"
+              npm run whisper:verificar -- "release/mac/Ouver Estúdio.app/Contents/Resources/whisper" --opcional ;;
+          esac
+      - name: Transcrever de verdade com o whisper-cli embutido (Linux, modelo tiny)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update && sudo apt-get install -y espeak-ng ffmpeg
+          espeak-ng -v pt-br -s 140 -w fala.wav "Bom dia. O trem das sete chegou atrasado hoje, por causa da chuva."
+          ffmpeg -loglevel error -y -i fala.wav -ac 1 -ar 16000 -c:a pcm_s16le fala16.wav
+          curl -fsSL --retry 4 -o ggml-tiny.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin
+          echo "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21  ggml-tiny.bin" | sha256sum -c
+          export OUVER_WHISPER_SAIDA="$PWD/whisper-saida.json"
+          npm run whisper:verificar -- release/linux-unpacked/resources/whisper --transcrever fala16.wav ggml-tiny.bin
+          npx vitest run test/whisperReal.test.ts
       - uses: actions/upload-artifact@v4
         with:
           name: instaladores-${{ matrix.os }}

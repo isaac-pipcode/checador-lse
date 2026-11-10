@@ -70,6 +70,7 @@ function DialogoMetodologia() {
 const PAGINA_DA_ACAO: Partial<Record<AcaoMenu, Pagina>> = {
   novoProjeto: 'projetos',
   importarInterprete: 'libras',
+  transcrever: 'lse',
 };
 
 const NAVEGACAO: Partial<Record<AcaoMenu, Pagina>> = {

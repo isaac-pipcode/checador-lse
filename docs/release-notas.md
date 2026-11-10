@@ -3,6 +3,14 @@ janela de Libras numa mesma linha do tempo.
 
 **Novo na 0.1.4**:
 
+- **Transcrição com o Whisper** para obras que chegam sem legenda: *Legendas → Transcrever o áudio da obra*
+  (ou *Arquivo → Transcrever…*). Roda no próprio computador, sem enviar nada; o rascunho já sai dentro das
+  regras mecânicas do Guia (37 caracteres, duas linhas, durações, intervalo, quebra no mais alto nível
+  sintático) e passa pela revisão de sempre. Falantes e efeitos sonoros ficam para a equipe. O modelo
+  (Turbo, 574 MB, ou Máxima precisão, 3,1 GB) é baixado uma vez e conferido por SHA-256; transcrever de
+  novo o mesmo arquivo vem do cache.
+- **Lembrar a chave de API** neste computador, cifrada pelo sistema (Windows, macOS ou chaveiro do Linux).
+
 - **Entrega em alta ou em proxy**: a seção *Qualidade das mídias* mostra de qual arquivo sai cada mídia
   (obra e Libras) e permite exportar dos originais (padrão) ou dos proxies, para uma versão leve de
   revisão. A escolha vale para o pacote, a AD com vídeo e a sequência para editores; saídas em proxy

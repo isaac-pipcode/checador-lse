@@ -102,6 +102,11 @@ export function montarMenu(): Menu {
         { label: 'Abrir vídeo da obra…', enabled: comProjeto, click: acao('abrirVideo') },
         { label: 'Importar legenda (.srt, .vtt)…', enabled: comProjeto, click: acao('importarLegenda') },
         {
+          label: 'Transcrever o áudio da obra (Whisper)…',
+          enabled: comProjeto && e.temVideo,
+          click: acao('transcrever'),
+        },
+        {
           label: 'Importar vídeo da intérprete de Libras…',
           enabled: comProjeto && e.temVideo,
           click: acao('importarInterprete'),

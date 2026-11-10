@@ -187,6 +187,12 @@ function ComponentesTerceiros() {
         </p>
       ) : null}
       <p className="mt-2 text-sm text-navy-700">
+        <strong>whisper.cpp</strong> (licença MIT) transcreve a fala para o rascunho de LSE, neste computador. O
+        programa vai embutido, compilado a partir do código oficial; licença e versão na pasta{' '}
+        <code>resources/whisper</code>. Os modelos do <strong>Whisper</strong> (OpenAI, licença MIT) são baixados sob
+        demanda do repositório do whisper.cpp no Hugging Face e conferidos por SHA-256.
+      </p>
+      <p className="mt-2 text-sm text-navy-700">
         Ícones: <strong>Lucide</strong> (licença ISC). Mãos de Libras: desenho próprio, derivado do traçado “hand” do
         Lucide.
       </p>

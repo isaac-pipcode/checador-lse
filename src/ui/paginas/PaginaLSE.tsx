@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Painel, PainelAbas } from '../comum';
 import { useDespachar, useEstado } from '../../state/store';
 import { Carregador, useImportarLegenda } from '../Carregador';
+import { DialogoTranscricao, PainelTranscricao } from '../Transcricao';
 import { ponte } from '../../desktop/ponte';
 import { Resumo } from '../Resumo';
 import { AcoesLote, Filtros } from '../Filtros';
@@ -35,110 +36,121 @@ export function LseEsquerda() {
   if (!carregado) {
     return (
       <Painel titulo="Legendas" rotulo="Legendas">
-        <Carregador />
-        {estado.errosParse.length > 0 ? <ErrosParse /> : null}
+        <div className="flex min-h-full flex-col">
+          {/* filme sem legenda (o caso comum na Ouver): transcrever vem primeiro; importar, depois */}
+          <div className="border-b border-fundo p-3">
+            <PainelTranscricao />
+          </div>
+          <div className="flex min-h-[200px] flex-1 flex-col">
+            <Carregador />
+          </div>
+          {estado.errosParse.length > 0 ? <ErrosParse /> : null}
+        </div>
+        <DialogoTranscricao />
       </Painel>
     );
   }
 
   return (
-    <PainelAbas
-      memoria="lse-esquerda"
-      rotulo="Legendas"
-      titulo={
-        <>
-          Legendas{' '}
-          <span className="font-normal normal-case tracking-normal text-navy-500">
-            {estado.arquivoNome} · {estado.cues.length}
-          </span>
-        </>
-      }
-      acoes={
-        <>
-          <button
-            type="button"
-            className="segmento"
-            aria-pressed={previa}
-            onClick={() => setPrevia((v) => !v)}
-            title="Mostrar o texto com as decisões aplicadas"
-          >
-            Prévia
-          </button>
-          <button
-            type="button"
-            className="btn-fantasma h-6 px-2 text-2xs"
-            onClick={() => {
-              // desktop: diálogo do sistema direto; navegador: volta à área de importar
-              if (!ponte()?.escolherLegenda) return despachar({ tipo: 'limpar' });
-              setErroTroca(null);
-              importar(true).catch((e: unknown) => setErroTroca(e instanceof Error ? e.message : String(e)));
-            }}
-            title={erroTroca ?? 'Importar outra legenda (.srt ou .vtt)'}
-          >
-            {erroTroca ? <Icone nome="erro" tamanho={14} className="text-bad" /> : null}
-            Trocar legenda…
-          </button>
-        </>
-      }
-      faixa={<Resumo variante="chips" />}
-      abas={[
-        {
-          id: 'lista',
-          rotulo: 'Legendas',
-          marca: pendentes || null,
-          tom: 'aviso',
-          conteudo: (rolagem) => (
-            <>
-              {estado.errosParse.length > 0 || estado.avisosParse.length > 0 ? <ErrosParse /> : null}
-              <Filtros />
-              <ListaLegendas mostrarPrevia={previa} rolagem={rolagem} />
-            </>
-          ),
-        },
-        {
-          id: 'obra',
-          rotulo: 'Obra inteira',
-          marca: obra.pendentes || null,
-          tom: 'aviso',
-          conteudo: <ApontamentosObra />,
-        },
-        {
-          id: 'lote',
-          rotulo: 'Lote e métricas',
-          conteudo: (
-            <>
-              <Secao
-                titulo="Aprovar em lote"
-                dica="O lote só alcança auto-correções determinísticas ainda pendentes. Sugestões assistidas (NLP, LLM, sinal) e pendências manuais exigem decisão uma a uma."
-              >
-                <AcoesLote />
-              </Secao>
-              <Secao titulo="Métricas da obra">
-                <Resumo variante="metricas" />
-              </Secao>
-              <Secao titulo="Atalhos da revisão">
-                <p className="text-2xs text-navy-700">
-                  Com um apontamento em foco: <kbd>A</kbd> aprovar · <kbd>R</kbd> rejeitar · <kbd>E</kbd> editar ·{' '}
-                  <kbd>J</kbd>/<kbd>K</kbd> navegar.
-                </p>
-              </Secao>
-            </>
-          ),
-        },
-      ]}
-    />
+    <>
+      <PainelAbas
+        memoria="lse-esquerda"
+        rotulo="Legendas"
+        titulo={
+          <>
+            Legendas{' '}
+            <span className="font-normal normal-case tracking-normal text-navy-500">
+              {estado.arquivoNome} · {estado.cues.length}
+            </span>
+          </>
+        }
+        acoes={
+          <>
+            <button
+              type="button"
+              className="segmento"
+              aria-pressed={previa}
+              onClick={() => setPrevia((v) => !v)}
+              title="Mostrar o texto com as decisões aplicadas"
+            >
+              Prévia
+            </button>
+            <button
+              type="button"
+              className="btn-fantasma h-6 px-2 text-2xs"
+              onClick={() => {
+                // desktop: diálogo do sistema direto; navegador: volta à área de importar
+                if (!ponte()?.escolherLegenda) return despachar({ tipo: 'limpar' });
+                setErroTroca(null);
+                importar(true).catch((e: unknown) => setErroTroca(e instanceof Error ? e.message : String(e)));
+              }}
+              title={erroTroca ?? 'Importar outra legenda (.srt ou .vtt)'}
+            >
+              {erroTroca ? <Icone nome="erro" tamanho={14} className="text-bad" /> : null}
+              Trocar legenda…
+            </button>
+          </>
+        }
+        faixa={<Resumo variante="chips" />}
+        abas={[
+          {
+            id: 'lista',
+            rotulo: 'Legendas',
+            marca: pendentes || null,
+            tom: 'aviso',
+            conteudo: (rolagem) => (
+              <>
+                {estado.errosParse.length > 0 || estado.avisosParse.length > 0 ? <ErrosParse /> : null}
+                <Filtros />
+                <ListaLegendas mostrarPrevia={previa} rolagem={rolagem} />
+              </>
+            ),
+          },
+          {
+            id: 'obra',
+            rotulo: 'Obra inteira',
+            marca: obra.pendentes || null,
+            tom: 'aviso',
+            conteudo: <ApontamentosObra />,
+          },
+          {
+            id: 'lote',
+            rotulo: 'Lote e métricas',
+            conteudo: (
+              <>
+                <Secao
+                  titulo="Aprovar em lote"
+                  dica="O lote só alcança auto-correções determinísticas ainda pendentes. Sugestões assistidas (NLP, LLM, sinal) e pendências manuais exigem decisão uma a uma."
+                >
+                  <AcoesLote />
+                </Secao>
+                <Secao titulo="Métricas da obra">
+                  <Resumo variante="metricas" />
+                </Secao>
+                <Secao titulo="Atalhos da revisão">
+                  <p className="text-2xs text-navy-700">
+                    Com um apontamento em foco: <kbd>A</kbd> aprovar · <kbd>R</kbd> rejeitar · <kbd>E</kbd> editar ·{' '}
+                    <kbd>J</kbd>/<kbd>K</kbd> navegar.
+                  </p>
+                </Secao>
+              </>
+            ),
+          },
+        ]}
+      />
+      <DialogoTranscricao />
+    </>
   );
 }
 
 function ErrosParse() {
   const { estado } = useEstado();
+  // sem erros de leitura, são só observações (ex.: rascunho da transcrição)
+  const titulo = estado.errosParse.length > 0 ? 'Problemas na leitura do arquivo' : 'Sobre este arquivo';
   return (
-    <section
-      aria-label="Problemas na leitura do arquivo"
-      className="m-3 rounded border border-warn bg-warn-100 px-3 py-2"
-    >
+    <section aria-label={titulo} className="m-3 rounded border border-warn bg-warn-100 px-3 py-2">
       <h3 className="text-sm font-semibold text-warn">
-        <Icone nome="aviso" tamanho={14} /> Problemas na leitura do arquivo
+        <Icone nome="aviso" tamanho={14} /> {titulo}
       </h3>
       <ul className="mt-1 space-y-1 text-sm text-warn">
         {estado.errosParse.map((e, i) => (

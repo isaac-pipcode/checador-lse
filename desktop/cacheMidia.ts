@@ -84,13 +84,38 @@ export function gravarNoCache(
   }
 }
 
+/** Resultados em JSON (ex.: a transcrição do Whisper), com a mesma chave e a mesma poda. */
+export function lerJsonDoCache<T>(pasta: string, chave: string): T | null {
+  const arq = join(pasta, `${chave}.json`);
+  if (!existsSync(arq)) return null;
+  try {
+    const v = JSON.parse(readFileSync(arq, 'utf-8')) as { versao?: number; dados?: T };
+    if (v.versao !== VERSAO_CACHE) return null;
+    const agora = new Date();
+    utimesSync(arq, agora, agora);
+    return v.dados ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function gravarJsonNoCache(pasta: string, chave: string, dados: unknown, limiteBytes = LIMITE_PADRAO) {
+  try {
+    mkdirSync(pasta, { recursive: true });
+    writeFileSync(join(pasta, `${chave}.json`), JSON.stringify({ versao: VERSAO_CACHE, dados }));
+    podar(pasta, limiteBytes);
+  } catch {
+    /* cache é otimização */
+  }
+}
+
 /** 500 MB: um envelope de 10 ms ocupa ~1,4 MB por hora de obra. */
 export const LIMITE_PADRAO = 500 * 1024 * 1024;
 
 function entradas(pasta: string) {
   if (!existsSync(pasta)) return [];
   return readdirSync(pasta)
-    .filter((n) => n.endsWith('.env'))
+    .filter((n) => n.endsWith('.env') || n.endsWith('.json'))
     .map((n) => {
       const st = statSync(join(pasta, n));
       return { arq: join(pasta, n), bytes: st.size, usado: st.mtimeMs };
